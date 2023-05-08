@@ -1,4 +1,10 @@
-# MOTH Parts
+[MOTH Parts](#moth_parts)
+
+[MOTH Assembly](#moth_assembly)
+
+---
+
+# <a name="moth_parts">MOTH Parts</a>
 
 Everyone can build this sensor, well almost everyone. All you need is access to a 3d-printer, your own or a may a friends printer. The rest is electronic parts available in retail and some hardware.
 
@@ -29,5 +35,16 @@ Hardware:
 - 6 screws M2 x 5mm
 - 4 screws M2 x 8mm
 - 6 nuts M2
+- 4 [threaded inserts M2 x 4mm](https://www.reichelt.at/at/de/3d-druck-gewindeeinsaetze-m2x4-70-stueck-rx-m2x4-p332211.html?PROVID=2807&gclid=Cj0KCQjwu-KiBhCsARIsAPztUF0J6DnrXp0YX_Ajaskqt8CrePC7NPw2n9GdOXkIdW2tjeDlc9kSpYEaAjDGEALw_wcB)
+
+![threaded inserts M2 x 4mm](../images/inserts_970.jpg)
+
+- acrylic glas 1mm, ~ 78mm x ~36mm
+
+![acrylic glas 1mm](../images/pmma_970.jpg)
+
+---
+
+# <a name="moth_assembly">MOTH Assembly</a>
 
 
