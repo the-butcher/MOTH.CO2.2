@@ -1,0 +1,25 @@
+<html>
+<script>
+    window.addEventListener('message', ({ data }) => {
+        var xmlHttp = new XMLHttpRequest();
+        var qstr = data.qstr ? Object.entries(data.qstr).map((v, i) => `${v[0]}=${v[1]}`).join('&') : null;
+        var href = data.meth == 'GET' && qstr ? `${data.href}/${data.call}?${qstr}` : `${data.href}/${data.call}`;
+        xmlHttp.open(data.meth, href, true);
+        xmlHttp.onreadystatechange = function () {
+            if (xmlHttp.readyState == 4) {
+                window.parent.postMessage({
+                    call: data.call,
+                    data: xmlHttp.responseText
+                }, '*');
+            }
+        };
+        xmlHttp.send(data.meth == 'POST' ? qstr : null);
+    });
+    window.onload = () => {
+        window.parent.postMessage({
+            event: 'loaded'
+        }, '*');
+    };
+</script>
+
+</html>

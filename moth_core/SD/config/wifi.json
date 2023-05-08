@@ -1,0 +1,10 @@
+{
+  "min": 5,
+  "rdr": "http://moth.the-butchers.at/?boxUrl=",
+  "ntw": [
+    {
+      "key": "your-wifi-ssid",
+      "pwd": "5n8sTz+z8NMxZ3RDsRy30w=="
+    }
+  ]
+}
