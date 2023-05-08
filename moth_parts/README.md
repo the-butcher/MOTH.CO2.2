@@ -47,4 +47,10 @@ Hardware:
 
 # <a name="moth_assembly">MOTH Assembly</a>
 
+- Solder a cable from, TODO :: complete, image
 
+- Lay the display flat on a soft surface (i.e. a piece of soft cloth), place the microcontroller directly over the respective pinholes of the display. Stick short pins (should portrude ~1mm when fully in) through each pinhole into the display pinholes. Do NOT add a pin to the RST pinhole. This pin will be bridged to from another pin for more control. TODO :: complete, image
+
+- Print [supports](supports.stl), clean parts with a file a sandpaper, cleanup holes with a 2mm drill if required. Use 4 M2 x 5mm screws and 4 M2 nuts to connect the feather esp32-s2 microcontroller and the scd-41 sensor.
+
+![supports](../images/s2_scd41_970.png)
