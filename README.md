@@ -45,3 +45,8 @@ A react administration UI for the device:
 ## License
 
 Please be aware that all software in this project is licensed under the [MIT license](license.txt), while the drawings and 3d-printed parts are licensed under the [Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
+
+---
+
+https://github.com/the-butcher/MOTH.CO2.2/assets/84620977/5f2a2e18-e023-444b-b362-80a291d31f36
+
