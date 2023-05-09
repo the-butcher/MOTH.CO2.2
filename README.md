@@ -6,7 +6,7 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 ![CO₂-Sensor electronics](/images/sensor02_800.jpg?raw=true)
 
-- The device uses the [Sensirion SCD-41] (https://www.adafruit.com/product/5190) Sensor, a small and high performance photoacoustic CO₂ sensor.
+- The device uses the [Sensirion SCD-41](https://www.adafruit.com/product/5190) Sensor, a small and high performance photoacoustic CO₂ sensor.
 
 - The sensor measures CO₂, temperature, humidity and pressure. Measurements are rendered to the device display, and can be shown in a simple <b>chart</b> to perceive recent measurement history. The display can be switched to an inverted <b>dark mode</b>. Thresholds are configurable, just like temperature display unit and timezone. An internal <b>buzzer</b> can be turned on to give acoustic feedback when CO₂ thresholds are exceeded.
 
@@ -24,21 +24,21 @@ The root folder of the project is structured as follows:
 
 The Arduino Sketch running on the device, configuration files and some [GFX Fonts](https://learn.adafruit.com/adafruit-gfx-graphics-library/using-fonts) used:
 
-- ## [MOTH Core](moth_core/README.md)
+## [MOTH Core](moth_core/README.md)
 
 ---
 
 Building instructions, drawings and printable files for the device:
 
 
-- ## [MOTH Parts and Assembly](moth_parts/README.md)
+## [MOTH Parts and Assembly](moth_parts/README.md)
 
 ---
 
 A react administration UI for the device:
 
 
-- ## [MOTH Client](moth_client/README.md)
+## [MOTH Client](moth_client/README.md)
 
 ---
 
