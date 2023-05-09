@@ -48,5 +48,6 @@ Please be aware that all software in this project is licensed under the [MIT lic
 
 ---
 
-https://github.com/the-butcher/MOTH.CO2.2/assets/84620977/5f2a2e18-e023-444b-b362-80a291d31f36
+https://github.com/the-butcher/MOTH.CO2.2/assets/84620977/41d54883-a5e3-45dd-9464-85bc31e8d269
+
 
