@@ -1,5 +1,5 @@
 
-# ELECTRIC parts
+# Electric parts
 
 [Adafruit ESP32-S2 Feather with BME280](https://www.adafruit.com/product/5303) The microcontroller. Not an S3, but it has an BME-280 Sensor onboard, thus saving an extra oart to be fit into the housing. The processors power is far beyond necessary and the pressure sensor delivers extra precision to the CO₂ sensor.
 

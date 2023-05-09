@@ -8,24 +8,24 @@ Building the sensor is split into two main parts. Electric assembly and housing.
 
 List of parts that need to be bought:
 
-- ## [ELECTRIC parts](electricparts.md)
+## [Electric parts](electricparts.md)
 
 ---
 
 Assembly instructions for the electric parts:
 
-- ## [ELECTRIC assembly](electricassembly.md)
+## [Electric Assembly](electricassembly.md)
 
 ---
 
 List of printable parts and some postprocessing hints:
 
-- ## [PRINTED parts](printedparts.md)
+## [Printed parts](printedparts.md)
 
 ---
 
 Final assembly of the Device:
 
-- ## [ASSEMBLY](assembly.md) :: MISSING
+## [Device Assembly](deviceassembly.md) :: MISSING
 
 ---

@@ -1,4 +1,4 @@
-# ELECTRIC assembly
+# Electric Assembly
 
 Lay the display flat on a soft surface (i.e. a piece of soft cloth). On the backside of the display solder a connection from the pad corresponding to the A4 pin to the pad labelled with "busy".
 
@@ -42,8 +42,8 @@ Attach the Buzzer so its pins go into GND and A1.
 
 ---
 
-The electric assembly is now ready to be configured and to have a sketch uploaded. Please refer to [MOTH Core](../moth_core/README.md) for further instructions.
+The Electric Assembly is now ready to be configured and to have a sketch uploaded. Please refer to [MOTH Core](../moth_core/README.md) for further instructions.
 
-<img src="../images/electricassembly_final.jpg" alt= "electric assembly" width="800">
+<img src="../images/electricassembly_final.jpg" alt="Electric Assembly" width="800">
 
 ---
