@@ -10,6 +10,25 @@ Arduino Sketch
 
 ## [moth_core_020](moth_core_020)
 
+Required packages are:
+
+- RTClib at version 2.1.1
+- Adafruit BusIO at version 1.14.1
+- ESP Async WebServer at version 1.2.3
+- AsyncTCP at version 1.1.1
+- PubSubClient at version 2.8
+- ArduinoJson at version 5.13.5
+- Adafruit LC709203F at version 1.3.2
+- SdFat - Adafruit Fork at version 2.2.1
+- Adafruit EPD at version 4.5.1
+- Adafruit GFX Library at version 1.11.5
+- QRCode at version 0.0.1
+- Adafruit Unified Sensor at version 1.1.9
+- Adafruit BME280 Library at version 2.2.2
+- Sensirion I2C SCD4x at version 0.4.0
+- Sensirion Core at version 0.6.0
+- AESLib at version 2.3.6
+
 ---
 
 Configuration files that define the behaviour of the sensor and a single html page which is required for Cross-Site (CORS) concerns when administering the device.
