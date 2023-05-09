@@ -4,17 +4,17 @@ This folder contains the Arduino Sketch for the MOTH.CO2.2 sensor and a set of c
 
 The root folder of the project is structured as follows:
 
-- ## [moth_core_020](moth_core_020)
+---
 
-This folder contains all files contributing to the Arduino Sketch
+Arduino Sketch
 
-To compile the Sketch the following libraries are required to be installed.
+## [moth_core_020](moth_core_020)
 
--TODO :: create list
-
-- ## [SD](SD)
+---
 
 Configuration files that define the behaviour of the sensor and a single html page which is required for Cross-Site (CORS) concerns when administering the device.
+
+## [SD](SD)
 
 - ### [encr.json](SD/config/encr.json)
 
@@ -153,7 +153,10 @@ example (unprotected server, no certificate):
   "top": "moth/co2"
 }
 ```
+---
 
-- ## [fonts](fonts)
+The GFX Fonts used by the sketch. These need to be copied to your ...\Arduino\libraries\Adafruit_GFX_Library\Fonts directory once the [Adafruit_GFX_Library](https://github.com/adafruit/Adafruit-GFX-Library) has been installed.
 
-This folder contains the GFX Fonts used by the sketch. These need to be copied to your ...\Arduino\libraries\Adafruit_GFX_Library\Fonts directory once the [Adafruit_GFX_Library](https://github.com/adafruit/Adafruit-GFX-Library) has been installed.
+## [fonts](fonts)
+
+---
