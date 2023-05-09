@@ -26,6 +26,6 @@ List of printable parts and some postprocessing hints:
 
 Final assembly of the Device:
 
-## [Device Assembly](deviceassembly.md) :: MISSING
+## [Device Assembly](deviceassembly.md)
 
 ---
