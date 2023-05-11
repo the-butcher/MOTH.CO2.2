@@ -196,6 +196,7 @@ void BoxConn::begin() {
 
   });  
   server.on("/latest", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -216,12 +217,14 @@ void BoxConn::begin() {
     request->send(response);
   });
   server.on("/data", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     DataResponse *response = new DataResponse();
     request->send(response);
   });
   server.on("/folder", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -271,6 +274,7 @@ void BoxConn::begin() {
 
   });
   server.on("/file", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     bool appendUnsaved;
@@ -337,6 +341,7 @@ void BoxConn::begin() {
     request->send(response);
   });
   server.on("/networks", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -364,6 +369,7 @@ void BoxConn::begin() {
     request->send(response);
   });
   server.on("/disconnect", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + 1000;  // have a short wifi expiry
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -377,6 +383,7 @@ void BoxConn::begin() {
     request->send(response);
   });
   server.on("/calibrate", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -409,6 +416,7 @@ void BoxConn::begin() {
     request->send(response);
   });
   server.on("/hibernate", HTTP_GET, [](AsyncWebServerRequest *request) {
+
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -424,6 +432,7 @@ void BoxConn::begin() {
     request->send(response);
   });
   server.on("/co2_reset", HTTP_GET, [](AsyncWebServerRequest *request) {
+    
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -495,7 +504,7 @@ void BoxConn::handleUpload(AsyncWebServerRequest *request, String filename, size
 }
 
 void BoxConn::handleStationConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-  BoxClock::updateTime();
+  BoxClock::updateTime(); // give the clock an opportunity to update
 }
 
 bool BoxConn::checkNumeric(String value) {
@@ -585,6 +594,7 @@ void BoxConn::on() {
   }
 
   wifiExpiryMillis = millis() + wifiTimeoutMillis;
+
 }
 
 void BoxConn::off() {

@@ -14,6 +14,7 @@ class BoxClock {
     static String getTimezone();
     static void begin();
     static DateTime getDate();
+    static bool isUpdateable();
     static void updateTime();
     static String getTimeString(DateTime date);
     static String getDateTimeString(DateTime date);

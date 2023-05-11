@@ -5,7 +5,7 @@
 #include "sntp.h"
 
 // https://randomnerdtutorials.com/esp32-ntp-timezones-daylight-saving/
-#define INIT_TIME_PERIOD UINT32_C(60 * 60 * 1000) // 720 minutes - 2 times a day (temporary set to every hour)
+#define MILLISECONDS_PER_HOUR UINT32_C(60 * 60 * 1000) // 1 HOUR
 
 /**
  * ################################################
@@ -52,8 +52,12 @@ void BoxClock::setTimezone(String timezone1) {
   tzset(); // when the sketch is uploaded, the ESP's time is kept, but the timezone is lost, this is to restore and have valid time, i.e. after a reset
 }
 
+bool BoxClock::isUpdateable() {
+  return millis() > (timeUpdateCounter * MILLISECONDS_PER_HOUR);
+}
+
 void BoxClock::updateTime() {
-  if ((timeUpdateCounter * INIT_TIME_PERIOD) < millis()) { // every INIT_TIME_PERIOD milliseconds
+  if (BoxClock::isUpdateable()) { // every MILLISECONDS_PER_HOUR milliseconds
     configTzTime(timezone.c_str(), "pool.ntp.org", "time.nist.gov");
     timeUpdateCounter++;
   }

@@ -49,7 +49,7 @@ const char FORMAT_5_DIGIT[] = "%5s";
 const char FORMAT_6_DIGIT[] = "%6s";
 const char FORMAT_SLASH_CONCAT[] = "%s/%s";
 const char FORMAT_CELL_PERCENT[] = "%5s%%";
-const char FORMAT_REBREATHE[] = "%3s%% stale";
+const char FORMAT_STALE[] = "%3s%% stale";
 
 const Rectangle RECT_TOP = {
   1,
@@ -371,7 +371,7 @@ void BoxDisplay::renderTable() {
   BoxDisplay::drawInnerBorders(EPD_LIGHT);
 
   int co2 = measurement.valuesCo2.co2;
-  float rebreathe = (co2 - 425.0) / 380.0;
+  float stale = max(0.0, (co2 - 425.0) / 380.0); // don't allow negative values
   textColor = getTextColor(co2, BoxDisplay::thresholdsCo2);
   fillColor = getFillColor(co2, BoxDisplay::thresholdsCo2);
   if (fillColor != EPD_WHITE) {
@@ -384,11 +384,11 @@ void BoxDisplay::renderTable() {
   if (co2 < 1000) {
     // upper left of CO2
     BoxDisplay::drawAntialiasedText08("ppm", RECT_CO2, 6, 76, textColor);
-    BoxDisplay::drawAntialiasedText08(formatString(String(rebreathe, 1), FORMAT_REBREATHE), RECT_CO2, 91, TEXT_OFFSET_Y, textColor);
+    BoxDisplay::drawAntialiasedText08(formatString(String(stale, 1), FORMAT_STALE), RECT_CO2, 91, TEXT_OFFSET_Y, textColor);
   } else {
     // lower left of CO2
     BoxDisplay::drawAntialiasedText08("ppm", RECT_CO2, 46, TEXT_OFFSET_Y, textColor);
-    BoxDisplay::drawAntialiasedText08(formatString(String(rebreathe, 1), FORMAT_CELL_PERCENT), RECT_CO2, 131, TEXT_OFFSET_Y, textColor);
+    BoxDisplay::drawAntialiasedText08(formatString(String(stale, 1), FORMAT_CELL_PERCENT), RECT_CO2, 131, TEXT_OFFSET_Y, textColor);
   }
   
 

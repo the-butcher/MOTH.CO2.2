@@ -50,13 +50,9 @@ bool isAudio;
 std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
 
 /**
- * -- more robust expiry code to detect powered state
- * -- see how far the DataRequest can be taken in terms of size (1440)
- *
  * -- add possibility to publish bme values, heap values
  * -- perform tests with various configurations, including invalid ones
- * -- when updating timezone config through the display config, there should be a live update of the timezone
- * -- possibility to show degrees in F
+ * -- think about what could be subscribed by the device (i.e. calibration)
  *
  * -- validate
  *    -- csv file is written
@@ -66,20 +62,25 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *    -- display config is read
  *    -- folder listing is working
  *    -- upload is working
- *     
+ *    -- timezone works and add examples to the readme
+ *    -- time gets adjusted while permanently being online
+ *    -- time gets adjusted hourly when offline
+ *    -- mqtt gets published hourly when offline
+ *    -- stale never shows minus values
+ *
  */
 
 void setup() {
 
-  // de-power the neopixel 
+  // de-power the neopixel
   pinMode(NEOPIXEL_POWER, OUTPUT);
-  digitalWrite(NEOPIXEL_POWER, LOW); 
+  digitalWrite(NEOPIXEL_POWER, LOW);
 
 #if defined(NEOPIXEL_HELPER)
-  digitalWrite(NEOPIXEL_POWER, HIGH); 
-  pixels.begin(); 
+  digitalWrite(NEOPIXEL_POWER, HIGH);
+  pixels.begin();
   pixels.setBrightness(16);
-#endif  
+#endif
 
   // pinMode(GPIO_NUM_14, INPUT); // A5
   // attachInterrupt(digitalPinToInterrupt(GPIO_NUM_14), handleButton14Change, CHANGE);
@@ -96,7 +97,7 @@ void setup() {
   buttonHander13.begin();
   pinMode(GPIO_NUM_17, OUTPUT); // sound
 
-  BoxClock::begin(); 
+  BoxClock::begin();
   BoxPack::begin();
   BoxEncr::begin(); // needs BoxFiles to be ready because it will read config
   BoxConn::begin(); // needs BoxFiles and BoxEncr to be ready because it will read config containing passwords
@@ -166,11 +167,25 @@ void beep() {
  */
 void renderState(bool force) {
   if (force || (esp_timer_get_time() - microsecondsRenderState) >= BoxDisplay::microsecondsRenderStateInterval) {
+
     microsecondsRenderState = esp_timer_get_time() - microsecondsPerSecond * 10; // add some safety to be sure the first state gets rendered
-    if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
-      BoxMqtt::publish();
+
+    bool autoConnect = BoxConn::getMode() == WIFI_OFF && BoxClock::isUpdateable();
+    if (autoConnect) {
+      BoxConn::on(); // turn wifi on, and let it expire immediately, the station_connected event will take care of adjusting time
     }
+
+    // it was either on in the first place or just forced to be on
+    if (BoxConn::getMode() == WIFI_STA && BoxMqtt::isConfiguredToBeActive()) {
+      BoxMqtt::publish(); // simply publish
+    }
+
+    if (autoConnect) {
+      BoxConn::off(); // if it was forced to be on, turn off directly afterwards
+    }
+
     BoxDisplay::renderState();
+
   }
 }
 
@@ -187,8 +202,6 @@ void loop() {
   attachInterrupt(buttonHander12.ipin, handleButton12Change, CHANGE);
   attachInterrupt(buttonHander13.ipin, handleButton13Change, CHANGE);
 
-  
-
   // regardless of loopAction, a measurement will be taken if it is time to do so
   // however, there may still be issues when this happens shortly before a measurement ...
   // ... in such cases it can happen that i.e. turning on WiFi consumes enough time to have a negative wait time to the next measurement
@@ -198,18 +211,18 @@ void loop() {
     BoxPack::tryRead();
     SensorScd041::setPressure(SensorBme280::values.pressure / 100.0);
     Measurement measurement = {
-      BoxClock::getDate().secondstime(), 
+      BoxClock::getDate().secondstime(),
       SensorScd041::values,
       SensorBme280::values,
       BoxPack::values,
       true // publishable
     };
-    Measurements::putMeasurement(measurement);  
+    Measurements::putMeasurement(measurement);
     if (isAudio && measurement.valuesCo2.co2 >= BoxDisplay::thresholdsCo2.riskHi) {
       beep();
     }
     displayFunc = [=]()->void{  renderState(false); };
-  } 
+  }
 
   if (loopAction == LOOP_REASON______CALIBRRATION) {
 
@@ -226,7 +239,7 @@ void loop() {
       displayFunc = [=]()->void{ BoxDisplay::renderMothInfo("failure"); };
     } else {
       displayFunc = [=]()->void{ BoxDisplay::renderMothInfo("success (" + String(result - 0x8000) + ")"); };
-    }    
+    }
 
   } else if (loopAction == LOOP_REASON_______HIBERNATION) {
 
@@ -247,39 +260,39 @@ void loop() {
 
   } else if (loopAction == LOOP_REASON______WIFI______ON) {
 
-    beep(); // confirmation beep                
+    beep(); // confirmation beep
 
-    BoxConn::on();
+    BoxConn::on(); // turn on, dont expire immediately
     displayFunc = [=]()->void{ BoxDisplay::renderQRCode(); };
 
   } else if (loopAction == LOOP_REASON______WIFI_____OFF) {
 
-    beep(); // confirmation beep                
+    beep(); // confirmation beep
 
     BoxConn::off();
     displayFunc = [=]()->void{ renderState(true); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE_STATE) {
 
-    beep(); // confirmation beep                
+    beep(); // confirmation beep
     BoxDisplay::toggleState();
     displayFunc = [=]()->void{  renderState(true); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE_THEME) {
 
-    beep(); // confirmation beep       
+    beep(); // confirmation beep
     BoxDisplay::toggleTheme();
-    displayFunc = [=]()->void{  renderState(true); };     
+    displayFunc = [=]()->void{  renderState(true); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE_AUDIO) {
 
     isAudio = !isAudio;
 
-    beep(); // confirmation beep       
+    beep(); // confirmation beep
     delay(200);
     if (isAudio) {
       beep(); // double beep to signal "ON"
-      // digitalWrite(NEOPIXEL_POWER, HIGH); // power the neopixel 
+      // digitalWrite(NEOPIXEL_POWER, HIGH); // power the neopixel
     } else {
       // digitalWrite(NEOPIXEL_POWER, LOW); // de-power the neopixel
     }
@@ -295,16 +308,19 @@ void loop() {
     displayFunc = nullptr; // [=]()->void{};
   }
 
-#if defined(NEOPIXEL_HELPER)  
+#if defined(NEOPIXEL_HELPER)
   blink(0x00FF00); // green - presleep
 #endif
-  
+
+  // whatever happens here, happens at least once / minute, may more often
+
   bool preventSleep = false;
   while (preventSleep || BoxConn::getMode() != WIFI_OFF) { // no sleep while wifi is active
 
-    // maintain mqtt connection
+    // whatever happens in this loop, happens about once per second
+
     if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
-      BoxMqtt::loop();
+      BoxMqtt::loop(); // maintain mqtt connection
     }
 
 #if defined(NEOPIXEL_HELPER)
@@ -322,7 +338,7 @@ void loop() {
     }
 
     // any of the above reasons has been set
-    int64_t microsecondsMeasureWait = min(microsecondsPerSecond, getMicrosecondsMeasurementWait()); 
+    int64_t microsecondsMeasureWait = min(microsecondsPerSecond, getMicrosecondsMeasurementWait());
     if (microsecondsMeasureWait <= 0) {
       loopReason = LOOP_REASON_______MEASUREMENT; // time to measure
       break;
@@ -333,7 +349,7 @@ void loop() {
     }
 
   }
-  
+
   detachInterrupt(buttonHander11.ipin);
   detachInterrupt(buttonHander12.ipin);
   detachInterrupt(buttonHander13.ipin);
@@ -355,11 +371,11 @@ void loop() {
     gpio_wakeup_enable(buttonHander13.gpin, buttonHander13.getWakeupLevel());
 
     esp_sleep_enable_gpio_wakeup();
-    esp_sleep_enable_timer_wakeup(microsecondsMeasureWait); 
+    esp_sleep_enable_timer_wakeup(microsecondsMeasureWait);
 
 #if defined(NEOPIXEL_HELPER)
     blink(0x0000FF); // blue - sleeping
-#endif    
+#endif
 
     esp_light_sleep_start();
 
@@ -375,5 +391,5 @@ void loop() {
   } else if (microsecondsMeasureWait > 0) {
     delayMicroseconds(microsecondsMeasureWait); // anything less or equal to a second is handled with a delay
   }
- 
+
 }
