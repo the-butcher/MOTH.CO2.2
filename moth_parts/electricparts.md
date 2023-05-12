@@ -1,13 +1,16 @@
 
 # Electric parts
 
-[Adafruit ESP32-S2 Feather with BME280](https://www.adafruit.com/product/5303) The microcontroller. Not an S3, but it has an BME-280 Sensor onboard, thus saving an extra oart to be fit into the housing. The processors power is far beyond necessary and the pressure sensor delivers extra precision to the CO₂ sensor.
+- <a href="#microcontroller">Adafruit ESP32-S2 Feather with BME280</a>
+- <a href="#co2sensor">Adafruit SCD-41 - True CO2 Temperature and Humidity Sensor - STEMMA QT / Qwiic</a>
+
+<a href="https://www.adafruit.com/product/5303" name="microcontroller">Adafruit ESP32-S2 Feather with BME280</a> The microcontroller. Not an S3, but it has an BME-280 Sensor onboard, thus saving an extra oart to be fit into the housing. The processors power is far beyond necessary and the pressure sensor delivers extra precision to the CO₂ sensor.
 
 <img src="https://cdn-shop.adafruit.com/970x728/5303-14.jpg" alt="Adafruit ESP32-S2 Feather with BME280" width="800">
 
 ---
 
-[Adafruit SCD-41 - True CO2 Temperature and Humidity Sensor - STEMMA QT / Qwiic](https://www.adafruit.com/product/5190) The actual CO₂ sensor. Easy to connect due STEMMA QT connection with the microcontroller.
+<a href="https://www.adafruit.com/product/5190" name="co2sensor">Adafruit SCD-41 - True CO2 Temperature and Humidity Sensor - STEMMA QT / Qwiic</a> The actual CO₂ sensor. Easy to connect due STEMMA QT connection with the microcontroller.
 
 <img src="https://cdn-shop.adafruit.com/970x728/5190-06.jpg" alt="Adafruit SCD-41 - True CO2 Temperature and Humidity Sensor - STEMMA QT / Qwiic" width="800">
 
