@@ -22,7 +22,7 @@ import FileUploadOutlined from '@mui/icons-material/FileUploadOutlined';
 const ApiUpload = (props: IApiProperties) => {
 
   const apiName = 'upload';
-  const apiDesc = 'upload a file';
+  const apiDesc = 'upload files to the device';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
   const [file, setFile] = useState<string>();

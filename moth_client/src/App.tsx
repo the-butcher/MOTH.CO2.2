@@ -112,14 +112,14 @@ const App = () => {
     clearTimeout(messageTimeout);
     messageTimeout = window.setTimeout(() => {
       iframe.src = iframeSrc;
-      status.current = 'disconnected';
+      status.current = 'connected';
       rebuildAndSetApiProps();
     }, 10000);
 
   }
 
   const panels = useRef<string[]>([panelParamValue]);
-  const status = useRef<EStatus>('disconnected');
+  const status = useRef<EStatus>('connected');
 
   const [apiProps, setApiProps] = useState<IApiProperties>({
     boxUrl: boxUrlParamValue,
@@ -191,7 +191,7 @@ const App = () => {
           <ApiSimple {...{
             ...apiProps,
             apiName: 'status',
-            apiDesc: 'get the latest measurement'
+            apiDesc: 'get details about device status'
           }} />
           <ApiFolder {...apiProps} />
           <ApiFile {...apiProps} />
@@ -207,12 +207,12 @@ const App = () => {
           <ApiSimple {...{
             ...apiProps,
             apiName: 'networks',
-            apiDesc: 'get a list of networks'
+            apiDesc: 'get a list of networks visible to the device'
           }} />
           <ApiSimple {...{
             ...apiProps,
             apiName: 'disconnect',
-            apiDesc: 'disconnect the box'
+            apiDesc: 'disconnect the device'
           }} />
         </CardContent>
       </Card>
@@ -225,7 +225,7 @@ const App = () => {
           <ApiSimple {...{
             ...apiProps,
             apiName: 'hibernate',
-            apiDesc: 'hibernate the box',
+            apiDesc: 'hibernate the device',
             confirm: {
               title: 'do you really want to hibernate?',
               content: 'this call will put the box into hibernation. no more measurements will be taken until the box is re-activated by pressing the reset button.'

@@ -15,7 +15,7 @@ import { IResponseProps } from './IResponseProps';
 const ApiDelete = (props: IApiProperties) => {
 
   const apiName = 'delete';
-  const apiDesc = 'delete a file from the box';
+  const apiDesc = 'delete files from the device';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
