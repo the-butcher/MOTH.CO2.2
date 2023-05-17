@@ -5,7 +5,8 @@ Parts used in the prototype build:
 
 - <a href="#microcontroller">Adafruit ESP32-S2 Feather with BME280</a>
 - <a href="#co2sensor">Adafruit SCD-41 - True CO2 Temperature and Humidity Sensor - STEMMA QT / Qwiic</a>
-- <a href="#cable">STEMMA QT / Qwiic JST SH 4-Pin Cable - 50mm Long</a>
+- <a href="#rtc">AAdafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic</a>
+- <a href="#cable">STEMMA QT / Qwiic JST SH 4-Pin Cable - 50mm Long x 2</a>
 - <a href="#display">Adafruit 2.9" Grayscale eInk / ePaper Display FeatherWing - 4 Level Grayscale</a>
 - <a href="#battery">3,7 V 3000mAh 18650 Lithium Li-Ion Battery Pack</a>
 - <a href="#buzzer">Buzzer</a>
@@ -17,7 +18,7 @@ The list contains references to where i got my parts from, if you get alterntive
 
 ---
 
-<a href="https://www.adafruit.com/product/5303" name="microcontroller">Adafruit ESP32-S2 Feather with BME280</a> The microcontroller. Not an S3, but it has an BME-280 Sensor onboard, thus saving an extra oart to be fit into the housing. The processors power is far beyond necessary and the pressure sensor delivers extra precision to the CO₂ sensor.
+<a href="https://www.adafruit.com/product/5303" name="microcontroller">Adafruit ESP32-S2 Feather with BME280</a> The microcontroller. Not an S3, but it has an BME-280 Sensor onboard, thus saving an extra part to be fit into the housing. The processors power is far beyond necessary and the pressure sensor delivers extra precision to the CO₂ sensor.
 
 <img src="https://cdn-shop.adafruit.com/970x728/5303-14.jpg" alt="Adafruit ESP32-S2 Feather with BME280" width="800">
 
@@ -29,7 +30,13 @@ The list contains references to where i got my parts from, if you get alterntive
 
 ---
 
-<a href="https://www.adafruit.com/product/4399" name="cable">STEMMA QT / Qwiic JST SH 4-Pin Cable - 50mm Long</a> Cable connecting microcontroller and CO₂ sensor.
+<a href="https://www.adafruit.com/product/5189" name="rtc">AAdafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic</a> Battery-backed real time clock (RTC)
+
+<img src="https://cdn-shop.adafruit.com/970x728/5189-00.jpg" alt="Adafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic" width="800">
+
+---
+
+<a href="https://www.adafruit.com/product/4399" name="cable">STEMMA QT / Qwiic JST SH 4-Pin Cable - 50mm Long</a> Cables connecting microcontroller, RTC and CO₂ sensor. 2 cables are needed.
 
 <img src="https://cdn-shop.adafruit.com/970x728/4399-00.jpg" alt="STEMMA QT / Qwiic JST SH 4-Pin Cable - 50mm Long" width="800">
 

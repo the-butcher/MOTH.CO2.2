@@ -23,11 +23,10 @@ Place the [Electric Assembly](electricassembly.md) on top of the acrylic glass o
 
 ---
 
-Add the battery and find a place to lead the cable to the batter plug on the microcontroller. Double- and triplecheck polarity of the battery before plugging it into the microcontroller. I added 2 little drops of glue under the battery to ease handling afterwards.
+Add the battery and find a place to lead the cable to the battery plug on the microcontroller. Double- and triplecheck polarity of the battery before plugging it into the microcontroller. I added 2 little drops of glue under the battery to ease handling afterwards.
 I had to file a little edge off the buzzer to make battery and buzzer fit nicely.
 
 <img src="../images/assembly03.png" alt= "battery" width="800">
-<img src="../images/assembly03_pic.png" alt= "battery" width="800">
 
 ---
 

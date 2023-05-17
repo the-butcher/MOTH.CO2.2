@@ -29,11 +29,11 @@ Again, you should be able to use the part as it is, but it will look better when
 
 ---
 
-### [Supports](supports.stl)
+### [Supports](supports2.stl)
 
-The supports serve to connect the microcontroller and the CO₂ sensor and also act as internal spacer.
+The supports serve to connect microcontroller, RTC and the CO₂ sensor and also act as flexible support for the CO₂ sensor to reduce mechanical load should the device be dropped.
 
-<img src="../images/supports.png" alt="upper housing" width="800">
+<img src="../images/supports2.png" alt="upper housing" width="800">
 
 ---
 
