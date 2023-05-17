@@ -218,6 +218,8 @@ void BoxDisplay::updateConfiguration() {
   // min elapsed time before a display state update
   BoxDisplay::microsecondsRenderStateInterval = max(MICROSECONDS_PER_MINUTE, displayUpdateMinutes * MICROSECONDS_PER_MINUTE);
 
+  // TODO :: set some flag that will trigger a state re-render from the main loop
+
 }
 
 bool BoxDisplay::isWarn(float value, Thresholds thresholds) {

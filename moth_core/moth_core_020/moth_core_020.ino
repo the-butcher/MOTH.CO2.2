@@ -91,6 +91,7 @@ void setup() {
   delay(2000);
 
   BoxFiles::begin();
+  BoxClock::begin();
   BoxDisplay::begin(); // needs BoxFiles to be ready because it will read config
 
   buttonHander11.begin();
@@ -98,7 +99,6 @@ void setup() {
   buttonHander13.begin();
   pinMode(GPIO_NUM_17, OUTPUT); // sound
 
-  BoxClock::begin();
   BoxPack::begin();
   BoxEncr::begin(); // needs BoxFiles to be ready because it will read config
   BoxConn::begin(); // needs BoxFiles and BoxEncr to be ready because it will read config containing passwords

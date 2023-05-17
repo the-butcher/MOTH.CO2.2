@@ -89,6 +89,22 @@ documentation (please do not use the documented version on the device, but a cle
   }
 }
 ```
+General timezone documentation can be found at:
+[timezones](https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv)
+
+Measurements are stored with local times.
+
+Timezones that have been tested to work are (but other will work too):
+
+|code|where|
+|---|---|
+|CET-1CEST,M3.5.0,M10.5.0/3|Vienna|
+|GMT0BST,M3.5.0/1,M10.5.0|London|
+|AST4ADT,M3.2.0,M11.1.0|Atlantic|
+|EST5EDT,M3.2.0,M11.1.0|New York|
+|CST6CDT,M3.2.0,M11.1.0|Chicago|
+|MST7MDT,M3.2.0,M11.1.0|Denver|
+|PST8PDT,M3.2.0,M11.1.0|Los Angeles|
 
 example:
 

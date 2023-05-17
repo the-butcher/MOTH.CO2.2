@@ -10,8 +10,8 @@
     "wLo": 19,
     "wHi": 25,
     "rHi": 30,
-	"off": 1.2,
-	"c2f": false
+    "off": 1.2,
+    "c2f": false
   },
   "hum": {
     "rLo": 25,
