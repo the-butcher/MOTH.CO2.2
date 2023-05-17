@@ -13,32 +13,40 @@
  * ################################################
  */
 int64_t timeUpdateCounter = 0;
-String timezone = "CET-1CEST,M3.5.0,M10.5.0/3"; // default CET/CEST, can be overridden in /config/disp.json -> "tzn"
+
+// https://sites.google.com/a/usapiens.com/opnode/time-zones
+// default CET/CEST, can be overridden in /config/disp.json -> "tzn"
+String timezone = "CET-1CEST,M3.5.0,M10.5.0/3"; 
 
 /**
  * ################################################
  * ## static class variabales                     
  * ################################################
  */
+RTC_PCF8523 BoxClock::baseClock;
 
 
 void BoxClock::begin() {
 
   // from examples -> ESP... -> SimpleTime.ino
-  // set notification call-back function 
-  // sntp_set_time_sync_notification_cb(BoxClock::handleTimeAvailable);
+  BoxClock::baseClock.begin();
 
   /**
    * NTP server address could be aquired via DHCP,
    *
    * NOTE: This call should be made BEFORE esp32 aquires IP address via DHCP,
    * otherwise SNTP option 42 would be rejected by default.
-   * NOTE: updateTime() function call if made AFTER DHCP-client run
+   * NOTE: updateFromNtp() function call if made AFTER DHCP-client run
    * will OVERRIDE aquired NTP server address
    */
   sntp_servermode_dhcp(1);    // (optional)
 
-  BoxClock::setTimezone(timezone);
+  // BoxClock::setTimezone(timezone);
+  // TODO set localtime from BoxClock
+
+  // set notification call-back function 
+  sntp_set_time_sync_notification_cb(BoxClock::handleUpdateFromNtp);
+
 
 }
 
@@ -56,23 +64,31 @@ bool BoxClock::isUpdateable() {
   return millis() > (timeUpdateCounter * MILLISECONDS_PER_HOUR);
 }
 
-void BoxClock::updateTime() {
+void BoxClock::updateFromNtp() {
   if (BoxClock::isUpdateable()) { // every MILLISECONDS_PER_HOUR milliseconds
     configTzTime(timezone.c_str(), "pool.ntp.org", "time.nist.gov");
     timeUpdateCounter++;
   }
 }
 
-// // Callback function (get's called when time adjusts via NTP)
-// void BoxClock::handleTimeAvailable(struct timeval *t) {
-//   Serial.print("got time adjustment from NTP");
-// }
+// Callback function (get's called when time adjusts via NTP)
+void BoxClock::handleUpdateFromNtp(struct timeval *t) {
 
-DateTime BoxClock::getDate() {
+  // localtime should already be set at that time
+
   struct tm timeinfo;
   getLocalTime(&timeinfo);
   DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-  return now;
+  BoxClock::baseClock.adjust(now);
+
+}
+
+DateTime BoxClock::getDate() {
+  return BoxClock::baseClock.now();
+  // struct tm timeinfo;
+  // getLocalTime(&timeinfo);
+  // DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  // return now;
 }
 
 String BoxClock::getDateTimeString(DateTime date) {

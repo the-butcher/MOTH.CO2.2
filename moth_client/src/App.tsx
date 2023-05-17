@@ -112,14 +112,14 @@ const App = () => {
     clearTimeout(messageTimeout);
     messageTimeout = window.setTimeout(() => {
       iframe.src = iframeSrc;
-      status.current = 'connected';
+      status.current = 'disconnected';
       rebuildAndSetApiProps();
     }, 10000);
 
   }
 
   const panels = useRef<string[]>([panelParamValue]);
-  const status = useRef<EStatus>('connected');
+  const status = useRef<EStatus>('disconnected');
 
   const [apiProps, setApiProps] = useState<IApiProperties>({
     boxUrl: boxUrlParamValue,

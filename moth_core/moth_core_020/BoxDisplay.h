@@ -27,7 +27,8 @@ class BoxDisplay {
   
   private:
     static ThinkInk_290_Grayscale4_T5_Clone baseDisplay;  
-    static void renderEnvironment();
+    static void renderHeader();
+    static void renderFooter();
     static String formatString(String value, char const* format);
     static String firstDigitOfFraction(float value);
     static int getTextColor(float value, Thresholds thresholds);

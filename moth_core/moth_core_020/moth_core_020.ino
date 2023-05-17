@@ -55,18 +55,19 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  * -- think about what could be subscribed by the device (i.e. calibration)
  *
  * -- validate
- *    -- csv file is written
- *    -- file response is working
- *    -- mqtt config is read
- *    -- encr is read
- *    -- display config is read
- *    -- folder listing is working
- *    -- upload is working
- *    -- timezone works and add examples to the readme
- *    -- time gets adjusted while permanently being online
- *    -- time gets adjusted hourly when offline
- *    -- mqtt gets published hourly when offline
- *    -- stale never shows minus values
+ *    ✓ preventSleep == false
+ *    ✓ csv file is written
+ *    ✓ file response is working
+ *    ✓ mqtt config was successfully read
+ *    ✓ encr was successfully read
+ *    ✓ display config was successfully read
+ *    ✓ folder listing is working
+ *    ✓ upload is working
+ *    ? timezone works and add examples to the readme
+ *    ✓ time gets adjusted while permanently being online
+ *    ✓ time gets adjusted hourly when offline
+ *    ? mqtt gets published hourly when offline
+ *    ? stale never shows minus values
  *
  */
 
@@ -169,10 +170,12 @@ void renderState(bool force) {
   if (force || (esp_timer_get_time() - microsecondsRenderState) >= BoxDisplay::microsecondsRenderStateInterval) {
 
     microsecondsRenderState = esp_timer_get_time() - microsecondsPerSecond * 10; // add some safety to be sure the first state gets rendered
-
+    
     bool autoConnect = BoxConn::getMode() == WIFI_OFF && BoxClock::isUpdateable();
     if (autoConnect) {
-      BoxConn::on(); // turn wifi on, and let it expire immediately, the station_connected event will take care of adjusting time
+      BoxConn::on(); // turn wifi on, the station_connected event will take care of adjusting time
+    } else {
+      BoxClock::updateFromNtp(); // will only update if enough time has passed
     }
 
     // it was either on in the first place or just forced to be on
@@ -312,9 +315,9 @@ void loop() {
   blink(0x00FF00); // green - presleep
 #endif
 
-  // whatever happens here, happens at least once / minute, may more often
+  // whatever happens here, happens at least once / minute, maybe more often
 
-  bool preventSleep = false;
+  bool preventSleep = false; // MUST be false in deployment
   while (preventSleep || BoxConn::getMode() != WIFI_OFF) { // no sleep while wifi is active
 
     // whatever happens in this loop, happens about once per second

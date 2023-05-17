@@ -306,7 +306,8 @@ void BoxDisplay::renderQRCode() {
     }
   }
 
-  renderEnvironment();
+  BoxDisplay::renderHeader();
+  BoxDisplay::renderFooter();
 
   BoxDisplay::flushBuffer();
 
@@ -318,10 +319,11 @@ void BoxDisplay::renderMothInfo(String info) {
 
   BoxDisplay::drawOuterBorders(EPD_LIGHT);
 
+  // skip header for clean screen
+  BoxDisplay::renderFooter();
+
   drawAntialiasedText20("moth", RECT_TOP, 8, 100, EPD_BLACK);
   drawAntialiasedText08(info, RECT_TOP, 110, 100, EPD_BLACK);
-
-  BoxDisplay::renderEnvironment();
 
   BoxDisplay::flushBuffer();
 
@@ -426,7 +428,8 @@ void BoxDisplay::renderTable() {
   BoxDisplay::drawAntialiasedText08(".", RECT_HUM, 72, 35, textColor);
   BoxDisplay::drawAntialiasedText08(String(humidityFrc), RECT_HUM, 82, 35, textColor);
 
-  BoxDisplay::renderEnvironment();
+  BoxDisplay::renderHeader();
+  BoxDisplay::renderFooter();
 
   BoxDisplay::flushBuffer();
 
@@ -456,10 +459,8 @@ void BoxDisplay::renderChart() {
 
   BoxDisplay::drawAntialiasedText08(label2, RECT_CO2, 56 - 10 * label2.length(), 24, EPD_BLACK);
   baseDisplay.drawFastHLine(1, 49, 296, EPD_LIGHT);
-  // baseDisplay.drawFastHLine(1, 50, 296, EPD_LIGHT);
   BoxDisplay::drawAntialiasedText08(label1, RECT_CO2, 56 - 10 * label1.length(), 52, EPD_BLACK);
   baseDisplay.drawFastHLine(1, 77, 296, EPD_LIGHT);
-  // baseDisplay.drawFastHLine(1, 78, 296, EPD_LIGHT);
   BoxDisplay::drawAntialiasedText08("0", RECT_CO2, 56 - 10, 81, EPD_BLACK);
 
   int minX;
@@ -477,11 +478,11 @@ void BoxDisplay::renderChart() {
 
     baseDisplay.drawFastVLine(minX, minY, dimY, EPD_BLACK);
     baseDisplay.drawFastVLine(minX + 1, minY, dimY, EPD_BLACK);
-    // baseDisplay.drawFastVLine(minX + 2, minY, dimY, EPD_BLACK);
-    
+     
   }
 
-  BoxDisplay::renderEnvironment();
+  BoxDisplay::renderHeader();
+  BoxDisplay::renderFooter();
 
   BoxDisplay::flushBuffer();
 
@@ -517,22 +518,12 @@ void BoxDisplay::drawAntialiasedText(String text, Rectangle rectangle, int xRel,
   baseDisplay.print(text);
 }
 
-void BoxDisplay::renderEnvironment() {
-
-  ValuesBat valuesBat = BoxPack::values;
+void BoxDisplay::renderHeader() {
 
   String networkMessage = "";
   if (BoxConn::getMode() != WIFI_OFF) {
     networkMessage = BoxConn::getAddress();
   }
-
-  BoxDisplay::drawAntialiasedText08(valuesBat.powered ? ">" : "<", RECT_BOT, 210, TEXT_OFFSET_Y, EPD_BLACK);
-
-  String cellPercentFormatted = formatString(String(valuesBat.percent, 1), FORMAT_CELL_PERCENT);
-  BoxDisplay::drawAntialiasedText08(cellPercentFormatted, RECT_BOT, 228, TEXT_OFFSET_Y, EPD_BLACK);
-
-  String timeFormatted = BoxClock::getTimeString(BoxClock::getDate());
-  BoxDisplay::drawAntialiasedText08(timeFormatted, RECT_BOT, 6, TEXT_OFFSET_Y, EPD_BLACK);
 
   BoxDisplay::drawAntialiasedText08(networkMessage, RECT_TOP, 6, TEXT_OFFSET_Y, EPD_BLACK);
 
@@ -548,6 +539,19 @@ void BoxDisplay::renderEnvironment() {
     BoxDisplay::drawAntialiasedText08(csvCountFormatted.c_str(), RECT_TOP, 288 - csvCountFormatted.length() * 10, TEXT_OFFSET_Y, EPD_BLACK);
   }
   
+}
+
+void BoxDisplay::renderFooter() {
+
+  ValuesBat valuesBat = BoxPack::values;
+
+  BoxDisplay::drawAntialiasedText08(valuesBat.powered ? ">" : "", RECT_BOT, 210, TEXT_OFFSET_Y, EPD_BLACK);
+
+  String cellPercentFormatted = formatString(String(valuesBat.percent, 1), FORMAT_CELL_PERCENT);
+  BoxDisplay::drawAntialiasedText08(cellPercentFormatted, RECT_BOT, 228, TEXT_OFFSET_Y, EPD_BLACK);
+
+  String timeFormatted = BoxClock::getTimeString(BoxClock::getDate());
+  BoxDisplay::drawAntialiasedText08(timeFormatted, RECT_BOT, 6, TEXT_OFFSET_Y, EPD_BLACK);
 
 }
 

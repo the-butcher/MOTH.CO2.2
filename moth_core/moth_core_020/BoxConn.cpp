@@ -504,7 +504,7 @@ void BoxConn::handleUpload(AsyncWebServerRequest *request, String filename, size
 }
 
 void BoxConn::handleStationConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-  BoxClock::updateTime(); // give the clock an opportunity to update
+  BoxClock::updateFromNtp(); // give the clock an opportunity to update
 }
 
 bool BoxConn::checkNumeric(String value) {
