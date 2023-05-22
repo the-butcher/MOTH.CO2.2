@@ -16,9 +16,9 @@
 #include <ArduinoJson.h>
 #include "File32Response.h"
 #include "DataResponse.h"
-#include <SdFat.h>
 #include "AESLib.h"
 #include "StringPrint.h"
+#include <SdFat.h>
 
 /**
  * ################################################
@@ -27,7 +27,6 @@
  */
 const char *CODE = "code";
 const String JSON_KEY___MINUTES = "min";
-const String JSON_KEY__REDIRECT = "rdr";
 const String JSON_KEY__NETWORKS = "ntw";
 const String JSON_KEY_______KEY = "key";
 const String JSON_KEY_______PWD = "pwd";
@@ -39,7 +38,6 @@ const String JSON_KEY_______PWD = "pwd";
  */
 AsyncWebServer server(80);
 
-String wifiRedirectUrl = "http://moth.the-butchers.at/?boxUrl=";
 int64_t wifiTimeoutMillis;
 int64_t wifiExpiryMillis = 0;
 wifi_mode_t mode = WIFI_OFF;
@@ -66,7 +64,6 @@ void BoxConn::updateConfiguration() {
   BoxConn::configStatus = CONFIG_STATUS_PENDING;
 
   int _wifiTimeoutMinutes = wifiTimeoutMillis / 60000;
-  String _wifiRedirectUrl = wifiRedirectUrl;
 
   if (BoxFiles::existsFile32(BoxConn::CONFIG_PATH)) {
 
@@ -80,9 +77,8 @@ void BoxConn::updateConfiguration() {
     StaticJsonBuffer<512> jsonBuffer;
     JsonObject &root = jsonBuffer.parseObject(wifiFile);
 
-    // minutes, redirect
+    // timeout minutes
     _wifiTimeoutMinutes = root[JSON_KEY___MINUTES] | _wifiTimeoutMinutes;
-    _wifiRedirectUrl = root[JSON_KEY__REDIRECT] | _wifiRedirectUrl;
 
     int configuredNetworkIndex = 0;
     int networkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
@@ -109,7 +105,6 @@ void BoxConn::updateConfiguration() {
     BoxConn::configStatus = CONFIG_STATUS_MISSING;
   }
 
-  wifiRedirectUrl = _wifiRedirectUrl;
   wifiTimeoutMillis = 60000 * _wifiTimeoutMinutes;
 }
 
@@ -143,26 +138,11 @@ void BoxConn::begin() {
   WiFi.mode(WIFI_STA);
   mode = WIFI_STA;
 
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
 
-    wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
-    if (wifiRedirectUrl != "") {
-      request->redirect(wifiRedirectUrl + BoxConn::getAddress());
-    } else {
-      request->send(200, "text/plain", "empty root document");
-    }
-
-  });
-  server.on("/iframe", HTTP_GET, [](AsyncWebServerRequest *request) {
-
-    wifiExpiryMillis = millis() + wifiTimeoutMillis;
-
-    File32Response *response = new File32Response("/server/iframe.html", "text/html");
-    request->send(response);
-
-  });
-  server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+  // });
+  server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -195,7 +175,7 @@ void BoxConn::begin() {
     request->send(response);
 
   });  
-  server.on("/latest", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/latest", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -215,15 +195,16 @@ void BoxConn::begin() {
 
     root.printTo(*response);
     request->send(response);
+
   });
-  server.on("/data", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     DataResponse *response = new DataResponse();
     request->send(response);
   });
-  server.on("/folder", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/folder", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -249,21 +230,27 @@ void BoxConn::begin() {
 
         char nameBuf[16];
         file.getName(nameBuf, 16);
+        String name = String(nameBuf);
 
-        String output;
-        StringPrint stringPrint((String &)output);
-        file.printModifyDateTime(&stringPrint);
+        if (!BoxEncr::CONFIG_PATH.endsWith(name)) {
 
-        if (file.isDirectory()) {
-          JsonObject &itemJo = foldersJa.createNestedObject();
-          itemJo["folder"] = String(nameBuf);
-          itemJo["last"] = output;
-        } else {
-          JsonObject &itemJo = filesJa.createNestedObject();
-          itemJo["size"] = file.size();
-          itemJo["file"] = String(nameBuf);
-          itemJo["last"] = output;
+          String output;
+          StringPrint stringPrint((String &)output);
+          file.printModifyDateTime(&stringPrint);
+
+          if (file.isDirectory()) {
+            JsonObject &itemJo = foldersJa.createNestedObject();
+            itemJo["folder"] = name;
+            itemJo["last"] = output;
+          } else {
+            JsonObject &itemJo = filesJa.createNestedObject();
+            itemJo["size"] = file.size();
+            itemJo["file"] = name;
+            itemJo["last"] = output;
+          }
+
         }
+
       }
       file.close();
     }
@@ -273,7 +260,7 @@ void BoxConn::begin() {
     request->send(response);
 
   });
-  server.on("/file", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/file", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -282,7 +269,7 @@ void BoxConn::begin() {
     if (request->hasParam("file")) {
 
       dataFileName = "/" + request->getParam("file")->value();
-      if (BoxFiles::existsFile32(dataFileName)) {
+      if (dataFileName != BoxEncr::CONFIG_PATH && BoxFiles::existsFile32(dataFileName)) { // hide encr from api
         File32Response *response = new File32Response(dataFileName, "text/csv");
         request->send(response);
       } else {
@@ -300,7 +287,7 @@ void BoxConn::begin() {
       AsyncResponseStream *response = request->beginResponseStream("application/json");
       DynamicJsonBuffer jsonBuffer;
       JsonObject &root = jsonBuffer.createObject();
-      root[CODE] = 400;  // file not found
+      root[CODE] = 400;  // bad request
       root["file"] = dataFileName;
       root["desc"] = "file required";
       root.printTo(*response);
@@ -308,7 +295,31 @@ void BoxConn::begin() {
     }
 
   });
-  server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/api/encrypt", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+    wifiExpiryMillis = millis() + wifiTimeoutMillis;
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+
+    if (request->hasParam("value")) {
+
+      String encrypted = BoxEncr::encrypt(request->getParam("value")->value());
+      root[CODE] = 200;
+      root["encr"] = encrypted;
+
+    } else {
+      root[CODE] = 400;  // bad request
+      root["desc"] = "value required";
+    }
+
+    root.printTo(*response);
+    request->send(response);
+
+  });  
+  server.on("/api/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
 
       wifiExpiryMillis = millis() + wifiTimeoutMillis;
       request->send(200);
@@ -339,8 +350,9 @@ void BoxConn::begin() {
 
     root.printTo(*response);
     request->send(response);
+
   });
-  server.on("/networks", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/networks", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -367,8 +379,9 @@ void BoxConn::begin() {
 
     root.printTo(*response);
     request->send(response);
+
   });
-  server.on("/disconnect", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/disconnect", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + 1000;  // have a short wifi expiry
 
@@ -382,7 +395,7 @@ void BoxConn::begin() {
     root.printTo(*response);
     request->send(response);
   });
-  server.on("/calibrate", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/calibrate", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -415,7 +428,7 @@ void BoxConn::begin() {
     root.printTo(*response);
     request->send(response);
   });
-  server.on("/hibernate", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/hibernate", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -431,7 +444,7 @@ void BoxConn::begin() {
     root.printTo(*response);
     request->send(response);
   });
-  server.on("/co2_reset", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/co2_reset", HTTP_GET, [](AsyncWebServerRequest *request) {
     
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -448,11 +461,41 @@ void BoxConn::begin() {
     request->send(response);
   });
   server.onNotFound([](AsyncWebServerRequest *request) {
-    if (request->method() == HTTP_OPTIONS) {
-      request->send(200);
+
+    Serial.println(request->url());
+    String url = request->url();
+    if (BoxFiles::existsFile32(url)) {
+
+      wifiExpiryMillis = millis() + wifiTimeoutMillis;
+
+      String fileType = url.substring(url.indexOf("."));
+      Serial.println(fileType);
+
+      if (fileType == ".html") {
+        fileType = "text/html";
+      } else if (fileType == ".js") {
+        fileType = "application/javascript";
+      } else if (fileType == ".css") {
+        fileType = "text/css";
+      } else if (fileType == ".ttf") {
+        fileType = "font/ttf";
+      }
+      
+      File32Response *response = new File32Response(url, fileType);
+      request->send(response);
+
     } else {
-      request->send(404);
+
+      if (request->method() == HTTP_OPTIONS) {
+        request->send(200);
+      } else {
+        request->send(404);
+      }
+
     }
+
+
+
   });
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
@@ -475,9 +518,9 @@ void BoxConn::handleUpload(AsyncWebServerRequest *request, String filename, size
 
     String dataFileName = "/" + request->getParam("file", true)->value();
 
-    if (BoxFiles::existsFile32) {
-      BoxFiles::removeFile32(dataFileName);
-    }
+    // if (BoxFiles::existsFile32) {
+    //   BoxFiles::removeFile32(dataFileName);
+    // }
 
     File32 targetFile;
     targetFile.open(dataFileName.c_str(), O_RDWR | O_CREAT | O_AT_END);
@@ -607,10 +650,9 @@ void BoxConn::off() {
 
 String BoxConn::getRootUrl() {
   if (mode == WIFI_AP) {
-    return "http://" + WiFi.softAPIP().toString() + "/login";
+    return "http://" + WiFi.softAPIP().toString() + "/server/index.html";
   } else if (mode == WIFI_STA) {
-    // in the network - provide
-    return wifiRedirectUrl + WiFi.localIP().toString();
+    return "http://" + WiFi.localIP().toString() + "/server/index.html";
   } else {
     return "";
   }

@@ -17,7 +17,7 @@ class BoxClock {
     static DateTime getDate();
     static bool isUpdateable();
     static void updateFromNtp();
-    static void updateReverse();
+    // static void updateReverse();
     static String getTimeString(DateTime date);
     static String getDateTimeString(DateTime date);
     static String getDataFileName(DateTime date);

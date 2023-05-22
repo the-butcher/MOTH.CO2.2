@@ -317,7 +317,7 @@ void loop() {
 
   // whatever happens here, happens at least once / minute, maybe more often
 
-  bool preventSleep = false; // MUST be false in deployment
+  bool preventSleep = true; // MUST be false in deployment, or battery life will be much shorter
   while (preventSleep || BoxConn::getMode() != WIFI_OFF) { // no sleep while wifi is active
 
     // whatever happens in this loop, happens about once per second

@@ -1,6 +1,5 @@
 {
   "min": 5,
-  "rdr": "http://moth.the-butchers.at/?boxUrl=",
   "ntw": [
     {
       "key": "your-wifi-ssid",

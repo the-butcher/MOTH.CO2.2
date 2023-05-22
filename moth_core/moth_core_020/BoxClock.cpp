@@ -58,7 +58,7 @@ void BoxClock::setTimezone(String timezone1) {
   timezone = timezone1;
   setenv("TZ", timezone.c_str(), 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
   tzset(); // when the sketch is uploaded, the ESP's time is kept, but the timezone is lost, this is to restore and have valid time, i.e. after a reset
-  BoxClock::updateReverse();
+  // BoxClock::updateReverse();
 }
 
 bool BoxClock::isUpdateable() {
@@ -72,16 +72,22 @@ void BoxClock::updateFromNtp() {
   }
 }
 
-void BoxClock::updateReverse() {
-  struct tm timeinfo;
-  getLocalTime(&timeinfo);
-  DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-  BoxClock::baseClock.adjust(now);
-}
+// void BoxClock::updateReverse() {
+//   struct tm timeinfo;
+//   getLocalTime(&timeinfo);
+//   DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+//   BoxClock::baseClock.adjust(now);
+// }
 
 // Callback function (get's called when time adjusts via NTP)
 void BoxClock::handleUpdateFromNtp(struct timeval *t) {
-  BoxClock::updateReverse(); // localtime should already be set at that time
+  struct tm timeinfo;
+  getLocalTime(&timeinfo);
+  DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  BoxClock::baseClock.adjust(now);  
+  // BoxClock::updateReverse(); // localtime should already be set at that time
+  // DateTime now(t->tv_sec + 60 * 60 * 2);
+  // BoxClock::baseClock.adjust(now);
 }
 
 DateTime BoxClock::getDate() {
