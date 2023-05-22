@@ -23,24 +23,16 @@ const ApiUpload = (props: IApiProperties) => {
 
   const apiName = 'upload';
   const apiDesc = 'upload files to the device';
+  const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
   const [file, setFile] = useState<string>();
   const [data, setData] = useState<string>();
-  const apiHref = `http://${boxUrl}/${apiName}`;
+  const apiHref = `${boxUrl}/${apiName}`;
 
   const [responseProps, setResponseProps] = useState<IResponseProps>();
   const issueApiCall = () => {
     (document.getElementById('uploadform') as HTMLFormElement).submit();
-    // handleApiCall({
-    //   href: `http://${boxUrl}`,
-    //   call: apiName,
-    //   meth: 'POST',
-    //   qstr: {
-    //     file,
-    //     data
-    //   }
-    // });
   }
 
   useEffect(() => {
@@ -51,7 +43,7 @@ const ApiUpload = (props: IApiProperties) => {
       setResponseProps({
         time: Date.now(),
         href: apiHref,
-        type: 'json',
+        type: apiType,
         http: 'POST',
         data: props[apiName]
       });

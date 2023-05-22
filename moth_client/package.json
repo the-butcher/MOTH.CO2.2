@@ -2,6 +2,10 @@
   "name": "co2-box-configuration-page",
   "version": "1.0.0",
   "main": "src/index.tsx",
+  "exports": {
+    "./server": "./server.tsx",
+    "./client": "./client.tsx"
+  },
   "homepage": ".",
   "private": true,
   "config-overrides-path": "config-overrides.cjs",
@@ -47,7 +51,8 @@
     "prettier": "prettier --write \"**/*.ts\" \"**/*.json\" \"**/*.tsx\" \"**/*.js\" \"**/*.css\" \"**/*.scss\"",
     "sonar": "react-scripts test --coverage --watchAll false --testResultsProcessor jest-sonar-reporter",
     "start": "react-app-rewired start",
-    "test": "react-scripts test --clearCache && react-scripts test"
+    "test": "react-scripts test --clearCache && react-scripts test",
+    "eject": "react-scripts eject"
   },
   "browserslist": {
     "production": [

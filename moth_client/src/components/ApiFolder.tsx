@@ -16,6 +16,7 @@ const ApiFolder = (props: IApiProperties) => {
 
   const apiName = 'folder';
   const apiDesc = 'list the contents of a folder on the device';
+  const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
@@ -24,9 +25,10 @@ const ApiFolder = (props: IApiProperties) => {
 
   const issueApiCall = () => {
     handleApiCall({
-      href: `http://${boxUrl}`,
+      href: boxUrl,
       call: apiName,
       meth: 'GET',
+      type: apiType,
       qstr: folder && folder !== "" ? { folder } : null
     });
   };
@@ -36,7 +38,7 @@ const ApiFolder = (props: IApiProperties) => {
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
     if (props[apiName]) {
 
-      let href = `http://${boxUrl}/${apiName}`;
+      let href = `${boxUrl}/${apiName}`;
       if (folder && folder !== "") {
         href += `?folder${folder}`
       }
@@ -44,7 +46,7 @@ const ApiFolder = (props: IApiProperties) => {
       setResponseProps({
         time: Date.now(),
         href,
-        type: 'json',
+        type: apiType,
         http: 'GET',
         data: props[apiName]
       });

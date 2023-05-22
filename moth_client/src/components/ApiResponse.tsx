@@ -12,7 +12,6 @@ const ApiResponse = (props: IResponseProps) => {
 
     const { time, href, http, type, data } = props;
 
-    console.log('data', data);
     const content = type == 'json' ? JSON.stringify(JSON.parse(data), null, 2) : data;
 
     useEffect(() => {

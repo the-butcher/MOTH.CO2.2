@@ -1,6 +1,7 @@
 export interface IApiCall {
     href: string;
     call: string;
-    meth: 'GET' | 'POST';
+    meth: 'POST' | 'GET';
+    type: 'json' | 'csv';
     qstr?: {}
 }

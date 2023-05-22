@@ -20,6 +20,7 @@ const ApiCalibrate = (props: IApiProperties) => {
 
   const apiName = 'calibrate';
   const apiDesc = 'calibrate the CO₂ sensor to a given reference value';
+  const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
@@ -30,9 +31,10 @@ const ApiCalibrate = (props: IApiProperties) => {
 
   const issueApiCall = () => {
     handleApiCall({
-      href: `http://${boxUrl}`,
+      href: boxUrl,
       call: apiName,
       meth: 'GET',
+      type: apiType,
       qstr: {
         ref
       }
@@ -50,8 +52,8 @@ const ApiCalibrate = (props: IApiProperties) => {
 
       setResponseProps({
         time: Date.now(),
-        href: `http://${boxUrl}/${apiName}?ref=${ref}`,
-        type: 'json',
+        href: `${boxUrl}/${apiName}?ref=${ref}`,
+        type: apiType,
         http: 'GET',
         data: props[apiName]
       });

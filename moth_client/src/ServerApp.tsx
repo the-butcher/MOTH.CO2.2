@@ -13,6 +13,7 @@ import { EStatus, IApiProperties } from './components/IApiProperties';
 import ApiDelete from './components/ApiDelete';
 import ApiData from './components/ApiData';
 import ApiFolder from './components/ApiFolder';
+import ApiEncrypt from './components/ApiEncrypt';
 
 const darkTheme = createTheme({
   typography: {
@@ -67,10 +68,14 @@ const darkTheme = createTheme({
   }
 });
 
-const App = () => {
+const ServerApp = () => {
 
   const urlParams = new URLSearchParams(window.location.search);
-  const boxUrlParamValue = urlParams.get("boxUrl");
+  // const boxUrlParamValue = `http://${urlParams.get("boxUrl")}/api`; // when not running directly from device
+  let boxUrlParamValue = `${window.location.origin}/api`; // ${window.location.pathname}`; // when running directly from device
+  // if (boxUrlParamValue.endsWith('/')) {
+  //   boxUrlParamValue = boxUrlParamValue.substring(0, boxUrlParamValue.length - 1);
+  // }
   const panelParamValue = urlParams.get("panel");
   let messageTimeout: number = -1;
 
@@ -131,13 +136,14 @@ const App = () => {
 
   useEffect(() => {
 
-    console.debug('✨ building app component');
+    console.debug('✨ building app component', window.location);
 
     window.setTimeout(() => {
       document.getElementById(panelParamValue)?.scrollIntoView({ behavior: "smooth" });
     }, 1000);
 
     window.addEventListener('message', ({ data }) => {
+
       if (data.call) {
         window.clearTimeout(messageTimeout);
         const _apiProps: IApiProperties = {
@@ -155,11 +161,13 @@ const App = () => {
         status.current = 'connected';
         rebuildAndSetApiProps();
       }
+
     });
 
   }, []);
 
-  const iframeSrc = `http://${boxUrlParamValue}/iframe`; // 'http://localhost:3000/iframe.html';
+  // const iframeSrc = `http://${boxUrlParamValue}/iframe`; //when not running directly from device
+  const iframeSrc = 'iframe.html'; //when running directly from device
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -221,6 +229,7 @@ const App = () => {
           <Typography gutterBottom variant="subtitle1" component="div">
             admin
           </Typography>
+          <ApiEncrypt {...apiProps} />
           <ApiCalibrate {...apiProps} />
           <ApiSimple {...{
             ...apiProps,
@@ -248,4 +257,4 @@ const App = () => {
 
 };
 
-export default App;
+export default ServerApp;

@@ -16,6 +16,7 @@ const ApiDelete = (props: IApiProperties) => {
 
   const apiName = 'delete';
   const apiDesc = 'delete files from the device';
+  const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
@@ -24,9 +25,10 @@ const ApiDelete = (props: IApiProperties) => {
 
   const issueApiCall = () => {
     handleApiCall({
-      href: `http://${boxUrl}`,
+      href: boxUrl,
       call: apiName,
       meth: 'GET',
+      type: apiType,
       qstr: {
         file
       }
@@ -44,8 +46,8 @@ const ApiDelete = (props: IApiProperties) => {
 
       setResponseProps({
         time: Date.now(),
-        href: `http://${boxUrl}/${apiName}?file=${file}`,
-        type: 'json',
+        href: `${boxUrl}/${apiName}?file=${file}`,
+        type: apiType,
         http: 'GET',
         data: props[apiName]
       });

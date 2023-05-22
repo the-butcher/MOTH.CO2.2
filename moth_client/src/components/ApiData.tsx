@@ -16,6 +16,7 @@ const ApiData = (props: IApiProperties) => {
 
   const apiName = 'data';
   const apiDesc = 'get the last hour of csv data';
+  const apiType = 'csv';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
@@ -23,9 +24,10 @@ const ApiData = (props: IApiProperties) => {
 
   const issueApiCall = () => {
     handleApiCall({
-      href: `http://${boxUrl}`,
+      href: boxUrl,
       call: apiName,
-      meth: 'GET'
+      meth: 'GET',
+      type: apiType
     });
   };
 
@@ -35,8 +37,8 @@ const ApiData = (props: IApiProperties) => {
     if (props[apiName]) {
       setResponseProps({
         time: Date.now(),
-        href: `http://${boxUrl}/${apiName}`,
-        type: 'csv',
+        href: `${boxUrl}/${apiName}`,
+        type: apiType,
         http: 'GET',
         data: props[apiName]
       });

@@ -12,15 +12,15 @@ import { IApiProperties } from './IApiProperties';
 import { IResponseProps } from './IResponseProps';
 
 
-const ApiFile = (props: IApiProperties) => {
+const ApiEncrypt = (props: IApiProperties) => {
 
-  const apiName = 'file';
-  const apiDesc = 'get the contents of a file on the device';
-  const apiType = 'csv';
+  const apiName = 'encrypt';
+  const apiDesc = 'encrypt a string value';
+  const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
-  const [file, setFile] = useState<string>();
+  const [value, setValue] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
 
   const issueApiCall = () => {
@@ -29,8 +29,14 @@ const ApiFile = (props: IApiProperties) => {
       call: apiName,
       meth: 'GET',
       type: apiType,
-      qstr: file && file !== "" ? { file } : null
+      qstr: {
+        value: value
+      }
     });
+  }
+
+  const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(event.target.value);
   };
 
   useEffect(() => {
@@ -38,26 +44,16 @@ const ApiFile = (props: IApiProperties) => {
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
     if (props[apiName]) {
 
-      let href = `${boxUrl}/${apiName}`;
-      if (file && file !== "") {
-        href += `?file${file}`
-      }
-
       setResponseProps({
         time: Date.now(),
-        href,
+        href: `${boxUrl}/${apiName}?value=${value}`,
         type: apiType,
         http: 'GET',
         data: props[apiName]
       });
-
     }
 
   }, [status, props[apiName]]);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFile(event.target.value);
-  };
 
   return (
     <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
@@ -72,11 +68,11 @@ const ApiFile = (props: IApiProperties) => {
           <Stack>
             <TextField
               disabled={status == 'disconnected'}
-              label="file"
+              label="value"
               id="outlined-start-adornment"
               size='small'
-              onChange={handleFileChange}
-              helperText="optional file name. specifiy to get the content of a specific file. leave empty to get most recent data"
+              onChange={handleValueChange}
+              required
             />
             <Button disabled={status == 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
@@ -91,4 +87,4 @@ const ApiFile = (props: IApiProperties) => {
   );
 }
 
-export default ApiFile;
+export default ApiEncrypt;

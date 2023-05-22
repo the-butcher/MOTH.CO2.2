@@ -20,8 +20,10 @@ const ApiSimple = (props: IApiSimpleProperties) => {
 
   const { apiName, apiDesc, boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
   const [responseProps, setResponseProps] = useState<IResponseProps>();
+  const apiType = 'json';
 
   const confirmOrCall = () => {
+    console.log('confirmOrCall');
     if (props.confirm) {
       handleClickOpen();
     } else {
@@ -31,9 +33,10 @@ const ApiSimple = (props: IApiSimpleProperties) => {
 
   const issueApiCall = () => {
     handleApiCall({
-      href: `http://${boxUrl}`,
+      href: boxUrl,
       call: apiName,
-      meth: 'GET'
+      meth: 'GET',
+      type: apiType
     });
   };
 
@@ -43,8 +46,8 @@ const ApiSimple = (props: IApiSimpleProperties) => {
     if (props[apiName]) {
       setResponseProps({
         time: Date.now(),
-        href: `http://${boxUrl}/${apiName}`,
-        type: 'json',
+        href: `${boxUrl}/${apiName}`,
+        type: apiType,
         http: 'GET',
         data: props[apiName]
       });
