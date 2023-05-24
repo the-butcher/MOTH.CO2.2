@@ -15,15 +15,7 @@
 #define SRAM_CS -1 
 #define EPD_RESET 8 // A5 -> has been bridged to the reset pin 
 
-typedef enum {
-  DISPLAY_STATE_TABLE,
-  DISPLAY_STATE_CHART
-} display_state_t;
 
-typedef enum {
-  DISPLAY_THEME_LIGHT,
-  DISPLAY_THEME__DARK
-} display_theme_t;
 
 /**
  * ################################################
@@ -90,6 +82,7 @@ int TEXT_OFFSET_Y = 16;
  */
 display_state_t displayState = DISPLAY_STATE_TABLE;
 display_theme_t displayTheme = DISPLAY_THEME_LIGHT;
+display_value_t displayValue = DISPLAY_VALUE___CO2;
 
 int textColor;
 int fillColor;
@@ -365,6 +358,10 @@ void BoxDisplay::renderState() {
   }
 }
 
+float BoxDisplay::celsiusToFahrenheit(float celsius) {
+  return celsius * 9.0 / 5.0 + 32;
+}
+
 void BoxDisplay::renderTable() {  
 
   Measurement measurement = Measurements::getLatestMeasurement();
@@ -402,7 +399,7 @@ void BoxDisplay::renderTable() {
   textColor = getTextColor(temperature, thresholdsTemperature);
   fillColor = getFillColor(temperature, thresholdsTemperature);
   if (c2f) {
-    temperature = temperature * 9.0 / 5.0 + 32;
+    temperature = BoxDisplay::celsiusToFahrenheit(temperature);
   }  
   int temperature10 = round(temperature * 10.0);
   int temperatureFix = floor(temperature10 / 10.0);
@@ -439,43 +436,78 @@ void BoxDisplay::renderTable() {
 
 void BoxDisplay::renderChart() {
 
+  // DISPLAY_VALUE___CO2,
+  // DISPLAY_VALUE___DEG,
+  // DISPLAY_VALUE___HUM,
+  // DISPLAY_VALUE___HPA  
+
   BoxDisplay::clearBuffer();
-
   BoxDisplay::drawOuterBorders(EPD_LIGHT);
-
-  int maxCo2 = 1500;
 
   int measurementCount = min(57, Measurements::memBufferIndx);
   Measurement measuremnt;
-  for (int i = 0; i < measurementCount; i++) {
-    measuremnt = Measurements::getOffsetMeasurement(i);
-    if (measuremnt.valuesCo2.co2 > 1500) {
-      maxCo2 = 3000;
-    } else if (measuremnt.valuesCo2.co2 > 3000) {
-      maxCo2 = 4500;
+
+  int minValue = 0;
+  int maxValue = 1500;
+  if (displayValue == DISPLAY_VALUE___CO2) {
+    for (int i = 0; i < measurementCount; i++) {
+      measuremnt = Measurements::getOffsetMeasurement(i);
+      if (measuremnt.valuesCo2.co2 > 1500) {
+        maxValue = 3000;
+      } else if (measuremnt.valuesCo2.co2 > 3000) {
+        maxValue = 4500;
+      }
     }
+  } else if (displayValue == DISPLAY_VALUE___DEG) {
+    if (c2f) {
+      minValue = 60;
+      maxValue = 120;
+    } else {
+      minValue = 10;
+      maxValue = 40;
+    }
+  } else if (displayValue == DISPLAY_VALUE___HUM) {
+    minValue = 20;
+    maxValue = 80;
+  } else if (displayValue == DISPLAY_VALUE___HPA) {
+    minValue = 900;
+    maxValue = 1050;
   }
 
-  String label2 = String(maxCo2 * 2 / 3);
-  String label1 = String(maxCo2 / 3);
+  String label2 = String(minValue + (maxValue - minValue) * 2 / 3);
+  String label1 = String(minValue + (maxValue - minValue) / 3);
+  String label0 = String(minValue);
 
   BoxDisplay::drawAntialiasedText08(label2, RECT_CO2, 56 - 10 * label2.length(), 24, EPD_BLACK);
   baseDisplay.drawFastHLine(1, 49, 296, EPD_LIGHT);
   BoxDisplay::drawAntialiasedText08(label1, RECT_CO2, 56 - 10 * label1.length(), 52, EPD_BLACK);
   baseDisplay.drawFastHLine(1, 77, 296, EPD_LIGHT);
-  BoxDisplay::drawAntialiasedText08("0", RECT_CO2, 56 - 10, 81, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText08(label0, RECT_CO2, 56 - 10 * label0.length(), 80, EPD_BLACK);
 
   int minX;
   int minY;
   int maxY = 103;
   int dimY;
   int limY = 78;
+  int curValue;
+
+
   for (int i = 0; i < measurementCount; i++) {
 
     measuremnt = Measurements::getOffsetMeasurement(i);
 
+    if (displayValue == DISPLAY_VALUE___CO2) {
+      curValue = measuremnt.valuesCo2.co2;
+    } else if (displayValue == DISPLAY_VALUE___DEG) {
+      curValue = measuremnt.valuesCo2.temperature;
+    } else if (displayValue == DISPLAY_VALUE___HUM) {
+      curValue = measuremnt.valuesCo2.humidity;
+    } else if (displayValue == DISPLAY_VALUE___HPA) {
+      curValue = measuremnt.valuesBme.pressure / 100;
+    }    
+
     minX = 290 - i * 4; // 290 is the left border of the right-most bar
-    dimY = min(limY, (int)round(measuremnt.valuesCo2.co2 * limY / maxCo2));
+    dimY = min(limY, (int)round((curValue - minValue) * limY / (maxValue - minValue)));
     minY = maxY - dimY;
 
     baseDisplay.drawFastVLine(minX, minY, dimY, EPD_BLACK);
@@ -518,28 +550,45 @@ void BoxDisplay::drawAntialiasedText(String text, Rectangle rectangle, int xRel,
   baseDisplay.setFont(fontB);
   baseDisplay.setTextColor(color);
   baseDisplay.print(text);
+  
 }
 
 void BoxDisplay::renderHeader() {
 
-  String networkMessage = "";
   if (BoxConn::getMode() != WIFI_OFF) {
-    networkMessage = BoxConn::getAddress();
+    BoxDisplay::drawAntialiasedText08(BoxConn::getAddress(), RECT_TOP, 6, TEXT_OFFSET_Y, EPD_BLACK);
+  }
+  
+
+  if (displayState == DISPLAY_STATE_TABLE) {
+
+    String csvCountFormatted = String(Measurements::getCsvBufferIndex());
+    int publishableCount = BoxMqtt::isConfiguredToBeActive() ? Measurements::getPublishableCount() : 0;
+    if (publishableCount > 0) {
+      String mqttCountFormatted = String(Measurements::getPublishableCount());
+      int pendingDataSize = csvCountFormatted.length() + mqttCountFormatted.length() + 1; // total string length
+      char pendingDataBuf[csvCountFormatted.length() + mqttCountFormatted.length() + 1];
+      sprintf(pendingDataBuf, "%s|%s", csvCountFormatted, mqttCountFormatted);
+      BoxDisplay::drawAntialiasedText08(pendingDataBuf, RECT_TOP, 288 - pendingDataSize * 10, TEXT_OFFSET_Y, EPD_BLACK);
+    } else {
+      BoxDisplay::drawAntialiasedText08(csvCountFormatted.c_str(), RECT_TOP, 288 - csvCountFormatted.length() * 10, TEXT_OFFSET_Y, EPD_BLACK);
+    }
+
+  } else { // chart
+
+    if (displayValue == DISPLAY_VALUE___CO2) {
+      BoxDisplay::drawAntialiasedText08("ppm", RECT_TOP, 288 - 30, TEXT_OFFSET_Y, textColor);
+    } else if (displayValue == DISPLAY_VALUE___DEG) {
+      BoxDisplay::drawAntialiasedText08(c2f ? "F" : "C", RECT_TOP, 288 - 10, TEXT_OFFSET_Y, textColor);
+      baseDisplay.drawCircle(288 - 13, RECT_TOP.ymin + 7, 2, textColor);
+    } else if (displayValue == DISPLAY_VALUE___HUM) {
+      BoxDisplay::drawAntialiasedText08("%", RECT_TOP, 288 - 10, TEXT_OFFSET_Y, textColor);
+    } else if (displayValue == DISPLAY_VALUE___HPA) {
+      BoxDisplay::drawAntialiasedText08("hPa", RECT_TOP, 288 - 30, TEXT_OFFSET_Y, textColor);
+    }
+
   }
 
-  BoxDisplay::drawAntialiasedText08(networkMessage, RECT_TOP, 6, TEXT_OFFSET_Y, EPD_BLACK);
-
-  String csvCountFormatted = String(Measurements::getCsvBufferIndex());
-  int publishableCount = BoxMqtt::isConfiguredToBeActive() ? Measurements::getPublishableCount() : 0;
-  if (publishableCount > 0) {
-    String mqttCountFormatted = String(Measurements::getPublishableCount());
-    int pendingDataSize = csvCountFormatted.length() + mqttCountFormatted.length() + 1; // total string length
-    char pendingDataBuf[csvCountFormatted.length() + mqttCountFormatted.length() + 1];
-    sprintf(pendingDataBuf, "%s|%s", csvCountFormatted, mqttCountFormatted);
-    BoxDisplay::drawAntialiasedText08(pendingDataBuf, RECT_TOP, 288 - pendingDataSize * 10, TEXT_OFFSET_Y, EPD_BLACK);
-  } else {
-    BoxDisplay::drawAntialiasedText08(csvCountFormatted.c_str(), RECT_TOP, 288 - csvCountFormatted.length() * 10, TEXT_OFFSET_Y, EPD_BLACK);
-  }
   
 }
 
@@ -565,11 +614,27 @@ void BoxDisplay::toggleState() {
   }
 }
 
+display_state_t BoxDisplay::getState() {
+  return displayState;
+}
+
 void BoxDisplay::toggleTheme() {
   if (displayTheme == DISPLAY_THEME_LIGHT) {
     displayTheme = DISPLAY_THEME__DARK;
   } else {
     displayTheme = DISPLAY_THEME_LIGHT;
+  }
+}
+
+void BoxDisplay::toggleValue() {
+  if (displayValue == DISPLAY_VALUE___CO2) {
+    displayValue = DISPLAY_VALUE___DEG;
+  } else if (displayValue == DISPLAY_VALUE___DEG) {
+    displayValue = DISPLAY_VALUE___HUM;
+  } else if (displayValue == DISPLAY_VALUE___HUM) {
+    displayValue = DISPLAY_VALUE___HPA;
+  } else {
+    displayValue = DISPLAY_VALUE___CO2;
   }
 }
 

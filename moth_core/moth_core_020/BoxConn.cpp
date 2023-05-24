@@ -482,6 +482,7 @@ void BoxConn::begin() {
       }
       
       File32Response *response = new File32Response(url, fileType);
+      response->addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT");
       request->send(response);
 
     } else {

@@ -21,6 +21,7 @@ typedef enum {
   LOOP_REASON______TOGGLE_STATE,
   LOOP_REASON______TOGGLE_THEME,
   LOOP_REASON______TOGGLE_AUDIO,
+  LOOP_REASON______TOGGLE_VALUE,
   LOOP_REASON_______MEASUREMENT, // time for a measurement
   LOOP_REASON______CALIBRRATION, // calibrate the sensor to a given reference value
   LOOP_REASON_______HIBERNATION, // hibernate the device
@@ -141,7 +142,11 @@ void handleButton12Change() {
 void handleButton13Change() {
   fallrise_t fallrise13 = buttonHander13.getFallRise();
   if (fallrise13 == FALL_RISE_FAST) {
-    loopReason = LOOP_REASON______TOGGLE_AUDIO;
+    if (BoxDisplay::getState() == DISPLAY_STATE_CHART) {
+      loopReason = LOOP_REASON______TOGGLE_VALUE;      
+    } else {
+      loopReason = LOOP_REASON______TOGGLE_AUDIO;
+    }
   }
 }
 
@@ -300,6 +305,12 @@ void loop() {
       // digitalWrite(NEOPIXEL_POWER, LOW); // de-power the neopixel
     }
 
+  } else if (loopAction == LOOP_REASON______TOGGLE_VALUE) {
+
+    beep(); // confirmation beep
+    BoxDisplay::toggleValue();
+    displayFunc = [=]()->void{ renderState(true); };
+    
   }
 
 #if defined(NEOPIXEL_HELPER)
@@ -317,7 +328,7 @@ void loop() {
 
   // whatever happens here, happens at least once / minute, maybe more often
 
-  bool preventSleep = true; // MUST be false in deployment, or battery life will be much shorter
+  bool preventSleep = false; // MUST be false in deployment, or battery life will be much shorter
   while (preventSleep || BoxConn::getMode() != WIFI_OFF) { // no sleep while wifi is active
 
     // whatever happens in this loop, happens about once per second

@@ -23,6 +23,23 @@
 #include "Rectangle.h"
 #include "BoxStatus.h"
 
+typedef enum {
+  DISPLAY_STATE_TABLE,
+  DISPLAY_STATE_CHART
+} display_state_t;
+
+typedef enum {
+  DISPLAY_THEME_LIGHT,
+  DISPLAY_THEME__DARK
+} display_theme_t;
+
+typedef enum {
+  DISPLAY_VALUE___CO2,
+  DISPLAY_VALUE___DEG,
+  DISPLAY_VALUE___HUM,
+  DISPLAY_VALUE___HPA
+} display_value_t;
+
 class BoxDisplay { 
   
   private:
@@ -44,6 +61,7 @@ class BoxDisplay {
     static bool isRisk(float value, Thresholds thresholds);
     static void renderChart();
     static void renderTable();
+    static float celsiusToFahrenheit(float celsius);
     
   public:
     static String CONFIG_PATH;
@@ -60,6 +78,8 @@ class BoxDisplay {
     static void renderQRCode();
     static void toggleTheme();
     static void toggleState();
+    static void toggleValue();
+    static display_state_t getState();
 
 };
 
