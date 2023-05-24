@@ -40,7 +40,7 @@ const ApiFile = (props: IApiProperties) => {
 
       let href = `${boxUrl}/${apiName}`;
       if (file && file !== "") {
-        href += `?file${file}`
+        href += `?file=${file}`
       }
 
       setResponseProps({
@@ -71,14 +71,14 @@ const ApiFile = (props: IApiProperties) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status == 'disconnected'}
+              disabled={status === 'disconnected'}
               label="file"
               id="outlined-start-adornment"
               size='small'
               onChange={handleFileChange}
               helperText="optional file name. specifiy to get the content of a specific file. leave empty to get most recent data"
             />
-            <Button disabled={status == 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

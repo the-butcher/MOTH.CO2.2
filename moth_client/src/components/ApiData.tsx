@@ -57,7 +57,7 @@ const ApiData = (props: IApiProperties) => {
       <AccordionDetails>
         <Card>
           <Stack>
-            <Button disabled={status == 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

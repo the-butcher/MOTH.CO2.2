@@ -40,7 +40,7 @@ const ApiFolder = (props: IApiProperties) => {
 
       let href = `${boxUrl}/${apiName}`;
       if (folder && folder !== "") {
-        href += `?folder${folder}`
+        href += `?folder=${folder}`
       }
 
       setResponseProps({
@@ -71,14 +71,14 @@ const ApiFolder = (props: IApiProperties) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status == 'disconnected'}
+              disabled={status === 'disconnected'}
               label="folder"
               id="outlined-start-adornment"
               size='small'
               onChange={handleFolderChange}
               helperText="optional folder name. specify to list the contents of a specific folder. leave empty to get the root folders contents"
             />
-            <Button disabled={status == 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

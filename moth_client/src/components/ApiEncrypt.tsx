@@ -67,14 +67,14 @@ const ApiEncrypt = (props: IApiProperties) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status == 'disconnected'}
+              disabled={status === 'disconnected'}
               label="value"
               id="outlined-start-adornment"
               size='small'
               onChange={handleValueChange}
               required
             />
-            <Button disabled={status == 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {
