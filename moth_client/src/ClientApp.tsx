@@ -2,10 +2,9 @@ import { createTheme, CssBaseline, ThemeProvider } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
-import { IApiCall } from './components/IApiCall';
-import { EStatus, IApiProperties } from './components/IApiProperties';
+import { JsonLoader } from './util/JsonLoader';
 
 const darkTheme = createTheme({
   typography: {
@@ -17,35 +16,6 @@ const darkTheme = createTheme({
     }
   },
   components: {
-    MuiAccordion: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#eeeeee',
-        }
-      }
-    },
-    MuiAccordionSummary: {
-      styleOverrides: {
-        content: {
-          '&.Mui-expanded': {
-            margin: '6px 0px',
-          },
-          margin: '6px 0px',
-        }
-      }
-    },
-    MuiAccordionDetails: {
-      styleOverrides: {
-        root: {
-          paddingLeft: '40px',
-        }
-      }
-    },
-    MuiStack: {
-      defaultProps: {
-        spacing: 2
-      }
-    },
     MuiCard: {
       defaultProps: {
         elevation: 3
@@ -62,25 +32,41 @@ const darkTheme = createTheme({
 
 const ClientApp = () => {
 
+  const [latest, setLatest] = useState<any>({
+    co2: 0,
+    temperature: 0,
+    humidity: 0,
+    pressure: 0
+  });
+
   useEffect(() => {
 
-    console.debug('✨ building clientapp component', window.location);
+    console.debug('✨ building clientapp component');
+
+    new JsonLoader().load('../api/latest').then(_latest => {
+      setLatest(_latest);
+    }).catch(e => {
+
+    });
 
   }, []);
 
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px' }}>
-        moth-api
-      </Typography>
-      <Typography variant="body1" component="h4" sx={{ paddingLeft: '10px' }}>
-        subtitle
-      </Typography>
       <Card sx={{ padding: '0px' }}>
         <CardContent>
           <Typography gutterBottom variant="subtitle1" component="div">
-            client
+            CO₂: {latest.co2}
+          </Typography>
+          <Typography gutterBottom variant="subtitle1" component="div">
+            °C : {latest.temperature}
+          </Typography>
+          <Typography gutterBottom variant="subtitle1" component="div">
+            %RH: {latest.humidity}
+          </Typography>
+          <Typography gutterBottom variant="subtitle1" component="div">
+            hPa: {latest.pressure / 100}
           </Typography>
         </CardContent>
       </Card>

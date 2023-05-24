@@ -98,7 +98,7 @@ const ServerApp = () => {
   const handlePanel = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
     const indexOfPanel = panels.current.indexOf(panel);
     if (indexOfPanel >= 0) {
-      panels.current = panels.current.filter(p => p != panel)
+      panels.current = panels.current.filter(p => p !== panel)
     } else {
       panels.current.push(panel);
     }
@@ -157,7 +157,7 @@ const ServerApp = () => {
         _apiProps[data.call] = data.data; // set the specific message on the api props
         setApiProps(_apiProps);
       }
-      if (data.event && data.event == 'loaded') {
+      if (data.event && data.event === 'loaded') {
         status.current = 'connected';
         rebuildAndSetApiProps();
       }
@@ -173,7 +173,7 @@ const ServerApp = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px' }}>
-        moth-api <iframe id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
+        moth-api2 <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
       </Typography>
       <Typography variant="body1" component="h4" sx={{ paddingLeft: '10px' }}>
         {boxUrlParamValue ? boxUrlParamValue : "no box specified"} ({status.current})
