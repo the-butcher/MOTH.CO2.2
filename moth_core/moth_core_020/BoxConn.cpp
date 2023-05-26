@@ -325,7 +325,7 @@ void BoxConn::begin() {
       request->send(200);
 
   }, BoxConn::handleUpload);
-  server.on("/delete", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/delete", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -462,14 +462,12 @@ void BoxConn::begin() {
   });
   server.onNotFound([](AsyncWebServerRequest *request) {
 
-    Serial.println(request->url());
     String url = request->url();
     if (BoxFiles::existsFile32(url)) {
 
       wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
       String fileType = url.substring(url.indexOf("."));
-      Serial.println(fileType);
 
       if (fileType == ".html") {
         fileType = "text/html";

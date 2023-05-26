@@ -19,6 +19,7 @@ const paths = require('./paths');
 const modules = require('./modules');
 const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
+// const CompressionPlugin = require('compression-webpack-plugin');
 
 // const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 // const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
@@ -26,7 +27,7 @@ const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin'
 
 const postcssNormalize = require('postcss-normalize');
 
-const appPackageJson = require(paths.appPackageJson);
+// const appPackageJson = require(paths.appPackageJson);
 
 // Source maps are resource heavy and can cause out of memory issue for large source files.
 const shouldUseSourceMap = false; // process.env.GENERATE_SOURCEMAP !== 'false';
@@ -37,7 +38,7 @@ const reactRefreshOverlayEntry = require.resolve(
 
 // Some apps do not need the benefits of saving a web request, so not inlining the chunk
 // makes for a smoother build process.
-const shouldInlineRuntimeChunk = process.env.INLINE_RUNTIME_CHUNK !== 'false';
+// const shouldInlineRuntimeChunk = process.env.INLINE_RUNTIME_CHUNK !== 'false';
 
 const emitErrorsAsWarnings = process.env.ESLINT_NO_DEV_ERRORS === 'true';
 const disableESLintPlugin = process.env.DISABLE_ESLINT_PLUGIN === 'true';
@@ -151,6 +152,7 @@ module.exports = function (webpackEnv) {
     entry: {
       client: paths.appClientJs,
       server: paths.appServerJs,
+      chart: paths.appChartJs,
     },
     output: {
       path: paths.appBuild,
@@ -420,9 +422,28 @@ module.exports = function (webpackEnv) {
         template: paths.appClientHtml,
         filename: "./client.html",
         chunksSortMode: "none",
-        //hash: true,
         chunks: [
           "client"
+        ],
+        inlineSource: ".(css)$"
+      }),
+      new HtmlWebpackPlugin({
+        title: "moth-server",
+        template: paths.appServerHtml,
+        filename: "./server.html",
+        chunksSortMode: "none",
+        chunks: [
+          "server"
+        ],
+        inlineSource: ".(css)$"
+      }),
+      new HtmlWebpackPlugin({
+        title: "moth-chart",
+        template: paths.appChartHtml,
+        filename: "./chart.html",
+        chunksSortMode: "none",
+        chunks: [
+          "chart"
         ],
         inlineSource: ".(css)$"
       }),
@@ -451,31 +472,31 @@ module.exports = function (webpackEnv) {
       //     }
       //   )
       // ),
-      new HtmlWebpackPlugin(
-        Object.assign(
-          {},
-          {
-            inject: true,
-            template: paths.appServerHtml,
-            filename: "server.html",
-            chunks: ["server"]
-          },
-          {
-            minify: {
-              removeComments: true,
-              collapseWhitespace: true,
-              removeRedundantAttributes: true,
-              useShortDoctype: true,
-              removeEmptyAttributes: true,
-              removeStyleLinkTypeAttributes: true,
-              keepClosingSlash: true,
-              minifyJS: true,
-              minifyCSS: true,
-              minifyURLs: true,
-            },
-          }
-        )
-      ),
+      // new HtmlWebpackPlugin(
+      //   Object.assign(
+      //     {},
+      //     {
+      //       inject: true,
+      //       template: paths.appServerHtml,
+      //       filename: "server.html",
+      //       chunks: ["server"]
+      //     },
+      //     {
+      //       minify: {
+      //         removeComments: true,
+      //         collapseWhitespace: true,
+      //         removeRedundantAttributes: true,
+      //         useShortDoctype: true,
+      //         removeEmptyAttributes: true,
+      //         removeStyleLinkTypeAttributes: true,
+      //         keepClosingSlash: true,
+      //         minifyJS: true,
+      //         minifyCSS: true,
+      //         minifyURLs: true,
+      //       },
+      //     }
+      //   )
+      // ),
       new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime-.+[.]js/]),
       new InterpolateHtmlPlugin(HtmlWebpackPlugin, env.raw),
       new ModuleNotFoundPlugin(paths.appPath),
@@ -516,6 +537,7 @@ module.exports = function (webpackEnv) {
           },
         },
       }),
+      new CompressionPlugin(),
     ].filter(Boolean),
     // Some libraries import Node modules but don't use them in the browser.
     // Tell webpack to provide empty mocks for them so importing them works.

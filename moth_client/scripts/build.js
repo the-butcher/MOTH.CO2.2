@@ -43,6 +43,8 @@ if (!checkRequiredFiles([
   paths.appClientJs,
   paths.appServerHtml,
   paths.appServerJs,
+  paths.appChartHtml,
+  paths.appChartJs,
 ])) {
   process.exit(1);
 }

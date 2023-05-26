@@ -9,6 +9,9 @@ void BoxFiles::begin() {
   sd32.begin(SD_CS, SPI_CLOCK);
 }
 
+bool BoxFiles::buildFolders(String dataFilePath) {
+  return BoxFiles::sd32.mkdir(dataFilePath);
+}
 bool BoxFiles::existsFile32(String fileName) {
   return BoxFiles::sd32.exists(fileName);
 }

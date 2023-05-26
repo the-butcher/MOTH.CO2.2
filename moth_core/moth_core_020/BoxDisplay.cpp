@@ -445,16 +445,16 @@ void BoxDisplay::renderChart() {
   BoxDisplay::drawOuterBorders(EPD_LIGHT);
 
   int measurementCount = min(57, Measurements::memBufferIndx);
-  Measurement measuremnt;
+  Measurement measurement;
 
   int minValue = 0;
   int maxValue = 1500;
   if (displayValue == DISPLAY_VALUE___CO2) {
     for (int i = 0; i < measurementCount; i++) {
-      measuremnt = Measurements::getOffsetMeasurement(i);
-      if (measuremnt.valuesCo2.co2 > 1500) {
+      measurement = Measurements::getOffsetMeasurement(i);
+      if (measurement.valuesCo2.co2 > 1500) {
         maxValue = 3000;
-      } else if (measuremnt.valuesCo2.co2 > 3000) {
+      } else if (measurement.valuesCo2.co2 > 3000) {
         maxValue = 4500;
       }
     }
@@ -470,8 +470,14 @@ void BoxDisplay::renderChart() {
     minValue = 20;
     maxValue = 80;
   } else if (displayValue == DISPLAY_VALUE___HPA) {
-    minValue = 900;
-    maxValue = 1050;
+    double pressureAvg = 0;
+    for (int i = 0; i < measurementCount; i++) {
+      measurement = Measurements::getOffsetMeasurement(i);
+      pressureAvg += measurement.valuesBme.pressure / 100.0;
+    }  
+    pressureAvg /= measurementCount; // lets say it is 998
+    minValue = floor(pressureAvg / 10.0) * 10 - 10; // 99.8 -> 99 -> 990 -> 980
+    maxValue = ceil(pressureAvg / 10.0) * 10 + 10; // 99.8 -> 100 -> 1000 - 1010
   }
 
   String label2 = String(minValue + (maxValue - minValue) * 2 / 3);
@@ -488,26 +494,26 @@ void BoxDisplay::renderChart() {
   int minY;
   int maxY = 103;
   int dimY;
-  int limY = 78;
-  int curValue;
+  float limY = 78.0;
+  float curValue;
 
 
   for (int i = 0; i < measurementCount; i++) {
 
-    measuremnt = Measurements::getOffsetMeasurement(i);
+    measurement = Measurements::getOffsetMeasurement(i);
 
     if (displayValue == DISPLAY_VALUE___CO2) {
-      curValue = measuremnt.valuesCo2.co2;
+      curValue = measurement.valuesCo2.co2;
     } else if (displayValue == DISPLAY_VALUE___DEG) {
-      curValue = measuremnt.valuesCo2.temperature;
+      curValue = measurement.valuesCo2.temperature;
     } else if (displayValue == DISPLAY_VALUE___HUM) {
-      curValue = measuremnt.valuesCo2.humidity;
+      curValue = measurement.valuesCo2.humidity;
     } else if (displayValue == DISPLAY_VALUE___HPA) {
-      curValue = measuremnt.valuesBme.pressure / 100;
+      curValue = measurement.valuesBme.pressure / 100.0;
     }    
 
     minX = 290 - i * 4; // 290 is the left border of the right-most bar
-    dimY = min(limY, (int)round((curValue - minValue) * limY / (maxValue - minValue)));
+    dimY = max(0, min((int)limY, (int)round((curValue - minValue) * limY / (maxValue - minValue))));
     minY = maxY - dimY;
 
     baseDisplay.drawFastVLine(minX, minY, dimY, EPD_BLACK);

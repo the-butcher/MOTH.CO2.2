@@ -1,6 +1,8 @@
 #include "Measurements.h"
 #include "BoxClock.h"
 #include "SdFat.h"
+#include "DataFileDef.h"
+#include "BoxFiles.h"
 
 /**
  * ################################################
@@ -29,27 +31,34 @@ void Measurements::begin() {
 void Measurements::saveToFile() {
 
   DateTime date;
-  String dataFileNameCurr = "";
+  DataFileDef dataFileDef;
   String dataFileNameLast = "";
+  String dataFilePathLast = "";
   File32 csvFile;
   Measurement measurement;
+
   for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0; offsetIndex--) {
     measurement = Measurements::getOffsetMeasurement(offsetIndex);
     date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
-    dataFileNameCurr = BoxClock::getDataFileName(date); // the file name that shall be written to
-    if (dataFileNameCurr != dataFileNameLast) {
-      if (csvFile) {
+    dataFileDef = BoxClock::getDataFileDef(date); // the file name that shall be written to
+    if (dataFileDef.name != dataFileNameLast) {
+      if (csvFile) { // file already open -> file change at midnight
         csvFile.sync(); // write anything pending
         csvFile.close();
       }
-      csvFile.open(dataFileNameCurr.c_str(), O_RDWR | O_CREAT | O_AT_END);
+      if (dataFileDef.path != dataFilePathLast) { // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
+        BoxFiles::buildFolders(dataFileDef.path);
+      }
+      csvFile.open(dataFileDef.name.c_str(), O_RDWR | O_CREAT | O_AT_END);
       if (csvFile.size() == 0) { // first time this file is being written to -> write csv header
         csvFile.print(Measurements::CSV_HEAD);
       }      
     }
     csvFile.print(Measurements::toCsv(measurement));
-    dataFileNameLast = dataFileNameCurr;
+    dataFileNameLast = dataFileDef.name;
+    dataFilePathLast = dataFileDef.path;
   }
+
   csvFile.sync();
   csvFile.close();
 

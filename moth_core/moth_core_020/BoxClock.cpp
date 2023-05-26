@@ -92,10 +92,6 @@ void BoxClock::handleUpdateFromNtp(struct timeval *t) {
 
 DateTime BoxClock::getDate() {
   return BoxClock::baseClock.now();
-  // struct tm timeinfo;
-  // getLocalTime(&timeinfo);
-  // DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-  // return now;
 }
 
 String BoxClock::getDateTimeString(DateTime date) {
@@ -104,10 +100,15 @@ String BoxClock::getDateTimeString(DateTime date) {
   return timeBuffer;
 }
 
-String BoxClock::getDataFileName(DateTime date) {
-  char timeBuffer[16];
-  sprintf(timeBuffer, "/d%04d%02d%02d.csv", date.year(), date.month(), date.day());
-  return timeBuffer;
+DataFileDef BoxClock::getDataFileDef(DateTime date) {
+  char pathBuffer[10];
+  sprintf(pathBuffer, "/%04d/%02d", date.year(), date.month());
+  char nameBuffer[22];
+  sprintf(nameBuffer, "/%04d/%02d/%04d%02d%02d.csv", date.year(), date.month(), date.year(), date.month(), date.day());
+  return {
+    String(pathBuffer),
+    String(nameBuffer)
+  };
 }
 
 String BoxClock::getTimeString(DateTime date) {

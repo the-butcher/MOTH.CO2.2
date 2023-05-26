@@ -5,7 +5,7 @@ Parts used in the prototype build:
 
 - <a href="#microcontroller">Adafruit ESP32-S2 Feather with BME280</a>
 - <a href="#co2sensor">Adafruit SCD-41 - True CO2 Temperature and Humidity Sensor - STEMMA QT / Qwiic</a>
-- <a href="#rtc">AAdafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic</a>
+- <a href="#rtc">Adafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic</a>
 - <a href="#cable">STEMMA QT / Qwiic JST SH 4-Pin Cable - 50mm Long x 2</a>
 - <a href="#display">Adafruit 2.9" Grayscale eInk / ePaper Display FeatherWing - 4 Level Grayscale</a>
 - <a href="#battery">3,7 V 3000mAh 18650 Lithium Li-Ion Battery Pack</a>
@@ -30,7 +30,7 @@ The list contains references to where i got my parts from, if you get alterntive
 
 ---
 
-<a href="https://www.adafruit.com/product/5189" name="rtc">AAdafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic</a> Battery-backed real time clock (RTC)
+<a href="https://www.adafruit.com/product/5189" name="rtc">Adafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic</a> Battery-backed real time clock (RTC)
 
 <img src="https://cdn-shop.adafruit.com/970x728/5189-00.jpg" alt="Adafruit PCF8523 Real Time Clock Breakout Board - STEMMA QT / Qwiic" width="800">
 
@@ -54,7 +54,7 @@ The list contains references to where i got my parts from, if you get alterntive
 
 ---
 
-<a href="https://www.reichelt.at/at/de/piezosummer-summer-cpm-121-p35924.html?&trstct=pol_4&nbc=1" name="buzzer">Buzzer</a>
+<a href="https://www.mouser.at/ProductDetail/TDK/PS1240P02BT?qs=d7g9p1yFhWaZXSY9MjKMkw%3D%3D" name="buzzer">Buzzer</a>
 
 <img src="../images/buzzer_800.png" alt="Buzzer" width="800">
 
@@ -62,9 +62,9 @@ The list contains references to where i got my parts from, if you get alterntive
 
 - <a name="screws">M2 hardware:</a>
 
-  - 6 screws M2 x 5mm
+  - 8 screws M2 x 5mm
   - 4 screws M2 x 8mm
-  - 6 nuts M2
+  - 8 nuts M2
 
 ---
 

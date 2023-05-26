@@ -29,6 +29,11 @@ typedef enum {
   LOOP_REASON___________UNKNOWN
 } loop_reason_t;
 
+const int BUZZER_______FREQ = 1000; // 3755
+const int BUZZER____CHANNEL = 0;
+const int BUZZER_RESOLUTION = 8; // 0 - 255
+const int BUZZER_______GPIO = GPIO_NUM_17;
+
 #if defined(NEOPIXEL_HELPER)
 #include <Adafruit_NeoPixel.h>
 #define NUMPIXELS 1
@@ -56,7 +61,8 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  * -- think about what could be subscribed by the device (i.e. calibration)
  *
  * -- validate
- *    ✓ preventSleep == false
+ *    X preventSleep == false
+ *    X csvBufferSize == 60
  *    ✓ csv file is written
  *    ✓ file response is working
  *    ✓ mqtt config was successfully read
@@ -64,7 +70,7 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *    ✓ display config was successfully read
  *    ✓ folder listing is working
  *    ✓ upload is working
- *    ? timezone works and add examples to the readme
+ *    ✓ timezone works and add examples to the readme
  *    ✓ time gets adjusted while permanently being online
  *    ✓ time gets adjusted hourly when offline
  *    ? mqtt gets published hourly when offline
@@ -98,7 +104,10 @@ void setup() {
   buttonHander11.begin();
   buttonHander12.begin();
   buttonHander13.begin();
-  pinMode(GPIO_NUM_17, OUTPUT); // sound
+
+  // pinMode(GPIO_NUM_17, OUTPUT); // sound
+  ledcSetup(BUZZER____CHANNEL, BUZZER_______FREQ, BUZZER_RESOLUTION);
+  ledcAttachPin(BUZZER_______GPIO, BUZZER____CHANNEL);
 
   BoxPack::begin();
   BoxEncr::begin(); // needs BoxFiles to be ready because it will read config
@@ -163,9 +172,10 @@ void blink(int color) {
 #endif
 
 void beep() {
-  digitalWrite(GPIO_NUM_17, HIGH);
-  delay(25);
-  digitalWrite(GPIO_NUM_17, LOW);
+  ledcWrite(BUZZER____CHANNEL, 255);
+  ledcWriteTone(BUZZER____CHANNEL, BUZZER_______FREQ); // 3755
+  delay(50);
+  ledcWrite(BUZZER____CHANNEL, 0);  
 }
 
 /**

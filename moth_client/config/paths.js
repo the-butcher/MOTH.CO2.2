@@ -58,6 +58,8 @@ module.exports = {
   appClientJs: resolveModule(resolveApp, 'src/client'),
   appServerHtml: resolveApp('public/server.html'),
   appServerJs: resolveModule(resolveApp, 'src/server'),
+  appChartHtml: resolveApp('public/chart.html'),
+  appChartJs: resolveModule(resolveApp, 'src/chart'),
   appPackageJson: resolveApp('package.json'),
   appSrc: resolveApp('src'),
   appTsConfig: resolveApp('tsconfig.json'),
