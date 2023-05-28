@@ -192,6 +192,7 @@ void BoxConn::begin() {
     root["temperature"] = round(latestMeasurement.valuesCo2.temperature * 10) / 10.0;
     root["humidity"] = round(latestMeasurement.valuesCo2.humidity * 10) / 10.0;
     root["pressure"] = latestMeasurement.valuesBme.pressure;
+    root["percent"] = latestMeasurement.valuesBat.percent;
 
     root.printTo(*response);
     request->send(response);
