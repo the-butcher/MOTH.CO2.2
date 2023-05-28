@@ -23,10 +23,10 @@ public:
   static void begin();
   static void on();
   static void off();
-  static String getNetwork();
   static String getRootUrl();
   static String getAddress();
-  static String getAPLogin();
+  static String getNetworkName();
+  static String getNetworkPass();
   static int wifiButtonCount;
   static bool isExpireable();
   static bool checkNumeric(String value);

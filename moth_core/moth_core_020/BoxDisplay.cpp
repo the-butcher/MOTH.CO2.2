@@ -253,16 +253,17 @@ void BoxDisplay::renderQRCode() {
 
   // either http://ap_ip/login or [PREF_A_WIFI] + IP
   String address = BoxConn::getRootUrl();
-  String network = BoxConn::getNetwork();
+  String networkName = BoxConn::getNetworkName();
+  String networkPass = BoxConn::getNetworkPass();
 
   int qrCodeX = 12;
   int qrCodeY = 35;
 
   // render the network connection link
-  if (network != "") {
+  if (networkName != "") {
 
-    char networkBuf[network.length() + 1];
-    network.toCharArray(networkBuf, network.length() + 1);
+    char networkBuf[networkName.length() + 1];
+    networkName.toCharArray(networkBuf, networkName.length() + 1);
 
     QRCode qrcodeNetwork;
     uint8_t qrcodeDataNetwork[qrcode_getBufferSize(3)];
@@ -279,7 +280,9 @@ void BoxDisplay::renderQRCode() {
     qrCodeX = 228;
 
     BoxDisplay::drawAntialiasedText08("< CONNECT", RECT_TOP, 75, 47, EPD_BLACK);
-    BoxDisplay::drawAntialiasedText08(BoxConn::getAPLogin(), RECT_TOP, 94, 63, EPD_BLACK);
+    if (networkPass != "") {
+      BoxDisplay::drawAntialiasedText08(BoxConn::getNetworkPass(), RECT_TOP, 94, 63, EPD_BLACK);
+    }
     BoxDisplay::drawAntialiasedText08("OPEN >", RECT_TOP, 160, 91, EPD_BLACK);
 
 

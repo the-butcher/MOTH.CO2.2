@@ -45,8 +45,10 @@ wifi_mode_t mode = WIFI_OFF;
 Network configuredNetworks[10];
 Network discoveredNetworks[10];
 
-String networkName = "mothbox";
-String networkPass = "CO2@420PPM";
+String apNetworkName = "mothbox";
+String apNetworkPass = "CO2@420PPM";
+
+String stNetworkName = "";
 
 /**
  * ################################################
@@ -138,10 +140,6 @@ void BoxConn::begin() {
   WiFi.mode(WIFI_STA);
   mode = WIFI_STA;
 
-  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-
-
-  // });
   server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
@@ -175,6 +173,11 @@ void BoxConn::begin() {
     request->send(response);
 
   });  
+  server.on("/api/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+    ESP.restart();
+
+  });
   server.on("/api/latest", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
@@ -204,6 +207,7 @@ void BoxConn::begin() {
 
     DataResponse *response = new DataResponse();
     request->send(response);
+
   });
   server.on("/api/folder", HTTP_GET, [](AsyncWebServerRequest *request) {
 
@@ -506,7 +510,7 @@ void BoxConn::begin() {
 
   uint64_t _chipmacid = 0LL;
   esp_efuse_mac_get_default((uint8_t *)(&_chipmacid));
-  networkName = "mothbox" + String(_chipmacid, HEX);
+  apNetworkName = "mothbox" + String(_chipmacid, HEX);
 
   WiFi.onEvent(BoxConn::handleStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
 
@@ -563,6 +567,8 @@ bool BoxConn::checkNumeric(String value) {
 
 void BoxConn::on() {
 
+  stNetworkName = ""; // reset network, we dont know where we will end up being connected to
+
   // find the first network that has a configured password
   int ssidCount = WiFi.scanNetworks();
   String ssidCandidate;
@@ -590,6 +596,7 @@ void BoxConn::on() {
       // allow some time for a connection to be established
       for (int i = 0; i < 10; i++) {
         if (WiFi.status() == WL_CONNECTED) {
+          stNetworkName = ssidCandidate;
           break;
         }
         delay(250);
@@ -626,11 +633,11 @@ void BoxConn::on() {
     WiFi.mode(WIFI_AP);
     mode = WIFI_AP;
 
-    char apBuf[networkName.length() + 1];
-    networkName.toCharArray(apBuf, networkName.length() + 1);
+    char apBuf[apNetworkName.length() + 1];
+    apNetworkName.toCharArray(apBuf, apNetworkName.length() + 1);
 
-    char psBuf[networkPass.length() + 1];
-    networkPass.toCharArray(psBuf, networkPass.length() + 1);
+    char psBuf[apNetworkPass.length() + 1];
+    apNetworkPass.toCharArray(psBuf, apNetworkPass.length() + 1);
 
     WiFi.softAP(apBuf, psBuf);
     mode = WIFI_AP;
@@ -650,18 +657,22 @@ void BoxConn::off() {
 
 String BoxConn::getRootUrl() {
   if (mode == WIFI_AP) {
-    return "http://" + WiFi.softAPIP().toString() + "/server/index.html";
+    return "http://" + WiFi.softAPIP().toString() + "/server/client.html";
   } else if (mode == WIFI_STA) {
-    return "http://" + WiFi.localIP().toString() + "/server/index.html";
+    return "http://" + WiFi.localIP().toString() + "/server/client.html";
   } else {
     return "";
   }
 }
 
-String BoxConn::getNetwork() {
+String BoxConn::getNetworkName() {
   if (mode == WIFI_AP) {
-    char networkBuf[networkName.length() + networkPass.length() + 19];
-    sprintf(networkBuf, "%s%s%s%s%s", "WIFI:T:WPA;S:", networkName, ";P:", networkPass, ";;");
+    char networkBuf[apNetworkName.length() + apNetworkPass.length() + 19];
+    sprintf(networkBuf, "%s%s%s%s%s", "WIFI:T:WPA;S:", apNetworkName, ";P:", apNetworkPass, ";;");
+    return networkBuf;
+  } else if (stNetworkName != "") {
+    char networkBuf[stNetworkName.length() + 17];
+    sprintf(networkBuf, "%s%s%s", "WIFI:T:WPA;S:", stNetworkName, ";;;");
     return networkBuf;
   } else {
     return "";
@@ -680,8 +691,12 @@ String BoxConn::getAddress() {
   }
 }
 
-String BoxConn::getAPLogin() {
-  return networkPass;
+String BoxConn::getNetworkPass() {
+  if (mode == WIFI_AP) {
+    return apNetworkPass;
+  } else {
+    return "";
+  }
 }
 
 wifi_mode_t BoxConn::getMode() {
