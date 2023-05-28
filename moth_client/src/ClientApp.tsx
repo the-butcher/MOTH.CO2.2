@@ -32,6 +32,8 @@ const darkTheme = createTheme({
 
 const ClientApp = () => {
 
+  const boxUrl = `${window.location.origin}/api`; // when running directly from device
+
   const [latest, setLatest] = useState<any>({
     co2: 0,
     temperature: 0,
@@ -47,7 +49,7 @@ const ClientApp = () => {
 
     console.debug('✨ building clientapp component');
 
-    new JsonLoader().load('http://192.168.0.179/api/file?file=config/disp.json').then(_disp => {
+    new JsonLoader().load(`${boxUrl}/file?file=config/disp.json`).then(_disp => {
       console.log('disp', _disp);
       setThresholdsCo2(new Thresholds(0, 0, _disp.co2.wHi, _disp.co2.rHi));
       setThresholdsDeg(new Thresholds(_disp.deg.rLo, _disp.deg.wLo, _disp.deg.wHi, _disp.deg.rHi))
@@ -56,8 +58,7 @@ const ClientApp = () => {
 
     });
 
-    // new JsonLoader().load('../api/latest').then(_latest => {
-    new JsonLoader().load('http://192.168.0.179/api/latest').then(_latest => {
+    new JsonLoader().load(`${boxUrl}/latest`).then(_latest => {
       setLatest(_latest);
     }).catch(e => {
 

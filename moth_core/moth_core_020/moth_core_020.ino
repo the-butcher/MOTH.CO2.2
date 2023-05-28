@@ -15,6 +15,8 @@
 #include "SensorBme280.h" // wrapper for bme280 sensor
 #include "SensorScd041.h" // wrapper for scd41 sensor
 
+#include "driver/rtc_io.h"
+
 typedef enum {
   LOOP_REASON______WIFI______ON,
   LOOP_REASON______WIFI_____OFF,
@@ -269,6 +271,12 @@ void loop() {
     pinMode(I2C_POWER, OUTPUT);
     digitalWrite(I2C_POWER, LOW); // turn off power to stemma QT Port (https://learn.adafruit.com/assets/110811)
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL); // go to sleep, no wakeup source but reset button (maybe a combination of all three buttons is an option)
+
+    // https://stackoverflow.com/questions/53324715/esp32-external-pin-wakeup-with-internal-pullup-resistor
+    const uint64_t ext_wakeup_pin_11_mask = 1ULL << GPIO_NUM_11;
+    rtc_gpio_pullup_en(GPIO_NUM_11);
+    rtc_gpio_pulldown_dis(GPIO_NUM_11);
+    esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_11_mask, ESP_EXT1_WAKEUP_ALL_LOW);
     esp_deep_sleep_start();
 
   } else if (loopAction == LOOP_REASON_RESET_CALIBRATION) {

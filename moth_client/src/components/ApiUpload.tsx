@@ -89,14 +89,14 @@ const ApiUpload = (props: IApiProperties) => {
                 id="outlined-start-adornment"
                 size='small'
                 onChange={handleFileChange}
-                disabled={status == 'disconnected'}
+                disabled={status === 'disconnected'}
               />
               <TextField
                 type="text"
                 id="outlined-start-adornment"
                 size='small'
                 label={data}
-                disabled={status == 'disconnected'}
+                disabled={status === 'disconnected'}
                 InputProps={{
                   endAdornment: (
                     <IconButton component="label">
@@ -111,7 +111,7 @@ const ApiUpload = (props: IApiProperties) => {
                   ),
                 }}
               />
-              <Button disabled={status == 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+              <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
                 click to execute
               </Button>
               <Dialog

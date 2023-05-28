@@ -70,19 +70,18 @@ const darkTheme = createTheme({
 
 const ServerApp = () => {
 
+  const boxUrl = `${window.location.origin}/api`; // when running directly from device
+
   const urlParams = new URLSearchParams(window.location.search);
   // const boxUrlParamValue = `http://${urlParams.get("boxUrl")}/api`; // when not running directly from device
-  let boxUrlParamValue = `${window.location.origin}/api`; // ${window.location.pathname}`; // when running directly from device
-  // if (boxUrlParamValue.endsWith('/')) {
-  //   boxUrlParamValue = boxUrlParamValue.substring(0, boxUrlParamValue.length - 1);
-  // }
+
   const panelParamValue = urlParams.get("panel");
   let messageTimeout: number = -1;
 
   const rebuildAndSetApiProps = () => {
     setApiProps({
       ...apiProps,
-      boxUrl: boxUrlParamValue,
+      boxUrl,
       panels: panels.current,
       pstate: status.current,
       handlePanel: handlePanel,
@@ -127,7 +126,7 @@ const ServerApp = () => {
   const status = useRef<EStatus>('disconnected');
 
   const [apiProps, setApiProps] = useState<IApiProperties>({
-    boxUrl: boxUrlParamValue,
+    boxUrl,
     panels: panels.current,
     pstate: status.current,
     handlePanel: handlePanel,
@@ -148,7 +147,7 @@ const ServerApp = () => {
         window.clearTimeout(messageTimeout);
         const _apiProps: IApiProperties = {
           ...apiProps,
-          boxUrl: boxUrlParamValue,
+          boxUrl,
           panels: panels.current,
           pstate: status.current,
           handlePanel: handlePanel,
@@ -176,7 +175,7 @@ const ServerApp = () => {
         moth-api2 <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
       </Typography>
       <Typography variant="body1" component="h4" sx={{ paddingLeft: '10px' }}>
-        {boxUrlParamValue ? boxUrlParamValue : "no box specified"} ({status.current})
+        {boxUrl ? boxUrl : "no box specified"} ({status.current})
       </Typography>
       <Card sx={{ padding: '0px' }}>
         <CardContent>
