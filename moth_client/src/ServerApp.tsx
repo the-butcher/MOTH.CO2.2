@@ -172,7 +172,7 @@ const ServerApp = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px' }}>
-        moth-api2 <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
+        moth-api <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
       </Typography>
       <Typography variant="body1" component="h4" sx={{ paddingLeft: '10px' }}>
         {boxUrl ? boxUrl : "no box specified"} ({status.current})

@@ -1,4 +1,4 @@
-import { createTheme, CssBaseline, MenuItem, Select, ThemeProvider } from '@mui/material';
+import { createTheme, CssBaseline, FormControl, InputLabel, MenuItem, Select, ThemeProvider, Typography } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -50,6 +50,7 @@ const propertyLookup = {
 const ChartApp = () => {
 
   const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  // const boxUrl = `http://192.168.0.179/api`; // when running directly from device
 
   const [chartData, setChartData] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<[Date, Date]>([new Date('2100-01-01'), new Date('2000-01-01')]);
@@ -139,6 +140,9 @@ const ChartApp = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
+      <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px', paddingBottom: '20px' }}>
+        moth-chart
+      </Typography>
       <Card sx={{ width: '100%', padding: '0px', margin: '12px 0px' }}>
         <CardContent>
           <LocalizationProvider dateAdapter={AdapterMoment}>
@@ -148,16 +152,21 @@ const ChartApp = () => {
               minDate={moment(dateRange[0])}
               maxDate={moment(dateRange[1])}
               onChange={(newValue) => handleDateChanged(newValue)}
-            /></LocalizationProvider>
-          <Select sx={{ marginLeft: '12px' }}
-            labelId="demo-simple-select-label"
-            id="demo-simple-select"
-            value={chartProp}
-            label="Prop"
-            onChange={event => handleChartValueChanged(event.target.value)}
-          >
-            {menuItems}
-          </Select>
+            />
+          </LocalizationProvider>
+          <FormControl variant="outlined">
+            <InputLabel id="prop-label" sx={{ marginLeft: '10px' }}>Prop</InputLabel>
+            <Select sx={{ marginLeft: '12px' }}
+              labelId="prop-label"
+              id="demo-simple-select"
+              value={chartProp}
+              label="Prop"
+              onChange={event => handleChartValueChanged(event.target.value)}
+            >
+              {menuItems}
+            </Select>
+          </FormControl>
+
 
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import { createTheme, CssBaseline, ThemeProvider } from '@mui/material';
+import { createTheme, CssBaseline, ThemeProvider, Typography } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import { useEffect, useState } from 'react';
@@ -38,7 +38,8 @@ const ClientApp = () => {
     co2: 0,
     temperature: 0,
     humidity: 0,
-    pressure: 0
+    pressure: 0,
+    percent: 0
   });
 
   const [thresholdsCo2, setThresholdsCo2] = useState<Thresholds>(new Thresholds(0, 0, 800, 1000));
@@ -69,6 +70,10 @@ const ClientApp = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
+      <CssBaseline />
+      <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px', paddingBottom: '20px' }}>
+        moth-latest
+      </Typography>
       <Card sx={{ width: '100%', height: '43vw', padding: '0px', margin: '0px' }}>
         <CardContent style={{ width: 'inherit', height: 'inherit', padding: '0px', margin: '0px' }}>
           <div style={{ position: 'relative', left: '0%', top: '0%', border: '0.5vw solid lightgray', width: '100%', height: '17%' }}>
@@ -108,7 +113,9 @@ const ClientApp = () => {
             </div>
           </div>
           <div style={{ position: 'relative', left: '0%', top: '0%', border: '0.5vw solid lightgray', width: '100%', height: '17%' }}>
-
+            <div style={{ position: 'relative', left: '0%', top: '-5%', width: '100%', height: '100%', fontSize: '5vw', textAlign: 'right', paddingRight: '2vw' }}>
+              {latest.percent.toFixed(1)}%
+            </div>
           </div>
           {/* <Typography variant="body1" component="div" sx={{ fontSize: '5em', margin: '0px', padding: '0px' }}>
             {latest.co2}<Typography gutterBottom variant="body1" component="span">&nbsp;CO₂ ppm</Typography>
