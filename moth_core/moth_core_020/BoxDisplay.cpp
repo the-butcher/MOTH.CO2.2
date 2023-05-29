@@ -402,7 +402,7 @@ void BoxDisplay::renderTable() {
     baseDisplay.drawFastHLine(RECT_CO2.xmin + 6, yMax - percent * yScale, 12, percent % 5 == 0 ? textColor: vertColor);
   }
 
-  int yDim = stale * yScale;
+  int yDim = round(stale * yScale);
   for (int y = -1; y <= 1; y++) {
     baseDisplay.drawFastHLine(RECT_CO2.xmin + 8, yMax - yDim + y, 8, textColor);
   }
