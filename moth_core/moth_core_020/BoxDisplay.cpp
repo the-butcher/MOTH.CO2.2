@@ -104,7 +104,7 @@ uint16_t tbw, tbh;
 String BoxDisplay::CONFIG_PATH = "/config/disp.json";
 config_status_t BoxDisplay::configStatus = CONFIG_STATUS_PENDING;
 Thresholds BoxDisplay::thresholdsCo2;
-int64_t BoxDisplay::microsecondsRenderStateInterval = 120000000; // default :: 2 minutes, will be overridden by config
+int64_t BoxDisplay::microsecondsRenderStateInterval = 180000000; // default :: 3 minutes, will be overridden by config
 ThinkInk_290_Grayscale4_T5_Clone BoxDisplay::baseDisplay(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 
 void BoxDisplay::begin() {

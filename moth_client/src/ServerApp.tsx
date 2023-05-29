@@ -248,9 +248,18 @@ const ServerApp = () => {
               content: 'this call will remove all calibration history from the box\'s CO₂ sensor. only use if the sensor seems to be stuck.'
             }
           }} />
+          <ApiSimple {...{
+            ...apiProps,
+            apiName: 'reset',
+            apiDesc: 'resets the device ',
+            confirm: {
+              title: 'do you really want to reset?',
+              content: 'this call will reset the decive, data not written to permanent storage may be lost.'
+            }
+          }} />
         </CardContent>
       </Card>
-
+      <div style={{ height: '12px' }}></div>
     </ThemeProvider>
   );
 

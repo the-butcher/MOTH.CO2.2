@@ -140,13 +140,13 @@ const ChartApp = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px', paddingBottom: '20px' }}>
+      <Typography variant="h4" component="h4" sx={{ padding: '0px 10px' }}>
         moth-chart
       </Typography>
       <Card sx={{ width: '100%', padding: '0px', margin: '12px 0px' }}>
         <CardContent>
           <LocalizationProvider dateAdapter={AdapterMoment}>
-            <DatePicker
+            <DatePicker sx={{ margin: '6px' }}
               label="Date"
               value={moment(dateRange[1])}
               minDate={moment(dateRange[0])}
@@ -155,8 +155,8 @@ const ChartApp = () => {
             />
           </LocalizationProvider>
           <FormControl variant="outlined">
-            <InputLabel id="prop-label" sx={{ marginLeft: '10px' }}>Prop</InputLabel>
-            <Select sx={{ marginLeft: '12px' }}
+            <InputLabel id="prop-label" sx={{ margin: '6px' }}>Prop</InputLabel>
+            <Select sx={{ margin: '6px' }}
               labelId="prop-label"
               id="demo-simple-select"
               value={chartProp}
@@ -197,6 +197,7 @@ const ChartApp = () => {
 
         </CardContent>
       </Card>
+      <div style={{ height: '12px' }}></div>
     </ThemeProvider>
   );
 

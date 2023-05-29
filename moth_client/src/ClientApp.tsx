@@ -71,10 +71,10 @@ const ClientApp = () => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <CssBaseline />
-      <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px', paddingBottom: '20px' }}>
+      <Typography variant="h4" component="h4" sx={{ padding: '0px 10px' }}>
         moth-latest
       </Typography>
-      <Card sx={{ width: '100%', height: '43vw', padding: '0px', margin: '0px' }}>
+      <Card sx={{ width: '100%', height: '43vw', padding: '0px', margin: '12px 0px' }}>
         <CardContent style={{ width: 'inherit', height: 'inherit', padding: '0px', margin: '0px' }}>
           <div style={{ position: 'relative', left: '0%', top: '0%', border: '0.5vw solid lightgray', width: '100%', height: '17%' }}>
 
@@ -117,26 +117,9 @@ const ClientApp = () => {
               {latest.percent.toFixed(1)}%
             </div>
           </div>
-          {/* <Typography variant="body1" component="div" sx={{ fontSize: '5em', margin: '0px', padding: '0px' }}>
-            {latest.co2}<Typography gutterBottom variant="body1" component="span">&nbsp;CO₂ ppm</Typography>
-          </Typography> */}
         </CardContent>
       </Card>
-      {/* <Card sx={{ padding: '0px' }}>
-        <CardContent>
-          <Typography gutterBottom variant="h4" component="div">
-            {latest.temperature}<Typography gutterBottom variant="subtitle1" component="span">
-              &nbsp;°C
-            </Typography>
-          </Typography>
-          <Typography gutterBottom variant="subtitle1" component="div">
-            %RH: {latest.humidity}
-          </Typography>
-          <Typography gutterBottom variant="subtitle1" component="div">
-            hPa: {latest.pressure / 100}
-          </Typography>
-        </CardContent>
-      </Card> */}
+      <div style={{ height: '12px' }}></div>
     </ThemeProvider>
   );
 

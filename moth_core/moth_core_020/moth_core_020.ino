@@ -64,7 +64,7 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *
  * -- validate
  *    X preventSleep == false
- *    X csvBufferSize == 60
+ *    ✓ csvBufferSize == 60
  *    ✓ csv file is written
  *    ✓ file response is working
  *    ✓ mqtt config was successfully read
@@ -76,7 +76,7 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *    ✓ time gets adjusted while permanently being online
  *    ✓ time gets adjusted hourly when offline
  *    ? mqtt gets published hourly when offline
- *    ? stale never shows minus values
+ *    ✓ stale never shows minus values
  *
  */
 
@@ -184,6 +184,7 @@ void beep() {
  * render either a current chart or current numeric values
  */
 void renderState(bool force) {
+
   if (force || (esp_timer_get_time() - microsecondsRenderState) >= BoxDisplay::microsecondsRenderStateInterval) {
 
     microsecondsRenderState = esp_timer_get_time() - microsecondsPerSecond * 10; // add some safety to be sure the first state gets rendered
@@ -207,6 +208,7 @@ void renderState(bool force) {
     BoxDisplay::renderState();
 
   }
+  
 }
 
 void loop() {
@@ -223,7 +225,7 @@ void loop() {
   attachInterrupt(buttonHander13.ipin, handleButton13Change, CHANGE);
 
   // regardless of loopAction, a measurement will be taken if it is time to do so
-  // however, there may still be issues when this happens shortly before a measurement ...
+  // however, there may be issues when this happens shortly before a measurement ...
   // ... in such cases it can happen that i.e. turning on WiFi consumes enough time to have a negative wait time to the next measurement
   if (esp_timer_get_time() >= getMicrosecondsMeasurementNext()) {
     SensorBme280::tryRead();
@@ -241,7 +243,7 @@ void loop() {
     if (isAudio && measurement.valuesCo2.co2 >= BoxDisplay::thresholdsCo2.riskHi) {
       beep();
     }
-    displayFunc = [=]()->void{  renderState(false); };
+    displayFunc = [=]()->void{ renderState(false); };
   }
 
   if (loopAction == LOOP_REASON______CALIBRRATION) {
@@ -287,14 +289,12 @@ void loop() {
   } else if (loopAction == LOOP_REASON______WIFI______ON) {
 
     beep(); // confirmation beep
-
     BoxConn::on(); // turn on, dont expire immediately
     displayFunc = [=]()->void{ BoxDisplay::renderQRCode(); };
 
   } else if (loopAction == LOOP_REASON______WIFI_____OFF) {
 
     beep(); // confirmation beep
-
     BoxConn::off();
     displayFunc = [=]()->void{ renderState(true); };
 
