@@ -67,7 +67,7 @@ void BoxConn::updateConfiguration() {
 
   int _wifiTimeoutMinutes = wifiTimeoutMillis / 60000;
 
-  if (BoxFiles::existsFile32(BoxConn::CONFIG_PATH)) {
+  if (BoxFiles::existsPath(BoxConn::CONFIG_PATH)) {
 
     BoxConn::configStatus = CONFIG_STATUS_PRESENT;
 
@@ -274,7 +274,7 @@ void BoxConn::begin() {
     if (request->hasParam("file")) {
 
       dataFileName = "/" + request->getParam("file")->value();
-      if (dataFileName != BoxEncr::CONFIG_PATH && BoxFiles::existsFile32(dataFileName)) { // hide encr from api
+      if (dataFileName != BoxEncr::CONFIG_PATH && BoxFiles::existsPath(dataFileName)) { // hide encr from api
         File32Response *response = new File32Response(dataFileName, "text/csv");
         request->send(response);
       } else {
@@ -342,15 +342,23 @@ void BoxConn::begin() {
     if (request->hasParam("file")) {
       String dataFileName = "/" + request->getParam("file")->value();
       root["file"] = dataFileName;
-      if (BoxFiles::existsFile32(dataFileName)) {
+      if (BoxFiles::existsPath(dataFileName)) {
         bool success = BoxFiles::removeFile32(dataFileName);
-        root[CODE] = 200;
+        root[CODE] = success ? 200 : 500;
       } else {
         root[CODE] = 404;  // file not found
       }
+    } else if (request->hasParam("folder")) {
+      String folderName = "/" + request->getParam("folder")->value();
+      if (BoxFiles::existsPath(folderName)) {
+        bool success = BoxFiles::removeFolder(folderName);
+        root[CODE] = success ? 200 : 500;
+      } else {
+        root[CODE] = 404;  // folder not found
+      }
     } else {
       root[CODE] = 400;
-      root["desc"] = "file required";
+      root["desc"] = "file or folder required";
     }
 
     root.printTo(*response);
@@ -468,7 +476,7 @@ void BoxConn::begin() {
   server.onNotFound([](AsyncWebServerRequest *request) {
 
     String url = request->url();
-    if (BoxFiles::existsFile32(url)) {
+    if (BoxFiles::existsPath(url)) {
 
       wifiExpiryMillis = millis() + wifiTimeoutMillis;
 

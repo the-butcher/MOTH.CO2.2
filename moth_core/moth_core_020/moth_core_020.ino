@@ -45,9 +45,12 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 loop_reason_t loopReason = LOOP_REASON___________UNKNOWN;
 loop_reason_t loopAction;
 
-int64_t microsecondsPerSecond = 1000000; // 1 second
-int64_t microsecondsOffsetBegin = 0;
-int64_t microsecondsRenderState = -180000000; // -3 minutes (be sure that even cases, when esp_get_time starts negative (?) the first state gets rendered)
+const int64_t MICROSECONDS_PER_SECOND = 1000000; // 1 second
+const int64_t MILLISECONDS_PER_SECOND = 1000; // 1 second
+const int64_t MEASUREMENT_WAIT_SECONDS_MAX = 1;
+
+int64_t offsetBeginSeconds = 0;
+int64_t renderStateSeconds = 0; // -3 minutes (be sure that even cases, when esp_get_time starts negative (?) the first state gets rendered)
 
 ButtonHandler buttonHander11(GPIO_NUM_11);
 ButtonHandler buttonHander12(GPIO_NUM_12);
@@ -63,7 +66,7 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  * -- think about what could be subscribed by the device (i.e. calibration)
  *
  * -- validate
- *    X preventSleep == false
+ *    ✓ preventSleep == false
  *    ✓ csvBufferSize == 60
  *    ✓ csv file is written
  *    ✓ file response is working
@@ -91,9 +94,6 @@ void setup() {
   pixels.begin();
   pixels.setBrightness(16);
 #endif
-
-  // pinMode(GPIO_NUM_14, INPUT); // A5
-  // attachInterrupt(digitalPinToInterrupt(GPIO_NUM_14), handleButton14Change, CHANGE);
 
   Serial.begin(115200);
   Wire.begin();
@@ -123,17 +123,16 @@ void setup() {
   SensorBme280::begin();
   SensorScd041::begin();
 
-  microsecondsOffsetBegin = esp_timer_get_time();
-
+  offsetBeginSeconds = BoxClock::getDate().secondstime();
 
 }
 
-int64_t getMicrosecondsMeasurementNext() {
-  return (Measurements::memBufferIndx + 1) * Measurements::microsecondsMeasurementInterval + microsecondsOffsetBegin;
+int64_t getMeasurementNextSeconds() {
+  return (Measurements::memBufferIndx + 1) * Measurements::measurementIntervalSeconds + offsetBeginSeconds;
 }
 
-int64_t getMicrosecondsMeasurementWait() {
-  return getMicrosecondsMeasurementNext() - esp_timer_get_time();
+int64_t getMeasurementWaitSeconds() {
+  return getMeasurementNextSeconds() - BoxClock::getDate().secondstime();
 }
 
 void handleButton11Change() {
@@ -185,9 +184,9 @@ void beep() {
  */
 void renderState(bool force) {
 
-  if (force || (esp_timer_get_time() - microsecondsRenderState) >= BoxDisplay::microsecondsRenderStateInterval) {
+  if (force || (BoxClock::getDate().secondstime() - renderStateSeconds) >= BoxDisplay::renderStateSeconds) {
 
-    microsecondsRenderState = esp_timer_get_time() - microsecondsPerSecond * 10; // add some safety to be sure the first state gets rendered
+    renderStateSeconds = BoxClock::getDate().secondstime() - 10; // add some safety to be sure the first state gets rendered
     
     bool autoConnect = BoxConn::getMode() == WIFI_OFF && BoxClock::isUpdateable();
     if (autoConnect) {
@@ -208,7 +207,7 @@ void renderState(bool force) {
     BoxDisplay::renderState();
 
   }
-  
+
 }
 
 void loop() {
@@ -227,11 +226,19 @@ void loop() {
   // regardless of loopAction, a measurement will be taken if it is time to do so
   // however, there may be issues when this happens shortly before a measurement ...
   // ... in such cases it can happen that i.e. turning on WiFi consumes enough time to have a negative wait time to the next measurement
-  if (esp_timer_get_time() >= getMicrosecondsMeasurementNext()) {
+  int64_t measureWaitSecondsA = getMeasurementWaitSeconds();
+  if (measureWaitSecondsA <= 1) {
+
+    // a final, short delay to hit the same second at all times, as far as possible
+    if (measureWaitSecondsA == 1) {
+      delay(MILLISECONDS_PER_SECOND);
+    }
+
     SensorBme280::tryRead();
     SensorScd041::tryRead();
     BoxPack::tryRead();
     SensorScd041::setPressure(SensorBme280::values.pressure / 100.0);
+
     Measurement measurement = {
       BoxClock::getDate().secondstime(),
       SensorScd041::values,
@@ -240,10 +247,12 @@ void loop() {
       true // publishable
     };
     Measurements::putMeasurement(measurement);
+
     if (isAudio && measurement.valuesCo2.co2 >= BoxDisplay::thresholdsCo2.riskHi) {
       beep();
     }
     displayFunc = [=]()->void{ renderState(false); };
+
   }
 
   if (loopAction == LOOP_REASON______CALIBRRATION) {
@@ -369,15 +378,15 @@ void loop() {
       loopReason = LOOP_REASON_RESET_CALIBRATION; // user requested calibration reset
     }
 
-    // any of the above reasons has been set
-    int64_t microsecondsMeasureWait = min(microsecondsPerSecond, getMicrosecondsMeasurementWait());
-    if (microsecondsMeasureWait <= 0) {
+
+    int64_t measureWaitSecondsB = min(MEASUREMENT_WAIT_SECONDS_MAX, getMeasurementWaitSeconds()); // not more than 1 second
+    if (measureWaitSecondsB <= 0) {
       loopReason = LOOP_REASON_______MEASUREMENT; // time to measure
       break;
     } else if (loopReason != LOOP_REASON___________UNKNOWN) {
       break; // expiry or user request
     } else {
-      delayMicroseconds(microsecondsMeasureWait);
+      delay(measureWaitSecondsB * MILLISECONDS_PER_SECOND);
     }
 
   }
@@ -391,8 +400,8 @@ void loop() {
   }
 
   // can go to sleep, but doublecheck that there is no negative sleep
-  int64_t microsecondsMeasureWait = getMicrosecondsMeasurementWait();
-  if (microsecondsMeasureWait > microsecondsPerSecond) { // longer than one second --> sleep
+  int64_t measureWaitSecondsC = getMeasurementWaitSeconds();
+  if (measureWaitSecondsC > 1) { // longer than one second --> sleep
 
     gpio_wakeup_disable(buttonHander11.gpin);
     gpio_wakeup_disable(buttonHander12.gpin);
@@ -403,7 +412,7 @@ void loop() {
     gpio_wakeup_enable(buttonHander13.gpin, buttonHander13.getWakeupLevel());
 
     esp_sleep_enable_gpio_wakeup();
-    esp_sleep_enable_timer_wakeup(microsecondsMeasureWait);
+    esp_sleep_enable_timer_wakeup(measureWaitSecondsC * MICROSECONDS_PER_SECOND);
 
 #if defined(NEOPIXEL_HELPER)
     blink(0x0000FF); // blue - sleeping
@@ -420,8 +429,6 @@ void loop() {
       loopReason = LOOP_REASON_______MEASUREMENT;
     }
 
-  } else if (microsecondsMeasureWait > 0) {
-    delayMicroseconds(microsecondsMeasureWait); // anything less or equal to a second is handled with a delay
   }
 
 }

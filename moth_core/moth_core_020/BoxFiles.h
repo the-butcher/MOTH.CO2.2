@@ -14,9 +14,10 @@ class BoxFiles {
   public:
   
     static void begin();
-    static bool buildFolders(String dataFilePath);
-    static bool existsFile32(String dataFileName);
-    static bool removeFile32(String dataFileName);
+    static bool buildFolders(String folder);
+    static bool removeFolder(String folder);
+    static bool existsPath(String path);
+    static bool removeFile32(String file);
 
 };
 

@@ -66,7 +66,7 @@ void BoxMqtt::updateConfiguration() {
   mqttUser = "";
   mqttPass = "";
   mqttCert = "";
-  if (BoxFiles::existsFile32(BoxMqtt::CONFIG_PATH)) {
+  if (BoxFiles::existsPath(BoxMqtt::CONFIG_PATH)) {
     
     BoxMqtt::configStatus = CONFIG_STATUS_PRESENT;
 
@@ -110,7 +110,7 @@ void BoxMqtt::updateConfiguration() {
 
 void BoxMqtt::checkClients() {
   if (wifiClient == NULL || mqttClient == NULL) {
-    if (mqttCert != "" && BoxFiles::existsFile32(mqttCert)) {
+    if (mqttCert != "" && BoxFiles::existsPath(mqttCert)) {
       wifiClient = new WiFiClientSecure();
       File32 certFile;
       certFile.open(mqttCert.c_str(), O_RDONLY);

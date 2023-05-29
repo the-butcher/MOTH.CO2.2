@@ -34,7 +34,6 @@ const String JSON_KEY_WARN_HIGH = "wHi";
 const String JSON_KEY_RISK_HIGH = "rHi";
 const String JSON_KEY_______C2F = "c2f";
 
-const int64_t MICROSECONDS_PER_MINUTE = 60000000;
 const char FORMAT_3_DIGIT[] = "%3s";
 const char FORMAT_4_DIGIT[] = "%4s";
 const char FORMAT_5_DIGIT[] = "%5s";
@@ -86,6 +85,7 @@ display_value_t displayValue = DISPLAY_VALUE___CO2;
 
 int textColor;
 int fillColor;
+int vertColor;
 
 Thresholds thresholdsTemperature;
 Thresholds thresholdsHumidity;
@@ -104,7 +104,7 @@ uint16_t tbw, tbh;
 String BoxDisplay::CONFIG_PATH = "/config/disp.json";
 config_status_t BoxDisplay::configStatus = CONFIG_STATUS_PENDING;
 Thresholds BoxDisplay::thresholdsCo2;
-int64_t BoxDisplay::microsecondsRenderStateInterval = 180000000; // default :: 3 minutes, will be overridden by config
+int64_t BoxDisplay::renderStateSeconds = 180; // default :: 3 minutes, will be overridden by config
 ThinkInk_290_Grayscale4_T5_Clone BoxDisplay::baseDisplay(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 
 void BoxDisplay::begin() {
@@ -142,7 +142,7 @@ void BoxDisplay::updateConfiguration() {
   float temperatureOffset = SensorScd041::getTemperatureOffset();
   String timezone = BoxClock::getTimezone();
 
-  if (BoxFiles::existsFile32(BoxDisplay::CONFIG_PATH)) {
+  if (BoxFiles::existsPath(BoxDisplay::CONFIG_PATH)) {
 
     BoxDisplay::configStatus = CONFIG_STATUS_PRESENT;
 
@@ -209,7 +209,7 @@ void BoxDisplay::updateConfiguration() {
   BoxClock::setTimezone(timezone);
 
   // min elapsed time before a display state update
-  BoxDisplay::microsecondsRenderStateInterval = max(MICROSECONDS_PER_MINUTE, displayUpdateMinutes * MICROSECONDS_PER_MINUTE);
+  BoxDisplay::renderStateSeconds = max(60, displayUpdateMinutes * 60);
 
   // TODO :: set some flag that will trigger a state re-render from the main loop
 
@@ -238,6 +238,14 @@ int BoxDisplay::getFillColor(float value, Thresholds thresholds) {
     return EPD_LIGHT;
   } else {
     return EPD_WHITE;
+  }
+}
+
+int BoxDisplay::getVertColor(float value, Thresholds thresholds) {
+  if (BoxDisplay::isRisk(value, thresholds)) {
+    return EPD_LIGHT;
+  } else {
+    return EPD_DARK;
   }
 }
 
@@ -375,9 +383,10 @@ void BoxDisplay::renderTable() {
   BoxDisplay::drawInnerBorders(EPD_LIGHT);
 
   int co2 = measurement.valuesCo2.co2;
-  float stale = max(0.0, (co2 - 425.0) / 380.0); // don't allow negative values
+  float stale = max(0.0, min(10.0, (co2 - 425.0) / 380.0)); // don't allow negative values
   textColor = getTextColor(co2, BoxDisplay::thresholdsCo2);
   fillColor = getFillColor(co2, BoxDisplay::thresholdsCo2);
+  vertColor = getVertColor(co2, BoxDisplay::thresholdsCo2);
   if (fillColor != EPD_WHITE) {
     BoxDisplay::fillRectangle(RECT_CO2, fillColor);
   }
@@ -385,16 +394,18 @@ void BoxDisplay::renderTable() {
 
   BoxDisplay::drawAntialiasedText08("CO", RECT_CO2, 6, TEXT_OFFSET_Y, textColor);
   BoxDisplay::drawAntialiasedText08("2", RECT_CO2, 26, TEXT_OFFSET_Y + 4, textColor);
-  if (co2 < 1000) {
-    // upper left of CO2
-    BoxDisplay::drawAntialiasedText08("ppm", RECT_CO2, 6, 76, textColor);
-    BoxDisplay::drawAntialiasedText08(formatString(String(stale, 1), FORMAT_STALE), RECT_CO2, 91, TEXT_OFFSET_Y, textColor);
-  } else {
-    // lower left of CO2
-    BoxDisplay::drawAntialiasedText08("ppm", RECT_CO2, 46, TEXT_OFFSET_Y, textColor);
-    BoxDisplay::drawAntialiasedText08(formatString(String(stale, 1), FORMAT_CELL_PERCENT), RECT_CO2, 131, TEXT_OFFSET_Y, textColor);
+  BoxDisplay::drawAntialiasedText08("ppm", RECT_CO2, 158, TEXT_OFFSET_Y, textColor);
+
+  int yScale = 5;
+  int yMax = RECT_CO2.ymax - 7;  
+  for (int percent = 0; percent <= 10; percent++) {
+    baseDisplay.drawFastHLine(RECT_CO2.xmin + 6, yMax - percent * yScale, 12, percent % 5 == 0 ? textColor: vertColor);
   }
-  
+
+  int yDim = stale * yScale;
+  for (int y = -1; y <= 1; y++) {
+    baseDisplay.drawFastHLine(RECT_CO2.xmin + 8, yMax - yDim + y, 8, textColor);
+  }
 
   // measurement.valuesBme.pressure;
 
@@ -438,11 +449,6 @@ void BoxDisplay::renderTable() {
 }
 
 void BoxDisplay::renderChart() {
-
-  // DISPLAY_VALUE___CO2,
-  // DISPLAY_VALUE___DEG,
-  // DISPLAY_VALUE___HUM,
-  // DISPLAY_VALUE___HPA  
 
   BoxDisplay::clearBuffer();
   BoxDisplay::drawOuterBorders(EPD_LIGHT);

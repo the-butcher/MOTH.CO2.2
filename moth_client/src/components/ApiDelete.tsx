@@ -15,12 +15,13 @@ import { IResponseProps } from './IResponseProps';
 const ApiDelete = (props: IApiProperties) => {
 
   const apiName = 'delete';
-  const apiDesc = 'delete files from the device';
+  const apiDesc = 'delete files or folders from the device';
   const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
   const [file, setFile] = useState<string>();
+  const [folder, setFolder] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
 
   const issueApiCall = () => {
@@ -30,7 +31,8 @@ const ApiDelete = (props: IApiProperties) => {
       meth: 'GET',
       type: apiType,
       qstr: {
-        file
+        file,
+        folder
       }
     });
   }
@@ -39,14 +41,25 @@ const ApiDelete = (props: IApiProperties) => {
     setFile(event.target.value);
   };
 
+  const handleFolderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFolder(event.target.value);
+  };
+
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
     if (props[apiName]) {
 
+      let href = `${boxUrl}/${apiName}`;
+      if (file !== '') {
+        href += `?file=${file}`;
+      } else if (folder !== '') {
+        href += `?folder=${folder}`;
+      }
+
       setResponseProps({
         time: Date.now(),
-        href: `${boxUrl}/${apiName}?file=${file}`,
+        href,
         type: apiType,
         http: 'GET',
         data: props[apiName]
@@ -67,11 +80,19 @@ const ApiDelete = (props: IApiProperties) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status == 'disconnected'}
+              disabled={status === 'disconnected'}
               label="file"
               id="outlined-start-adornment"
               size='small'
               onChange={handleFileChange}
+              required
+            />
+            <TextField
+              disabled={status === 'disconnected'}
+              label="folder"
+              id="outlined-start-adornment"
+              size='small'
+              onChange={handleFolderChange}
               required
             />
             <Button disabled={status == 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>

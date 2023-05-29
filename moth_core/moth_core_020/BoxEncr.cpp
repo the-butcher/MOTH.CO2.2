@@ -36,7 +36,7 @@ void BoxEncr::updateConfiguration() {
 
   String _key = key;
   String _inv = inv;
-  if (BoxFiles::existsFile32(BoxEncr::CONFIG_PATH)) {
+  if (BoxFiles::existsPath(BoxEncr::CONFIG_PATH)) {
 
     BoxEncr::configStatus = CONFIG_STATUS_PRESENT;
 

@@ -13,7 +13,7 @@ int Measurements::regBufferSize = 5;
 int Measurements::csvBufferSize = 60; // 60;
 int Measurements::memBufferSize = 10080; // 10080; // 60 * 24 * 7, every minute over the last 7 days (space-wise it could also handle 14 days)
 int Measurements::memBufferIndx = 0;
-int64_t Measurements::microsecondsMeasurementInterval = 60000000; // 1 minute
+int64_t Measurements::measurementIntervalSeconds = 60; // 1 minute
 Measurement* Measurements::measurements;
 String Measurements::CSV_HEAD = "time; co2; temperature; humidity; pressure; percent; voltage\r\n";
 

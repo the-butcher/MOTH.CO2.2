@@ -50,6 +50,7 @@ class BoxDisplay {
     static String firstDigitOfFraction(float value);
     static int getTextColor(float value, Thresholds thresholds);
     static int getFillColor(float value, Thresholds thresholds);
+    static int getVertColor(float value, Thresholds thresholds);
     static void fillRectangle(Rectangle rectangle, uint16_t color);
     static void drawOuterBorders(uint16_t color);
     static void drawInnerBorders(uint16_t color);
@@ -66,7 +67,7 @@ class BoxDisplay {
   public:
     static String CONFIG_PATH;
     static config_status_t configStatus;
-    static int64_t microsecondsRenderStateInterval;
+    static int64_t renderStateSeconds;
     static Thresholds thresholdsCo2;
     static void begin();
     static void clearBuffer();
