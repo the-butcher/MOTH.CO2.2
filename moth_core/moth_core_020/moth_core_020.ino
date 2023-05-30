@@ -160,11 +160,6 @@ void handleButton13Change() {
   }
 }
 
-// void handleButton14Change() {
-//   Serial.print("change 14, ");
-//   Serial.println(digitalRead(GPIO_NUM_14));
-// }
-
 #if defined(NEOPIXEL_HELPER)
 void blink(int color) {
   pixels.fill(color);

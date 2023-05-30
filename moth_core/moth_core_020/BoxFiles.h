@@ -1,10 +1,7 @@
 #ifndef BoxFiles_h
 #define BoxFiles_h
 
-#include <Arduino.h>
 #include "SdFat.h"
-#include "Measurements.h"
-#include "RTClib.h"
 
 class BoxFiles {
   

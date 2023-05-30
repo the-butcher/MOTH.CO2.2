@@ -6,6 +6,7 @@
  * ################################################
  */
 float temperatureOffset = 1.2; // default offset, can be overridden in /config/disp.json -> "deg/off"
+bool hasBegun = false;
 
 /**
  * ################################################
@@ -18,6 +19,7 @@ ValuesCo2 SensorScd041::values;
 void SensorScd041::begin() {
   SensorScd041::baseSensor.begin(Wire);
   SensorScd041::applyTemperatureOffset(); // this also starts measurements
+  hasBegun = true;
 }
 
 float SensorScd041::getTemperatureOffset() {
@@ -27,7 +29,7 @@ float SensorScd041::getTemperatureOffset() {
 void SensorScd041::setTemperatureOffset(float temperatureOffset1) {
   bool isApplOffsetRequired = temperatureOffset1 != temperatureOffset;
   temperatureOffset = temperatureOffset1;
-  if (isApplOffsetRequired) {
+  if (hasBegun && isApplOffsetRequired) {
     SensorScd041::applyTemperatureOffset();
   }
 }

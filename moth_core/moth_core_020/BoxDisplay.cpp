@@ -8,13 +8,13 @@
 #include "SensorScd041.h"
 #include "WiFi.h"
 #include <SdFat.h>
+#include <ArduinoJson.h>
 
 #define EPD_DC 10
 #define EPD_CS 9
 #define EPD_BUSY 14  // A4 -> has been solder-connected to the busy pad
 #define SRAM_CS -1 
 #define EPD_RESET 8 // A5 -> has been bridged to the reset pin 
-
 
 
 /**
