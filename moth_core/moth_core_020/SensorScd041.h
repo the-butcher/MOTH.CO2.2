@@ -9,6 +9,8 @@ class SensorScd041 {
   
   private:
     static SensirionI2CScd4x baseSensor;
+    static float temperatureOffset;
+    static bool hasBegun;
     static void applyTemperatureOffset();
    
   public:

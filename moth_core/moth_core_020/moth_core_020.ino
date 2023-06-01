@@ -75,10 +75,10 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *    ✓ display config was successfully read
  *    ✓ folder listing is working
  *    ✓ upload is working
- *    ✓ timezone works and add examples to the readme
+ *    ✓ timezone works
  *    ✓ time gets adjusted while permanently being online
  *    ✓ time gets adjusted hourly when offline
- *    ? mqtt gets published hourly when offline
+ *    ! mqtt gets published hourly when offline
  *    ✓ stale never shows minus values
  *
  */

@@ -7,6 +7,10 @@
 // https://randomnerdtutorials.com/esp32-ntp-timezones-daylight-saving/
 #define MILLISECONDS_PER_HOUR UINT32_C(60 * 60 * 1000) // 1 HOUR
 
+// response->addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT");
+// char days[7][3] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+// char months[12][3] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
 /**
  * ################################################
  * ## mutable variables
@@ -58,7 +62,6 @@ void BoxClock::setTimezone(String timezone1) {
   timezone = timezone1;
   setenv("TZ", timezone.c_str(), 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
   tzset(); // when the sketch is uploaded, the ESP's time is kept, but the timezone is lost, this is to restore and have valid time, i.e. after a reset
-  // BoxClock::updateReverse();
 }
 
 bool BoxClock::isUpdateable() {
@@ -74,13 +77,22 @@ void BoxClock::updateFromNtp() {
 
 // Callback function (get's called when time adjusts via NTP)
 void BoxClock::handleUpdateFromNtp(struct timeval *t) {
+  
   struct tm timeinfo;
   getLocalTime(&timeinfo);
+
+  // time_t rawtime;
+  // struct tm * ptm;
+  // time(&rawtime);
+  // ptm = gmtime(&rawtime);
+  // Serial.print("times, ");
+  // Serial.print(ptm->tm_hour);
+  // Serial.print(", ");
+  // Serial.println(timeinfo.tm_hour);
+
   DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
   BoxClock::baseClock.adjust(now);  
-  // BoxClock::updateReverse(); // localtime should already be set at that time
-  // DateTime now(t->tv_sec + 60 * 60 * 2);
-  // BoxClock::baseClock.adjust(now);
+
 }
 
 DateTime BoxClock::getDate() {

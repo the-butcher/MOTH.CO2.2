@@ -5,8 +5,7 @@
  * ## mutable variables
  * ################################################
  */
-float temperatureOffset = 1.2; // default offset, can be overridden in /config/disp.json -> "deg/off"
-bool hasBegun = false;
+
 
 /**
  * ################################################
@@ -15,21 +14,23 @@ bool hasBegun = false;
  */
 SensirionI2CScd4x SensorScd041::baseSensor;
 ValuesCo2 SensorScd041::values;
+float SensorScd041::temperatureOffset = 1.2; // default offset, can be overridden in /config/disp.json -> "deg/off"
+bool SensorScd041::hasBegun = false;
 
 void SensorScd041::begin() {
   SensorScd041::baseSensor.begin(Wire);
   SensorScd041::applyTemperatureOffset(); // this also starts measurements
-  hasBegun = true;
+  SensorScd041::hasBegun = true;
 }
 
 float SensorScd041::getTemperatureOffset() {
-  return temperatureOffset;
+  return SensorScd041::temperatureOffset;
 }
 
-void SensorScd041::setTemperatureOffset(float temperatureOffset1) {
-  bool isApplOffsetRequired = temperatureOffset1 != temperatureOffset;
-  temperatureOffset = temperatureOffset1;
-  if (hasBegun && isApplOffsetRequired) {
+void SensorScd041::setTemperatureOffset(float temperatureOffset) {
+  bool isApplOffsetRequired = temperatureOffset != SensorScd041::temperatureOffset;
+  SensorScd041::temperatureOffset = temperatureOffset;
+  if (SensorScd041::hasBegun && isApplOffsetRequired) {
     SensorScd041::applyTemperatureOffset();
   }
 }
@@ -80,7 +81,7 @@ void SensorScd041::factoryReset() {
 void SensorScd041::applyTemperatureOffset() {
   SensorScd041::baseSensor.stopPeriodicMeasurement();
   delay(500);
-  SensorScd041::baseSensor.setTemperatureOffset(temperatureOffset);
+  SensorScd041::baseSensor.setTemperatureOffset(SensorScd041::temperatureOffset);
   delay(400);
   SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();    
 }

@@ -6,6 +6,7 @@
 #include "BoxConn.h"
 #include "Measurements.h"
 #include "SensorScd041.h"
+#include "SensorBme280.h"
 #include "WiFi.h"
 #include <SdFat.h>
 #include <ArduinoJson.h>
@@ -33,6 +34,7 @@ const String JSON_KEY_WARN__LOW = "wLo";
 const String JSON_KEY_WARN_HIGH = "wHi";
 const String JSON_KEY_RISK_HIGH = "rHi";
 const String JSON_KEY_______C2F = "c2f";
+const String JSON_KEY_______COR = "cor";
 
 const char FORMAT_3_DIGIT[] = "%3s";
 const char FORMAT_4_DIGIT[] = "%4s";
@@ -92,6 +94,7 @@ Thresholds thresholdsHumidity;
 Thresholds thresholdsHighlight;
 
 bool c2f = false; // if true show values in fahrenheit
+float cor = 0.0; // if true try to use the bme280 sensor's temperature for display temperature correction
 
 int16_t tbx, tby;
 uint16_t tbw, tbh;
@@ -139,7 +142,8 @@ void BoxDisplay::updateConfiguration() {
   int humRiskHi = 65;  
 
   int displayUpdateMinutes = 3;
-  float temperatureOffset = SensorScd041::getTemperatureOffset();
+  float temperatureOffsetScd041 = SensorScd041::getTemperatureOffset();
+  float temperatureOffsetBme280 = SensorBme280::getTemperatureOffset();
   String timezone = BoxClock::getTimezone();
 
   if (BoxFiles::existsPath(BoxDisplay::CONFIG_PATH)) {
@@ -147,35 +151,44 @@ void BoxDisplay::updateConfiguration() {
     BoxDisplay::configStatus = CONFIG_STATUS_PRESENT;
 
     File32 dispFile;
-    dispFile.open(BoxDisplay::CONFIG_PATH.c_str(), O_RDONLY);
+    bool fileSuccess = dispFile.open(BoxDisplay::CONFIG_PATH.c_str(), O_RDONLY);
+    if (fileSuccess) {
 
-    BoxDisplay::configStatus = CONFIG_STATUS__LOADED;
+      BoxDisplay::configStatus = CONFIG_STATUS__LOADED;
 
-    StaticJsonBuffer<512> jsonBuffer;
-    JsonObject &root = jsonBuffer.parseObject(dispFile);    
+      StaticJsonBuffer<1024> jsonBuffer;
+      JsonObject &root = jsonBuffer.parseObject(dispFile);    
+      if (root.success()) {
 
-    displayUpdateMinutes = root[JSON_KEY___MINUTES] | displayUpdateMinutes;
-    timezone = root[JSON_KEY__TIMEZONE] | timezone;
+        displayUpdateMinutes = root[JSON_KEY___MINUTES] | displayUpdateMinutes;
+        timezone = root[JSON_KEY__TIMEZONE] | timezone;
 
-    co2WarnHi = root[JSON_KEY_______CO2][JSON_KEY_WARN_HIGH] | co2WarnHi;
-    co2RiskHi = root[JSON_KEY_______CO2][JSON_KEY_RISK_HIGH] | co2RiskHi;
+        co2WarnHi = root[JSON_KEY_______CO2][JSON_KEY_WARN_HIGH] | co2WarnHi;
+        co2RiskHi = root[JSON_KEY_______CO2][JSON_KEY_RISK_HIGH] | co2RiskHi;
 
-    degRiskLo = root[JSON_KEY_______DEG][JSON_KEY_RISK__LOW] | degRiskLo;
-    degWarnLo = root[JSON_KEY_______DEG][JSON_KEY_WARN__LOW] | degWarnLo;
-    degWarnHi = root[JSON_KEY_______DEG][JSON_KEY_WARN_HIGH] | degWarnHi;
-    degRiskHi = root[JSON_KEY_______DEG][JSON_KEY_RISK_HIGH] | degRiskHi;
-    temperatureOffset = root[JSON_KEY_______DEG][JSON_KEY____OFFSET] | temperatureOffset;
-    c2f = root[JSON_KEY_______DEG][JSON_KEY_______C2F] | false;
+        degRiskLo = root[JSON_KEY_______DEG][JSON_KEY_RISK__LOW] | degRiskLo;
+        degWarnLo = root[JSON_KEY_______DEG][JSON_KEY_WARN__LOW] | degWarnLo;
+        degWarnHi = root[JSON_KEY_______DEG][JSON_KEY_WARN_HIGH] | degWarnHi;
+        degRiskHi = root[JSON_KEY_______DEG][JSON_KEY_RISK_HIGH] | degRiskHi;
 
-    humRiskLo = root[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | humRiskLo;
-    humWarnLo = root[JSON_KEY_______HUM][JSON_KEY_WARN__LOW] | humWarnLo;
-    humWarnHi = root[JSON_KEY_______HUM][JSON_KEY_WARN_HIGH] | humWarnHi;
-    humRiskHi = root[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | humRiskHi;
+        temperatureOffsetScd041 = root[JSON_KEY_______DEG][JSON_KEY____OFFSET][0] | temperatureOffsetScd041;
+        temperatureOffsetBme280 = root[JSON_KEY_______DEG][JSON_KEY____OFFSET][1] | temperatureOffsetBme280;
+        c2f = root[JSON_KEY_______DEG][JSON_KEY_______C2F] | c2f;
+        cor = root[JSON_KEY_______DEG][JSON_KEY_______COR] | cor;
 
-    dispFile.close();
+        humRiskLo = root[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | humRiskLo;
+        humWarnLo = root[JSON_KEY_______HUM][JSON_KEY_WARN__LOW] | humWarnLo;
+        humWarnHi = root[JSON_KEY_______HUM][JSON_KEY_WARN_HIGH] | humWarnHi;
+        humRiskHi = root[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | humRiskHi;
 
-    BoxDisplay::configStatus = CONFIG_STATUS__PARSED;
+        BoxDisplay::configStatus = CONFIG_STATUS__PARSED;
 
+      }
+
+      dispFile.close();
+
+    }
+  
   } else {
     BoxDisplay::configStatus = CONFIG_STATUS_MISSING;
   }
@@ -205,13 +218,12 @@ void BoxDisplay::updateConfiguration() {
     20
   };
 
-  SensorScd041::setTemperatureOffset(temperatureOffset);
+  SensorScd041::setTemperatureOffset(temperatureOffsetScd041);
+  SensorBme280::setTemperatureOffset(temperatureOffsetBme280);
   BoxClock::setTimezone(timezone);
 
   // min elapsed time before a display state update
   BoxDisplay::renderStateSeconds = max(60, displayUpdateMinutes * 60);
-
-  // TODO :: set some flag that will trigger a state re-render from the main loop
 
 }
 
@@ -373,17 +385,67 @@ float BoxDisplay::celsiusToFahrenheit(float celsius) {
   return celsius * 9.0 / 5.0 + 32;
 }
 
+ValuesCo2 BoxDisplay::getDisplayValues() {
+
+  Measurement latestMeasurement = Measurements::getLatestMeasurement();
+  int valueCount = 14;
+
+  if (cor > 0 && Measurements::memBufferIndx > valueCount) {
+
+    float temperature = latestMeasurement.valuesCo2.temperature;
+    float humidity = latestMeasurement.valuesCo2.humidity;
+
+    // get an average over the bme280's latest 14 temperatures
+    Measurement offsetMeasurement;
+    float temperatureAvg = 0.0;
+    for (int offset = 0; offset < valueCount; offset++) {
+      offsetMeasurement = Measurements::getOffsetMeasurement(offset);
+      temperatureAvg += offsetMeasurement.valuesBme.temperature;
+    }
+    temperatureAvg = temperatureAvg / valueCount;
+
+    if (temperatureAvg > temperature) {
+
+      // calculate absolute humidity
+      float humidityAbs = humidity * Measurements::toMagnus(temperature); // (g/m3)
+
+      // apply temperature correction, then calculate new relative humidity for that temperature
+      temperature = temperature - (temperatureAvg - temperature) * cor;
+      humidity = humidityAbs / Measurements::toMagnus(temperature);
+
+      // return the corrected values
+      return {
+        latestMeasurement.valuesCo2.co2,
+        temperature,
+        humidity
+      };
+
+    } else {
+      return latestMeasurement.valuesCo2;
+    }
+
+
+  } else {
+    return latestMeasurement.valuesCo2;
+  }
+
+}
+
 void BoxDisplay::renderTable() {  
 
-  Measurement measurement = Measurements::getLatestMeasurement();
+  // Measurement measurement = Measurements::getLatestMeasurement();
 
   BoxDisplay::clearBuffer();
 
   BoxDisplay::drawOuterBorders(EPD_LIGHT);
   BoxDisplay::drawInnerBorders(EPD_LIGHT);
 
-  int co2 = measurement.valuesCo2.co2;
-  float stale = max(0.0, min(10.0, (co2 - 425.0) / 380.0)); // don't allow negative values
+  ValuesCo2 displayValues = BoxDisplay::getDisplayValues();
+  int co2 = displayValues.co2;
+  float stale = max(0.0, min(10.0, (co2 - 425.0) / 380.0)); // don't allow negative stale values
+  float temperature = displayValues.temperature;
+  float humidity = displayValues.humidity;
+
   textColor = getTextColor(co2, BoxDisplay::thresholdsCo2);
   fillColor = getFillColor(co2, BoxDisplay::thresholdsCo2);
   vertColor = getVertColor(co2, BoxDisplay::thresholdsCo2);
@@ -407,9 +469,6 @@ void BoxDisplay::renderTable() {
     baseDisplay.drawFastHLine(RECT_CO2.xmin + 8, yMax - yDim + y, 8, textColor);
   }
 
-  // measurement.valuesBme.pressure;
-
-  float temperature = measurement.valuesCo2.temperature;
   textColor = getTextColor(temperature, thresholdsTemperature);
   fillColor = getFillColor(temperature, thresholdsTemperature);
   if (c2f) {
@@ -427,7 +486,6 @@ void BoxDisplay::renderTable() {
   BoxDisplay::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 82, 35, textColor);
   baseDisplay.drawCircle(RECT_DEG.xmin + 79, RECT_DEG.ymin + 7, 2, textColor);
 
-  float humidity = measurement.valuesCo2.humidity;
   textColor = getTextColor(humidity, thresholdsHumidity);
   fillColor = getFillColor(humidity, thresholdsHumidity);
   int humidity10 = round(humidity * 10.0);
@@ -603,7 +661,6 @@ void BoxDisplay::renderHeader() {
     }
 
   }
-
   
 }
 
@@ -611,9 +668,9 @@ void BoxDisplay::renderFooter() {
 
   ValuesBat valuesBat = BoxPack::values;
 
-  BoxDisplay::drawAntialiasedText08(valuesBat.powered ? ">" : "", RECT_BOT, 210, TEXT_OFFSET_Y, EPD_BLACK);
+  // BoxDisplay::drawAntialiasedText08(valuesBat.powered ? ">" : "", RECT_BOT, 210, TEXT_OFFSET_Y, EPD_BLACK);
 
-  String cellPercentFormatted = formatString(String(valuesBat.percent, 1), FORMAT_CELL_PERCENT);
+  String cellPercentFormatted = formatString(String(valuesBat.percent, 0), FORMAT_CELL_PERCENT);
   BoxDisplay::drawAntialiasedText08(cellPercentFormatted, RECT_BOT, 228, TEXT_OFFSET_Y, EPD_BLACK);
 
   String timeFormatted = BoxClock::getTimeString(BoxClock::getDate());

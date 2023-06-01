@@ -19,6 +19,7 @@
 #include "AESLib.h"
 #include "StringPrint.h"
 #include <SdFat.h>
+#include "ValuesCo2.h"
 
 /**
  * ################################################
@@ -72,36 +73,41 @@ void BoxConn::updateConfiguration() {
     BoxConn::configStatus = CONFIG_STATUS_PRESENT;
 
     File32 wifiFile;
-    wifiFile.open(BoxConn::CONFIG_PATH.c_str(), O_RDONLY);
+    bool fileSuccess = wifiFile.open(BoxConn::CONFIG_PATH.c_str(), O_RDONLY);
+    if (fileSuccess) {
 
-    BoxConn::configStatus = CONFIG_STATUS__LOADED;
+      BoxConn::configStatus = CONFIG_STATUS__LOADED;
 
-    StaticJsonBuffer<512> jsonBuffer;
-    JsonObject &root = jsonBuffer.parseObject(wifiFile);
+      StaticJsonBuffer<512> jsonBuffer;
+      JsonObject &root = jsonBuffer.parseObject(wifiFile);
+      if (root.success()) {
 
-    // timeout minutes
-    _wifiTimeoutMinutes = root[JSON_KEY___MINUTES] | _wifiTimeoutMinutes;
+        // timeout minutes
+        _wifiTimeoutMinutes = root[JSON_KEY___MINUTES] | _wifiTimeoutMinutes;
 
-    int configuredNetworkIndex = 0;
-    int networkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
-    for (int i = 0; i < networkCount; i++) {
-      String key = root[JSON_KEY__NETWORKS][i][JSON_KEY_______KEY] | "";
-      String pwd = root[JSON_KEY__NETWORKS][i][JSON_KEY_______PWD] | "";
-      if (pwd != "") {
-        pwd = BoxEncr::decrypt(pwd);
+        int configuredNetworkIndex = 0;
+        int networkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
+        for (int i = 0; i < networkCount; i++) {
+          String key = root[JSON_KEY__NETWORKS][i][JSON_KEY_______KEY] | "";
+          String pwd = root[JSON_KEY__NETWORKS][i][JSON_KEY_______PWD] | "";
+          if (pwd != "") {
+            pwd = BoxEncr::decrypt(pwd);
+          }
+          configuredNetworks[configuredNetworkIndex] = {
+            key,
+            pwd,
+            0,
+            WIFI_AUTH_OPEN
+          };
+          configuredNetworkIndex++;
+        }
+        BoxConn::configStatus = CONFIG_STATUS__PARSED;
+
       }
-      configuredNetworks[configuredNetworkIndex] = {
-        key,
-        pwd,
-        0,
-        WIFI_AUTH_OPEN
-      };
-      configuredNetworkIndex++;
+      
+      wifiFile.close();
+
     }
-
-    wifiFile.close();
-
-    BoxConn::configStatus = CONFIG_STATUS__PARSED;
     
   } else {
     BoxConn::configStatus = CONFIG_STATUS_MISSING;
@@ -145,6 +151,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=60"); // assume status does not change too quick
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -190,12 +197,19 @@ void BoxConn::begin() {
     Measurement latestMeasurement = Measurements::getLatestMeasurement();
     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + latestMeasurement.secondstime);
 
+    ValuesCo2 valuesCo2 = BoxDisplay::getDisplayValues();
+
     root["time"] = BoxClock::getDateTimeString(date);
-    root["co2"] = latestMeasurement.valuesCo2.co2;
-    root["temperature"] = round(latestMeasurement.valuesCo2.temperature * 10) / 10.0;
-    root["humidity"] = round(latestMeasurement.valuesCo2.humidity * 10) / 10.0;
+    root["co2"] = valuesCo2.co2;
+    root["temperature"] = round(valuesCo2.temperature * 10) / 10.0;
+    root["humidity"] = round(valuesCo2.humidity * 10) / 10.0;
     root["pressure"] = latestMeasurement.valuesBme.pressure;
     root["percent"] = latestMeasurement.valuesBat.percent;
+
+    int maxAge = 60 - (BoxClock::getDate().secondstime() - latestMeasurement.secondstime); // time until next measurement
+    char maxAgeBuf[16];
+    sprintf(maxAgeBuf, "max-age=%s", String(maxAge));
+    response->addHeader("Cache-Control", maxAgeBuf);
 
     root.printTo(*response);
     request->send(response);
@@ -206,6 +220,12 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     DataResponse *response = new DataResponse();
+
+    int maxAge = 60 - (BoxClock::getDate().secondstime() - Measurements::getLatestMeasurement().secondstime); // time until next measurement
+    char maxAgeBuf[16];
+    sprintf(maxAgeBuf, "max-age=%s", String(maxAge));
+    response->addHeader("Cache-Control", maxAgeBuf);
+
     request->send(response);
 
   });
@@ -214,6 +234,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=60"); // assume no frequent changes in folder content
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -275,10 +296,23 @@ void BoxConn::begin() {
 
       dataFileName = "/" + request->getParam("file")->value();
       if (dataFileName != BoxEncr::CONFIG_PATH && BoxFiles::existsPath(dataFileName)) { // hide encr from api
+
         File32Response *response = new File32Response(dataFileName, "text/csv");
+        
+        int maxAge = 86400; // 24 hours
+        if (dataFileName == Measurements::dataFileNameLast) {
+          maxAge = (Measurements::csvBufferSize - Measurements::getCsvBufferIndex()) * 60; // time until next file update
+        }
+        char maxAgeBuf[16];
+        sprintf(maxAgeBuf, "max-age=%s", String(maxAge));
+        response->addHeader("Cache-Control", maxAgeBuf);
+
+        // TODO :: refect actual content type
         request->send(response);
+
       } else {
         AsyncResponseStream *response = request->beginResponseStream("application/json");
+        response->addHeader("Cache-Control", "max-age=60");
         DynamicJsonBuffer jsonBuffer;
         JsonObject &root = jsonBuffer.createObject();
         root[CODE] = 404;  // file not found
@@ -290,6 +324,7 @@ void BoxConn::begin() {
 
     } else {
       AsyncResponseStream *response = request->beginResponseStream("application/json");
+      response->addHeader("Cache-Control", "max-age=60");
       DynamicJsonBuffer jsonBuffer;
       JsonObject &root = jsonBuffer.createObject();
       root[CODE] = 400;  // bad request
@@ -305,6 +340,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=10"); // tell the browser to not call too often
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -335,6 +371,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=60");
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -370,6 +407,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=10"); // networks are only evaluated when turning wifi off, then on again, ne frequent changes
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -399,6 +437,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + 1000;  // have a short wifi expiry
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=10");
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -425,6 +464,7 @@ void BoxConn::begin() {
         if (ref >= 400) {
           BoxConn::requestedCalibrationReference = ref;
           root["ref"] = ref;
+          response->addHeader("Cache-Control", "max-age=180"); // no sense in calibrating quicker than 3 minutes
         } else {
           root[CODE] = 400;
           root["desc"] = "ref must be >= 400";
@@ -446,6 +486,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=60");
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -462,6 +503,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=180");
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -493,7 +535,7 @@ void BoxConn::begin() {
       }
       
       File32Response *response = new File32Response(url, fileType);
-      response->addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT");
+      response->addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT"); // TODO this should change with updates to the server files
       request->send(response);
 
     } else {

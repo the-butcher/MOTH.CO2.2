@@ -71,26 +71,32 @@ void BoxMqtt::updateConfiguration() {
     BoxMqtt::configStatus = CONFIG_STATUS_PRESENT;
 
     File32 mqttFile;
-    mqttFile.open(BoxMqtt::CONFIG_PATH.c_str(), O_RDONLY);
+    bool fileSuccess = mqttFile.open(BoxMqtt::CONFIG_PATH.c_str(), O_RDONLY);
+    if (fileSuccess) {
 
-    BoxMqtt::configStatus = CONFIG_STATUS__LOADED;
+      BoxMqtt::configStatus = CONFIG_STATUS__LOADED;
 
-    StaticJsonBuffer<512> jsonBuffer;
-    JsonObject &root = jsonBuffer.parseObject(mqttFile);    
+      StaticJsonBuffer<512> jsonBuffer;
+      JsonObject &root = jsonBuffer.parseObject(mqttFile);    
+      if (root.success()) {
 
-    mqttAddr = root[JSON_KEY___ADDR] | mqttAddr;
-    mqttPort = root[JSON_KEY___PORT] | mqttPort;
-    mqttUser = root[JSON_KEY___USER] | mqttUser;
-    String _mqttPass = root[JSON_KEY___PASS] | mqttPass;
-    if (_mqttPass != "") {
-      mqttPass = BoxEncr::decrypt(_mqttPass);
+        mqttAddr = root[JSON_KEY___ADDR] | mqttAddr;
+        mqttPort = root[JSON_KEY___PORT] | mqttPort;
+        mqttUser = root[JSON_KEY___USER] | mqttUser;
+        String _mqttPass = root[JSON_KEY___PASS] | mqttPass;
+        if (_mqttPass != "") {
+          mqttPass = BoxEncr::decrypt(_mqttPass);
+        }
+        mqttClid = root[JSON_KEY_CLIENT] | mqttClid;
+        mqttCert = root[JSON_KEY___CERT] | mqttCert;
+
+        BoxMqtt::configStatus = CONFIG_STATUS__PARSED;   
+
+      }
+
+      mqttFile.close();
+
     }
-    mqttClid = root[JSON_KEY_CLIENT] | mqttClid;
-    mqttCert = root[JSON_KEY___CERT] | mqttCert;
-
-    mqttFile.close();
-
-    BoxMqtt::configStatus = CONFIG_STATUS__PARSED;    
 
   } else {
     BoxMqtt::configStatus = CONFIG_STATUS_MISSING;

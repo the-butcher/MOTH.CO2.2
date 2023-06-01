@@ -3,6 +3,19 @@
 #include "SdFat.h"
 #include "DataFileDef.h"
 #include "BoxFiles.h"
+#include "SensorBme280.h"
+
+/**
+ * ################################################
+ * ## constants
+ * ################################################
+ */
+const float MAGIC_NO = 13.2473225884051;
+const float MAGNUS_B = 17.670;
+const float MAGNUS_C = 243.50;
+const float KELVIN_Z = 273.15;
+
+const int CALIBRATION_INTERVAL_BME280 = 20;
 
 /**
  * ################################################
@@ -15,7 +28,8 @@ int Measurements::memBufferSize = 10080; // 10080; // 60 * 24 * 7, every minute 
 int Measurements::memBufferIndx = 0;
 int64_t Measurements::measurementIntervalSeconds = 60; // 1 minute
 Measurement* Measurements::measurements;
-String Measurements::CSV_HEAD = "time; co2; temperature; humidity; pressure; percent; voltage\r\n";
+String Measurements::CSV_HEAD = "time; co2; temperature; humidity; pressure; percent\r\n";
+String Measurements::dataFileNameLast = "";
 
 void Measurements::begin() {
 
@@ -23,8 +37,36 @@ void Measurements::begin() {
   Measurements::measurements = (Measurement*) ps_malloc(Measurements::memBufferSize * sizeof(Measurement));
   memset(Measurements::measurements, 0, Measurements::memBufferSize * sizeof(Measurement));
 
-  // Serial.print(memBufferSize);
-  // Serial.println(" measurements allocated from PSRAM");
+}
+
+float Measurements::toMagnus(float temperatureDeg) {
+  return exp((MAGNUS_B * temperatureDeg) / (temperatureDeg + MAGNUS_C)) * MAGIC_NO / (KELVIN_Z + temperatureDeg);
+}  
+
+void Measurements::checkCalibrationOffsetBme280() {
+
+  Measurement measurement;
+
+  // calculating the variance of temperature offset between voc and co2
+  double calibrationThreshold = 0.25; // TODO maybe refine this value
+  double temperatureOffsetVal = 0.0;
+  double temperatureOffsetAvg = 0.0;
+  double temperatureOffsetVar = 0.0; // variance
+  for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0; offsetIndex--) {
+    measurement = Measurements::getOffsetMeasurement(offsetIndex);
+    temperatureOffsetVal = measurement.valuesBme.temperature - measurement.valuesCo2.temperature;
+    temperatureOffsetAvg += temperatureOffsetVal;
+  }
+  temperatureOffsetAvg = temperatureOffsetAvg / Measurements::csvBufferSize;
+  for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0; offsetIndex--) {
+    measurement = Measurements::getOffsetMeasurement(offsetIndex);
+    temperatureOffsetVal = measurement.valuesBme.temperature - measurement.valuesCo2.temperature;
+    temperatureOffsetVar += pow(temperatureOffsetVal - temperatureOffsetAvg, 2);
+  }
+  temperatureOffsetVar = sqrt(temperatureOffsetVar);
+  if (temperatureOffsetVar < calibrationThreshold) { 
+    SensorBme280::setTemperatureOffset(SensorBme280::getTemperatureOffset() + temperatureOffsetAvg);
+  } 
 
 }
 
@@ -32,16 +74,15 @@ void Measurements::saveToFile() {
 
   DateTime date;
   DataFileDef dataFileDef;
-  String dataFileNameLast = "";
   String dataFilePathLast = "";
   File32 csvFile;
-  Measurement measurement;
 
+  Measurement measurement;
   for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0; offsetIndex--) {
     measurement = Measurements::getOffsetMeasurement(offsetIndex);
     date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
     dataFileDef = BoxClock::getDataFileDef(date); // the file name that shall be written to
-    if (dataFileDef.name != dataFileNameLast) {
+    if (dataFileDef.name != Measurements::dataFileNameLast) {
       if (csvFile) { // file already open -> file change at midnight
         csvFile.sync(); // write anything pending
         csvFile.close();
@@ -55,7 +96,7 @@ void Measurements::saveToFile() {
       }      
     }
     csvFile.print(Measurements::toCsv(measurement));
-    dataFileNameLast = dataFileDef.name;
+    Measurements::dataFileNameLast = dataFileDef.name;
     dataFilePathLast = dataFileDef.path;
   }
 
@@ -79,6 +120,9 @@ Measurement Measurements::getLatestMeasurement() {
 void Measurements::putMeasurement(Measurement measurement) {
   Measurements::measurements[Measurements::memBufferIndx % Measurements::memBufferSize] = measurement;
   memBufferIndx++;
+  if (Measurements::memBufferIndx % CALIBRATION_INTERVAL_BME280 == 0) { // csv buffer turnaround
+    Measurements::checkCalibrationOffsetBme280();
+  }
   if (Measurements::memBufferIndx % Measurements::csvBufferSize == 0) { // csv buffer turnaround
     Measurements::saveToFile();
   }
@@ -165,14 +209,19 @@ String Measurements::toCsv(Measurement measurement) {
 
   DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
 
-  sprintf(csvBuffer, "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s\r\n", 
-  date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
-  String(measurement.valuesCo2.co2), 
-  String(measurement.valuesCo2.temperature, 1), 
-  String(measurement.valuesCo2.humidity, 1), 
-  String(measurement.valuesBme.pressure), 
-  String(measurement.valuesBat.percent, 1), 
-  String(measurement.valuesBat.voltage, 3));
+  sprintf(csvBuffer, "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s; %s\r\n", 
+    date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
+    String(measurement.valuesCo2.co2), 
+    String(measurement.valuesCo2.temperature, 1), 
+    String(measurement.valuesCo2.humidity, 1), 
+    String(measurement.valuesBme.pressure),
+    String(measurement.valuesBat.percent, 1), 
+    // remove from here in final version
+    String(measurement.valuesBat.voltage, 3),
+    String(measurement.valuesBme.temperature, 1), 
+    String(measurement.valuesBme.humidity, 1),
+    String(SensorBme280::getTemperatureOffset(), 2)
+  );
 
   // TODO :: make the number locale configurable
   for(int i = 0; i < 128; i++) {

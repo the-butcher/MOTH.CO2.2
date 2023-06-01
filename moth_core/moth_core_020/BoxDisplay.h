@@ -81,6 +81,7 @@ class BoxDisplay {
     static void toggleState();
     static void toggleValue();
     static display_state_t getState();
+    static ValuesCo2 getDisplayValues();
 
 };
 

@@ -41,23 +41,30 @@ void BoxEncr::updateConfiguration() {
     BoxEncr::configStatus = CONFIG_STATUS_PRESENT;
 
     File32 encrFile;
-    encrFile.open(BoxEncr::CONFIG_PATH.c_str(), O_RDONLY);
+    bool fileSuccess = encrFile.open(BoxEncr::CONFIG_PATH.c_str(), O_RDONLY);
+    if (fileSuccess) {
 
-    BoxEncr::configStatus = CONFIG_STATUS__LOADED;
+      BoxEncr::configStatus = CONFIG_STATUS__LOADED;
 
-    StaticJsonBuffer<512> jsonBuffer;
-    JsonObject &root = jsonBuffer.parseObject(encrFile);    
-    _key = root["key"] | _key;
-    _inv = root["inv"] | _inv;
-    if (_key.length() == 16) {
-      key = _key;
+      StaticJsonBuffer<512> jsonBuffer;
+      JsonObject &root = jsonBuffer.parseObject(encrFile);    
+      if (root.success()) {
+        
+        _key = root["key"] | _key;
+        _inv = root["inv"] | _inv;
+        if (_key.length() == 16) {
+          key = _key;
+        }
+        if (_inv.length() == 16) {
+          inv = _inv;
+        }
+        BoxEncr::configStatus = CONFIG_STATUS__PARSED;
+
+      }
+      
+      encrFile.close();
+
     }
-    if (_inv.length() == 16) {
-      inv = _inv;
-    }
-    encrFile.close();
-
-    BoxEncr::configStatus = CONFIG_STATUS__PARSED;
 
   } else {
     BoxEncr::configStatus = CONFIG_STATUS_MISSING;
