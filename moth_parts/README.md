@@ -2,7 +2,6 @@
 
 Building the sensor is split into two main parts. Electric assembly and housing.
 
-<img src="../images/overview_800.png" alt= "acrylic glas 1mm" width="800">
 
 ---
 
