@@ -2,7 +2,7 @@
 
 This folder contains the Arduino Sketch for the MOTH.CO2.2 sensor and a set of configuration- and system files in [SD](SD) that need be placed on the SD card of the device.
 
-The root folder of the project is structured as follows:
+The moth_core folder of the project is structured as follows:
 
 ---
 
@@ -33,13 +33,15 @@ Required packages are:
 
 Configuration files that define the behaviour of the sensor and a single html page which is required for Cross-Site (CORS) concerns when administering the device.
 
-## [SD](SD)
+## [SD/config](SD/config/)
 
 - ### [encr.json](SD/config/encr.json)
 
 Passwords stored in the device are encrypted. This file defines key and initialization vector for the encryption. You can use the default configuration, but it is recommended to define your own keys for extra safety. Once you know which keys you want to use you can use this [Online AES Encryption and Decryption Tool](https://www.javainuse.com/aesgenerator) to encrypt passwords needed in the configuration.
 
 Using the key "ielxdb1yd4xlcco1" and initialization vector "4mtxg8yroia48rwf", the plaintext value of "toomuchcoffee" should encryt to "pM43tKZYyemPQVyHdezUog==", an encrypted value of "G8H9B97V6jSl4W7A7/KxdQ==" should decrypt to "inthemorning".
+
+The device api provides an "api/encrypt" operation for convenience.
 
 documentation (please do not use the documented version on the device, but a clean json without the comments):
 
@@ -78,8 +80,12 @@ documentation (please do not use the documented version on the device, but a cle
     "wLo": 19, <<< lower temperature (celsius) warn limit
     "wHi": 25, <<< upper temperature (celsius) warn limit
     "rHi": 30, <<< upper temperature (celsius) risk limit
-	"off": 1.2, <<< temperature sensor offset (higher value gives lower temperature reading)
-	"c2f": false <<< temperature display in fahrenheit?
+    "off": [ <<< temperature offsets
+      0.805, <<< primary temperature offset of the scd41 sensor
+      0.785  <<< secondary temperature offset of the bme280 sensor (this value will change internally at runtime)
+    ],
+    "c2f": false, <<< temperature display in fahrenheit?
+    "cor": 0.42 <<< temperature correction (see explanation below)
   },
   "hum": {
     "rLo": 25, <<< lower humidity (% RH) risk limit
@@ -106,6 +112,10 @@ Timezones that have been tested to work are (but other will work too):
 |MST7MDT,M3.2.0,M11.1.0|Denver|
 |PST8PDT,M3.2.0,M11.1.0|Los Angeles|
 
+When the "cor" property holds a value larger than zero, the device attempts to correct temperature changes from charging or WiFi operation.
+This correction is based on the internal temperature difference between the on-controller bme280 sensor and the scd41's primary temperature sensor.
+Check the moth_core_020/BoxDisplay::getDisplayValues() method for more detail.
+
 example:
 
 ```
@@ -121,14 +131,18 @@ example:
     "wLo": 19,
     "wHi": 25,
     "rHi": 30,
-	"off": 1.2,
-	"c2f": false
+    "off": [
+      0.805,
+      0.785
+    ],
+    "c2f": false,
+    "cor": 0.42
   },
   "hum": {
     "rLo": 25,
     "wLo": 30,
     "wHi": 60,
-    "rHi": 65
+    "rHi": 657
   }
 }
 ```
@@ -188,6 +202,57 @@ example (unprotected server, no certificate):
   "top": "moth/co2"
 }
 ```
+
+- ### [wifi.json](SD/config/wifi.json)
+
+Configuration for the WiFi connection of the decive.
+
+documentation (please do not use the documented version on the device, but a clean json without the comments):
+
+```
+{
+  "min": 5, <<< wifi timeout in minutes, when not connected to power, wifi will auto turn off after that time
+  "ntw": [ <<< an array of network connections
+    {
+      "key": "your-wifi-ssid", <<< the ssid of your network
+      "pwd": "06xj5MI/EJoS/3PliM5nzA==" <<< encrypted password for your networt (see encr.json above)
+    }
+  ]
+}
+```
+
+example (the password decrypts to "your-wifi-pass"):
+
+```
+{
+  "min": 5,
+  "ntw": [
+    {
+      "key": "your-wifi-ssid",
+      "pwd": "06xj5MI/EJoS/3PliM5nzA=="
+    }
+  ]
+}
+```
+
+## [SD/server](SD/server/)
+
+The device contains a small webserver. The files in this folder server for convenient access to the device api.
+
+- ### [SD/server/client.html](SD/server/chart.html)
+
+Provides a simple UI showing the latest measurements.
+
+- ### [SD/server/chart.html](SD/server/chart.html)
+
+Provides a simple UI to access historic data stored in the device.
+
+- ### [SD/server/server.html](SD/server/server.html)
+
+Provides a simple UI to access the api operations of the device.
+
+The files for the webserver are built from the [moth_client](../moth_client/) subproject.
+
 ---
 
 The GFX Fonts used by the sketch. These need to be copied to your ...\Arduino\libraries\Adafruit_GFX_Library\Fonts directory once the [Adafruit_GFX_Library](https://github.com/adafruit/Adafruit-GFX-Library) has been installed.

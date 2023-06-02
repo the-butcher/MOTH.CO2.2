@@ -12,7 +12,7 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 - WiFi connectivity can be used to access current and historic measurements and to change device configuration or to calibrate. Measurements can also be be auto published over the [MQTT](https://de.wikipedia.org/wiki/MQTT) protocol.
 
-- When operated in low power mode (no WiFi, 3 minute display update), the device lasts <ins>4 days or longer</ins> on a single battery charge.
+- When operated in low power mode (no WiFi, 3 minute display update), the device lasts up to <ins>1 week</ins> on a single battery charge.
 
 - The housing can be wall mounted, with or without theft protection.
 
