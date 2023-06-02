@@ -25,15 +25,22 @@ const ApiDelete = (props: IApiProperties) => {
   const [responseProps, setResponseProps] = useState<IResponseProps>();
 
   const issueApiCall = () => {
+    let qstr = {};
+    if (file !== "") {
+      qstr = {
+        file
+      };
+    } else if (folder !== '') {
+      qstr = {
+        folder
+      };
+    }
     handleApiCall({
       href: boxUrl,
       call: apiName,
       meth: 'GET',
       type: apiType,
-      qstr: {
-        file,
-        folder
-      }
+      qstr
     });
   }
 
