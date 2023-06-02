@@ -27,6 +27,9 @@ Again, you should be able to use the part as it is, but it will look better when
 
 <img src="../images/upper_housing_finish.png" alt="upper housing" width="800">
 
+#### [Upper Housing with raft](housing_upper_b.stl)
+
+For unknown reasons, i had problems with warping on the upper housing part. To fix these issues, there is another version with thick rafts around the part borders.
 ---
 
 ### [Supports](supports2.stl)
