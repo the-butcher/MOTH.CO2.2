@@ -29,7 +29,7 @@ int Measurements::memBufferIndx = 0;
 int64_t Measurements::measurementIntervalSeconds = 60; // 1 minute
 Measurement* Measurements::measurements;
 String Measurements::CSV_HEAD = "time; co2; temperature; humidity; pressure; percent\r\n";
-String Measurements::dataFileNameLast = "";
+String Measurements::dataFileNameCurr = "";
 
 void Measurements::begin() {
 
@@ -74,6 +74,7 @@ void Measurements::saveToFile() {
 
   DateTime date;
   DataFileDef dataFileDef;
+  String dataFileNameLast = "";
   String dataFilePathLast = "";
   File32 csvFile;
 
@@ -82,26 +83,28 @@ void Measurements::saveToFile() {
     measurement = Measurements::getOffsetMeasurement(offsetIndex);
     date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
     dataFileDef = BoxClock::getDataFileDef(date); // the file name that shall be written to
-    if (dataFileDef.name != Measurements::dataFileNameLast) {
+    if (dataFileDef.name != dataFileNameLast) {
       if (csvFile) { // file already open -> file change at midnight
         csvFile.sync(); // write anything pending
         csvFile.close();
       }
       if (dataFileDef.path != dataFilePathLast) { // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
         BoxFiles::buildFolders(dataFileDef.path);
+        dataFilePathLast = dataFileDef.path;
       }
       csvFile.open(dataFileDef.name.c_str(), O_RDWR | O_CREAT | O_AT_END);
       if (csvFile.size() == 0) { // first time this file is being written to -> write csv header
         csvFile.print(Measurements::CSV_HEAD);
       }      
+      dataFileNameLast = dataFileDef.name;
     }
     csvFile.print(Measurements::toCsv(measurement));
-    Measurements::dataFileNameLast = dataFileDef.name;
-    dataFilePathLast = dataFileDef.path;
   }
 
   csvFile.sync();
   csvFile.close();
+
+  Measurements::dataFileNameCurr = dataFileNameLast;
 
 }
 

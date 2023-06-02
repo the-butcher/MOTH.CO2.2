@@ -15,7 +15,7 @@ class Measurements {
     static float getSlope(std::function<float(const Measurement)> func);
     
   public:
-    static String dataFileNameLast;
+    static String dataFileNameCurr;
     static int64_t measurementIntervalSeconds;
     static String CSV_HEAD;
     static int csvBufferSize;

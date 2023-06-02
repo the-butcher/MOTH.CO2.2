@@ -157,6 +157,7 @@ void BoxConn::begin() {
     JsonObject &root = jsonBuffer.createObject();
     root[CODE] = 200;
 
+    root["vnum"] = "1.0.001";
     root["heap"] = ESP.getFreeHeap();
     root["sram"] = ESP.getPsramSize();
     root["freq"] = ESP.getCpuFreqMHz();
@@ -300,7 +301,7 @@ void BoxConn::begin() {
         File32Response *response = new File32Response(dataFileName, "text/csv");
         
         int maxAge = 86400; // 24 hours
-        if (dataFileName == Measurements::dataFileNameLast) {
+        if (dataFileName == Measurements::dataFileNameCurr) {
           maxAge = (Measurements::csvBufferSize - Measurements::getCsvBufferIndex()) * 60; // time until next file update
         }
         char maxAgeBuf[16];
