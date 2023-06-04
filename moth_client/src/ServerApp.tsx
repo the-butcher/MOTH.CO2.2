@@ -1,19 +1,22 @@
-import { createTheme, CssBaseline, ThemeProvider } from '@mui/material';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import WysiwygIcon from '@mui/icons-material/Wysiwyg';
+import ConstructionIcon from '@mui/icons-material/Construction';
+import { createTheme, CssBaseline, Fab, IconButton, ThemeProvider, Tooltip } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import ApiCalibrate from './components/ApiCalibrate';
+import ApiData from './components/ApiData';
+import ApiDelete from './components/ApiDelete';
+import ApiEncrypt from './components/ApiEncrypt';
 import ApiFile from './components/ApiFile';
+import ApiFolder from './components/ApiFolder';
 import ApiSimple from './components/ApiSimple';
 import ApiUpload from './components/ApiUpload';
 import { IApiCall } from './components/IApiCall';
 import { EStatus, IApiProperties } from './components/IApiProperties';
-import ApiDelete from './components/ApiDelete';
-import ApiData from './components/ApiData';
-import ApiFolder from './components/ApiFolder';
-import ApiEncrypt from './components/ApiEncrypt';
 
 const darkTheme = createTheme({
   typography: {
@@ -71,6 +74,7 @@ const darkTheme = createTheme({
 const ServerApp = () => {
 
   const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  // const boxUrl = `http://192.168.0.178/api`; // when running directly from device
 
   const urlParams = new URLSearchParams(window.location.search);
   // const boxUrlParamValue = `http://${urlParams.get("boxUrl")}/api`; // when not running directly from device
@@ -170,14 +174,27 @@ const ServerApp = () => {
 
   return (
     <ThemeProvider theme={darkTheme}>
+
       <CssBaseline />
+      <Tooltip title="moth-latest">
+        <Fab href='client.html' variant="circular" size='small' sx={{ position: 'fixed', right: 60, top: 10 }} >
+          <WysiwygIcon />
+        </Fab>
+      </Tooltip>
+      <Tooltip title="moth-chart">
+        <Fab href='chart.html' variant="circular" size='small' sx={{ position: 'fixed', right: 10, top: 10 }} >
+          <ShowChartIcon />
+        </Fab>
+      </Tooltip>
+
       <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px' }}>
-        moth-api <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
+        <IconButton><ConstructionIcon sx={{ width: '1.5em', height: '1.5em' }} /></IconButton>moth-api <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
       </Typography>
-      <Typography variant="body1" component="h4" sx={{ paddingLeft: '10px' }}>
+      <Typography variant="body1" sx={{ paddingLeft: '20px' }}>
         {boxUrl ? boxUrl : "no box specified"} ({status.current})
       </Typography>
       <Card sx={{ padding: '0px' }}>
+
         <CardContent>
           <Typography gutterBottom variant="subtitle1" component="div">
             data
@@ -258,8 +275,24 @@ const ServerApp = () => {
             }
           }} />
         </CardContent>
+        <div style={{ height: '12px' }}></div>
       </Card>
-      <div style={{ height: '12px' }}></div>
+
+
+      {/* <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
+        <BottomNavigation
+          showLabels
+
+        // value={value}
+        // onChange={(event, newValue) => {
+        //   setValue(newValue);
+        // }}
+        >
+          <BottomNavigationAction label="client" icon={<WysiwygIcon />} />
+          <BottomNavigationAction label="chart" icon={<ShowChartIcon />} />
+        </BottomNavigation>
+      </Paper> */}
+
     </ThemeProvider>
   );
 

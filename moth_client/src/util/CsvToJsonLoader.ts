@@ -20,7 +20,7 @@ export class CsvToJsonLoader {
                     const responseHeaders = responseLines[0].split(";");
                     const responseData = [];
                     let responseRecord: {};
-                    console.log(responseLines[0]);
+                    // console.log(responseLines[0]);
                     for (var line = 1; line < responseLines.length - 1; line += 1) {
                         const responseValues = responseLines[line].split(";");
                         responseRecord = {};

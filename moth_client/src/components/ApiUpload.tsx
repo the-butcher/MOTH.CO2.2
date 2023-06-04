@@ -79,7 +79,8 @@ const ApiUpload = (props: IApiProperties) => {
         </div>
       </AccordionSummary>
       <AccordionDetails>
-        <form id="uploadform" action={apiHref} method="POST" encType="multipart/form-data" target="_new">
+        <iframe title="callframe" name="uploadframe" style={{ height: '30px', border: 'none' }} />
+        <form id="uploadform" action={apiHref} method="POST" encType="multipart/form-data" target="uploadframe">
           <Card>
             <Stack>
               <TextField
@@ -95,7 +96,7 @@ const ApiUpload = (props: IApiProperties) => {
                 type="text"
                 id="outlined-start-adornment"
                 size='small'
-                label={data}
+                label={data && data !== "" ? data : "file"}
                 disabled={status === 'disconnected'}
                 InputProps={{
                   endAdornment: (

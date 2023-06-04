@@ -10,7 +10,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { Stack } from '@mui/system';
-import { useEffect, useState } from 'react';
+import { KeyboardEvent, useEffect, useState } from 'react';
 import { IApiProperties } from './IApiProperties';
 
 import ApiResponse from './ApiResponse';
@@ -27,7 +27,11 @@ const ApiCalibrate = (props: IApiProperties) => {
   const [ref, setRef] = useState<number>(420);
   const [responseProps, setResponseProps] = useState<IResponseProps>();
 
-
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      issueApiCall();
+    }
+  }
 
   const issueApiCall = () => {
     handleApiCall({
@@ -94,6 +98,7 @@ const ApiCalibrate = (props: IApiProperties) => {
               size='small'
               onChange={handleRefChange}
               required
+              onKeyUp={handleKeyUp}
             />
             <Button disabled={status == 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
               click to execute

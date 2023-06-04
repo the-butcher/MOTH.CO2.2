@@ -6,7 +6,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import Card from '@mui/material/Card';
 import TextField from '@mui/material/TextField';
 import { Stack } from '@mui/system';
-import { useEffect, useState } from 'react';
+import { KeyboardEvent, useEffect, useState } from 'react';
 import ApiResponse from './ApiResponse';
 import { IApiProperties } from './IApiProperties';
 import { IResponseProps } from './IResponseProps';
@@ -22,6 +22,12 @@ const ApiFile = (props: IApiProperties) => {
 
   const [file, setFile] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      issueApiCall();
+    }
+  }
 
   const issueApiCall = () => {
     handleApiCall({
@@ -76,6 +82,7 @@ const ApiFile = (props: IApiProperties) => {
               id="outlined-start-adornment"
               size='small'
               onChange={handleFileChange}
+              onKeyUp={handleKeyUp}
               helperText="optional file name. specifiy to get the content of a specific file. leave empty to get most recent data"
             />
             <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>

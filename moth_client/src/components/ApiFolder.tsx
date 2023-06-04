@@ -6,7 +6,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import Card from '@mui/material/Card';
 import TextField from '@mui/material/TextField';
 import { Stack } from '@mui/system';
-import { useEffect, useState } from 'react';
+import { KeyboardEvent, useEffect, useState } from 'react';
 import ApiResponse from './ApiResponse';
 import { IApiProperties } from './IApiProperties';
 import { IResponseProps } from './IResponseProps';
@@ -22,6 +22,12 @@ const ApiFolder = (props: IApiProperties) => {
 
   const [folder, setFolder] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      issueApiCall();
+    }
+  }
 
   const issueApiCall = () => {
     handleApiCall({
@@ -76,6 +82,7 @@ const ApiFolder = (props: IApiProperties) => {
               id="outlined-start-adornment"
               size='small'
               onChange={handleFolderChange}
+              onKeyUp={handleKeyUp}
               helperText="optional folder name. specify to list the contents of a specific folder. leave empty to get the root folders contents"
             />
             <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>

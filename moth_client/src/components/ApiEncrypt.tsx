@@ -6,7 +6,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import Card from '@mui/material/Card';
 import TextField from '@mui/material/TextField';
 import { Stack } from '@mui/system';
-import { useEffect, useState } from 'react';
+import { KeyboardEvent, useEffect, useState } from 'react';
 import ApiResponse from './ApiResponse';
 import { IApiProperties } from './IApiProperties';
 import { IResponseProps } from './IResponseProps';
@@ -22,6 +22,12 @@ const ApiEncrypt = (props: IApiProperties) => {
 
   const [value, setValue] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      issueApiCall();
+    }
+  }
 
   const issueApiCall = () => {
     handleApiCall({
@@ -73,6 +79,7 @@ const ApiEncrypt = (props: IApiProperties) => {
               size='small'
               onChange={handleValueChange}
               required
+              onKeyUp={handleKeyUp}
             />
             <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
