@@ -1,33 +1,27 @@
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
-import { Button } from '@mui/material';
+import { Button, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import Accordion from '@mui/material/Accordion';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import Card from '@mui/material/Card';
 import TextField from '@mui/material/TextField';
 import { Stack } from '@mui/system';
-import { KeyboardEvent, useEffect, useState } from 'react';
+import { ChangeEvent, KeyboardEvent, useEffect, useState } from 'react';
 import ApiResponse from './ApiResponse';
 import { IApiProperties } from './IApiProperties';
 import { IResponseProps } from './IResponseProps';
 
 
-const ApiEncrypt = (props: IApiProperties) => {
+const ApiDisplay = (props: IApiProperties) => {
 
-  const apiName = 'encrypt';
-  const apiDesc = 'encrypt a string value';
+  const apiName = 'display';
+  const apiDesc = 'toggles various display aspects';
   const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
 
-  const [value, setValue] = useState<string>();
+  const [display, setDisplay] = useState<string>("");
   const [responseProps, setResponseProps] = useState<IResponseProps>();
-
-  const handleKeyUp = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      issueApiCall();
-    }
-  }
 
   const issueApiCall = () => {
     handleApiCall({
@@ -36,29 +30,31 @@ const ApiEncrypt = (props: IApiProperties) => {
       meth: 'GET',
       type: apiType,
       qstr: {
-        value: value
+        display: display
       }
     });
-  }
-
-  const handleValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(event.target.value);
   };
 
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
     if (props[apiName]) {
+
       setResponseProps({
         time: Date.now(),
-        href: `${boxUrl}/${apiName}?value=${value}`,
+        href: `${boxUrl}/${apiName}?display=${display}`,
         type: apiType,
         http: 'GET',
         data: props[apiName]
       });
+
     }
 
   }, [status, props[apiName]]);
+
+  const handleDisplayChange = (display: string) => {
+    setDisplay(display);
+  };
 
   return (
     <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
@@ -71,15 +67,28 @@ const ApiEncrypt = (props: IApiProperties) => {
       <AccordionDetails>
         <Card>
           <Stack>
-            <TextField
-              disabled={status === 'disconnected'}
-              label="value"
-              id="outlined-start-adornment"
-              size='small'
-              onChange={handleValueChange}
-              required
-              onKeyUp={handleKeyUp}
-            />
+            <FormControl variant="outlined">
+              <InputLabel id="prop-label" size='small'>Display aspect</InputLabel>
+              <Select
+                disabled={status === 'disconnected'}
+                size='small'
+                labelId="prop-label"
+                id="demo-simple-select"
+                value={display}
+                label="Display aspect"
+                onChange={event => handleDisplayChange(event.target.value)}
+              >
+                <MenuItem key="state_table" value="state_table">State: Table</MenuItem>
+                <MenuItem key="state_chart" value="state_chart">State: Chart</MenuItem>
+                <MenuItem key="theme_light" value="theme_light">Theme: Light</MenuItem>
+                <MenuItem key="theme_dark" value="theme_dark">Theme: Dark</MenuItem>
+                <MenuItem key="value_co2" value="value_co2">Value: CO₂ (when state = table)</MenuItem>
+                <MenuItem key="value_deg" value="value_deg">Value: Temperature (when state = table)</MenuItem>
+                <MenuItem key="value_hum" value="value_hum">Value: Humidity (when state = table)</MenuItem>
+                <MenuItem key="value_hpa" value="value_hpa">Value: Pressure (when state = table)</MenuItem>
+
+              </Select>
+            </FormControl>
             <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
@@ -93,4 +102,4 @@ const ApiEncrypt = (props: IApiProperties) => {
   );
 }
 
-export default ApiEncrypt;
+export default ApiDisplay;

@@ -35,7 +35,6 @@ const darkTheme = createTheme({
 
 const ClientApp = () => {
 
-
   const ip = window.location.origin.substring(window.location.protocol.length + 2);
   // const ip = '192.168.0.66'
   const boxUrl = `http://${ip}/api`; // when running directly from device

@@ -17,6 +17,7 @@ import ApiSimple from './components/ApiSimple';
 import ApiUpload from './components/ApiUpload';
 import { IApiCall } from './components/IApiCall';
 import { EStatus, IApiProperties } from './components/IApiProperties';
+import ApiDisplay from './components/ApiDisplay';
 
 const darkTheme = createTheme({
   typography: {
@@ -212,6 +213,7 @@ const ServerApp = () => {
           <Typography gutterBottom variant="subtitle1" component="div">
             files, status
           </Typography>
+          <ApiDisplay {...apiProps} />
           <ApiSimple {...{
             ...apiProps,
             apiName: 'status',
