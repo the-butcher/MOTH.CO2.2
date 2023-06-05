@@ -24,6 +24,7 @@ typedef enum {
   LOOP_REASON______TOGGLE_THEME,
   LOOP_REASON______TOGGLE_AUDIO,
   LOOP_REASON______TOGGLE_VALUE,
+  LOOP_REASON______RENDER_STATE, // a simple re-render
   LOOP_REASON_______MEASUREMENT, // time for a measurement
   LOOP_REASON______CALIBRRATION, // calibrate the sensor to a given reference value
   LOOP_REASON_______HIBERNATION, // hibernate the device
@@ -118,7 +119,7 @@ void setup() {
   Measurements::begin();
 
   BoxPack::tryRead(); // need to read, or no battery values will be present in the starting info
-  BoxDisplay::renderMothInfo("starting");
+  BoxDisplay::renderMothInfo(BoxConn::VNUM);
 
   SensorBme280::begin();
   SensorScd041::begin();
@@ -252,6 +253,7 @@ void loop() {
 
   if (loopAction == LOOP_REASON______CALIBRRATION) {
 
+    beep(); // confirmation beep
     SensorScd041::stopPeriodicMeasurement();
     delay(500);
     uint16_t result = SensorScd041::forceCalibration(BoxConn::requestedCalibrationReference);
@@ -269,6 +271,7 @@ void loop() {
 
   } else if (loopAction == LOOP_REASON_______HIBERNATION) {
 
+    beep(); // confirmation beep
     BoxConn::isHibernationRequired = false; // does not make a difference, but anyways
 
     BoxConn::off();
@@ -287,6 +290,7 @@ void loop() {
 
   } else if (loopAction == LOOP_REASON_RESET_CALIBRATION) {
 
+    beep(); // confirmation beep
     BoxConn::isCo2CalibrationReset = false;
     SensorScd041::factoryReset();
 
@@ -333,6 +337,12 @@ void loop() {
     BoxDisplay::toggleValue();
     displayFunc = [=]()->void{ renderState(true); };
     
+  } else if (loopAction == LOOP_REASON______RENDER_STATE) {
+
+    beep(); // confirmation beep
+    BoxConn::isRenderStateRequired = false;
+    displayFunc = [=]()->void{ renderState(true); };
+
   }
 
 #if defined(NEOPIXEL_HELPER)
@@ -371,6 +381,13 @@ void loop() {
       loopReason = LOOP_REASON_______HIBERNATION; // user requested hibernation
     } else if (BoxConn::isCo2CalibrationReset) {
       loopReason = LOOP_REASON_RESET_CALIBRATION; // user requested calibration reset
+    } else if (BoxMqtt::isWifiConnectionRequested) {
+      BoxMqtt::isWifiConnectionRequested = false; // wifi conn requested over mqtt
+      if (BoxConn::getMode() == WIFI_OFF) {
+        loopReason = LOOP_REASON______WIFI______ON;
+      }
+    } else if (BoxConn::isRenderStateRequired) {
+      loopReason = LOOP_REASON______RENDER_STATE;
     }
 
 

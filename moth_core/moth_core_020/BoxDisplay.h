@@ -77,10 +77,13 @@ class BoxDisplay {
     static void renderState();
     static void renderMothInfo(String info);
     static void renderQRCode();
+    static void setTheme(display_theme_t theme);
     static void toggleTheme();
+    static void setState(display_state_t state);
     static void toggleState();
-    static void toggleValue();
     static display_state_t getState();
+    static void setValue(display_value_t value);
+    static void toggleValue();
     static ValuesCo2 getDisplayValues();
 
 };

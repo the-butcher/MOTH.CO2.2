@@ -28,7 +28,7 @@ int Measurements::memBufferSize = 10080; // 10080; // 60 * 24 * 7, every minute 
 int Measurements::memBufferIndx = 0;
 int64_t Measurements::measurementIntervalSeconds = 60; // 1 minute
 Measurement* Measurements::measurements;
-String Measurements::CSV_HEAD = "time; co2; temperature; humidity; pressure; percent\r\n";
+String Measurements::CSV_HEAD = "time; co2; temperature; humidity; temperature_bme; humidity_bme; pressure; percent\r\n";
 String Measurements::dataFileNameCurr = "";
 
 void Measurements::begin() {
@@ -212,18 +212,15 @@ String Measurements::toCsv(Measurement measurement) {
 
   DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
 
-  sprintf(csvBuffer, "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s; %s\r\n", 
+  sprintf(csvBuffer, "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s\r\n", 
     date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
     String(measurement.valuesCo2.co2), 
     String(measurement.valuesCo2.temperature, 1), 
     String(measurement.valuesCo2.humidity, 1), 
-    String(measurement.valuesBme.pressure),
-    String(measurement.valuesBat.percent, 1), 
-    // remove from here in final version
-    String(measurement.valuesBat.voltage, 3),
     String(measurement.valuesBme.temperature, 1), 
     String(measurement.valuesBme.humidity, 1),
-    String(SensorBme280::getTemperatureOffset(), 2)
+    String(measurement.valuesBme.pressure),
+    String(measurement.valuesBat.percent, 1)
   );
 
   // TODO :: make the number locale configurable

@@ -1,5 +1,6 @@
 # anything marked as nonrepo
 *nonrepo*
+sqlite
 
 *.skb
 *.gcode

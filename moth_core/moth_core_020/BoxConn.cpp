@@ -12,6 +12,7 @@
 #include "BoxMqtt.h"
 #include "Network.h"
 #include "SensorScd041.h"
+#include "SensorBme280.h"
 #include "BoxFiles.h"
 #include <ArduinoJson.h>
 #include "File32Response.h"
@@ -32,6 +33,7 @@ const String JSON_KEY__NETWORKS = "ntw";
 const String JSON_KEY_______KEY = "key";
 const String JSON_KEY_______PWD = "pwd";
 
+
 /**
  * ################################################
  * ## mutable variables
@@ -47,6 +49,7 @@ Network configuredNetworks[10];
 Network discoveredNetworks[10];
 
 String apNetworkName = "mothbox";
+String apNetworkConn = "";
 String apNetworkPass = "CO2@420PPM";
 
 String stNetworkName = "";
@@ -61,6 +64,8 @@ config_status_t BoxConn::configStatus = CONFIG_STATUS_PENDING;
 int BoxConn::requestedCalibrationReference = -1;
 bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
+bool BoxConn::isRenderStateRequired = false;
+String BoxConn::VNUM = "1.0.004";
 
 void BoxConn::updateConfiguration() {
 
@@ -157,10 +162,11 @@ void BoxConn::begin() {
     JsonObject &root = jsonBuffer.createObject();
     root[CODE] = 200;
 
-    root["vnum"] = "1.0.001";
+    root["vnum"] = BoxConn::VNUM;
     root["heap"] = ESP.getFreeHeap();
     root["sram"] = ESP.getPsramSize();
     root["freq"] = ESP.getCpuFreqMHz();
+    root["boff"] = SensorBme280::getTemperatureOffset();
 
     JsonObject &encrJo = root.createNestedObject("encr");
     encrJo["config"] = BoxConn::formatConfigStatus(BoxEncr::configStatus);    
@@ -235,7 +241,7 @@ void BoxConn::begin() {
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=60"); // assume no frequent changes in folder content
+    response->addHeader("Cache-Control", "max-age=10"); // assume no frequent changes in folder content
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -365,7 +371,7 @@ void BoxConn::begin() {
 
       wifiExpiryMillis = millis() + wifiTimeoutMillis;
       request->send(200);
-
+   
   }, BoxConn::handleUpload);
   server.on("/api/delete", HTTP_GET, [](AsyncWebServerRequest *request) {
 
@@ -388,6 +394,7 @@ void BoxConn::begin() {
       }
     } else if (request->hasParam("folder")) {
       String folderName = "/" + request->getParam("folder")->value();
+      root["folder"] = folderName;
       if (BoxFiles::existsPath(folderName)) {
         bool success = BoxFiles::removeFolder(folderName);
         root[CODE] = success ? 200 : 500;
@@ -412,7 +419,6 @@ void BoxConn::begin() {
 
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
-
     root[CODE] = 200;
 
     JsonArray &networksJa = root.createNestedArray("networks");
@@ -429,6 +435,50 @@ void BoxConn::begin() {
       }
     }
 
+    root.printTo(*response);
+    request->send(response);
+
+  });
+  server.on("/api/display", HTTP_GET, [](AsyncWebServerRequest *request) {
+    
+    wifiExpiryMillis = millis() + wifiTimeoutMillis;
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root[CODE] = 200;
+
+    if (request->hasParam("display")) {
+      String requestedDisplay = request->getParam("display")->value();
+      BoxConn::isRenderStateRequired = true;
+      root["display"] = requestedDisplay;      
+      if (requestedDisplay == "state_table") {
+        BoxDisplay::setState(DISPLAY_STATE_TABLE);
+      } else if (requestedDisplay == "state_chart") {
+        BoxDisplay::setState(DISPLAY_STATE_CHART);
+      } else if (requestedDisplay == "theme_light") {
+        BoxDisplay::setTheme(DISPLAY_THEME_LIGHT);
+      } else if (requestedDisplay == "theme_dark") {
+        BoxDisplay::setTheme(DISPLAY_THEME__DARK);
+      } else if (requestedDisplay == "value_co2") {
+        BoxDisplay::setValue(DISPLAY_VALUE___CO2);
+      } else if (requestedDisplay == "value_deg") {
+        BoxDisplay::setValue(DISPLAY_VALUE___DEG);
+      } else if (requestedDisplay == "value_hum") {
+        BoxDisplay::setValue(DISPLAY_VALUE___HUM);
+      } else if (requestedDisplay == "value_hpa") {
+        BoxDisplay::setValue(DISPLAY_VALUE___HPA);
+      } else {
+        BoxConn::isRenderStateRequired = false;
+        root[CODE] = 400;
+        root["desc"] = "invalid display value";
+      }
+    } else {
+      root[CODE] = 400;
+      root["desc"] = "display required";
+    }
+    
     root.printTo(*response);
     request->send(response);
 
@@ -561,7 +611,14 @@ void BoxConn::begin() {
 
   uint64_t _chipmacid = 0LL;
   esp_efuse_mac_get_default((uint8_t *)(&_chipmacid));
-  apNetworkName = "mothbox" + String(_chipmacid, HEX);
+
+  char networkNameBuf[20];
+  sprintf(networkNameBuf, "mothbox%s", String(_chipmacid, HEX));
+  apNetworkName = String(networkNameBuf);
+
+  char networkConnBuf[48];
+  sprintf(networkConnBuf, "WIFI:T:WPA;S:mothbox%s;P:CO2@420PPM;;", String(_chipmacid, HEX));
+  apNetworkConn = String(networkConnBuf);
 
   WiFi.onEvent(BoxConn::handleStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
 
@@ -573,9 +630,18 @@ void BoxConn::handleUpload(AsyncWebServerRequest *request, String filename, size
 
     String dataFileName = "/" + request->getParam("file", true)->value();
 
-    // if (BoxFiles::existsFile32) {
-    //   BoxFiles::removeFile32(dataFileName);
-    // }
+    // delete file if exists
+    if (index == 0) {
+      if (BoxFiles::existsPath(dataFileName) && index == 0) {
+        BoxFiles::removeFile32(dataFileName);
+      } else {
+        int lastIndexOfSlash = dataFileName.lastIndexOf("/");
+        if (lastIndexOfSlash > 0) {
+          String dataFilePath = dataFileName.substring(0, lastIndexOfSlash);
+          BoxFiles::buildFolders(dataFilePath);
+        }
+      }
+    }
 
     File32 targetFile;
     targetFile.open(dataFileName.c_str(), O_RDWR | O_CREAT | O_AT_END);
@@ -718,9 +784,7 @@ String BoxConn::getRootUrl() {
 
 String BoxConn::getNetworkName() {
   if (mode == WIFI_AP) {
-    char networkBuf[apNetworkName.length() + apNetworkPass.length() + 19];
-    sprintf(networkBuf, "%s%s%s%s%s", "WIFI:T:WPA;S:", apNetworkName, ";P:", apNetworkPass, ";;");
-    return networkBuf;
+    return apNetworkConn;
   } else if (stNetworkName != "") {
     char networkBuf[stNetworkName.length() + 17];
     sprintf(networkBuf, "%s%s%s", "WIFI:T:WPA;S:", stNetworkName, ";;;");

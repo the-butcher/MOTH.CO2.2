@@ -28,8 +28,10 @@ class BoxMqtt {
     static bool publishJson(PubSubClient* mqttClient, JsonObject &root, char* mqid);
     static void checkClients();
     static bool checkConnect();
+    static void callback(char* topic, byte* payload, unsigned int length);
     
   public:
+    static bool isWifiConnectionRequested;
     static String CONFIG_PATH;
     static config_status_t configStatus;
     static int status;

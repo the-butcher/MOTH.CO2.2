@@ -20,6 +20,7 @@ const String JSON_KEY___USER = "usr";
 const String JSON_KEY___PASS = "pwd";
 const String JSON_KEY_CLIENT = "cli";
 const String JSON_KEY___CERT = "crt";
+const String JSON_KEY__TOPIC = "top";
 
 /**
  * ################################################
@@ -33,6 +34,10 @@ String mqttPass = "";
 String mqttClid = "";
 String mqttCert = "";
 
+bool isPublishCo2;
+bool isPublishBme;
+bool isPublishBat;
+
 WiFiClient* wifiClient;
 PubSubClient* mqttClient;
 
@@ -45,6 +50,7 @@ int BoxMqtt::failureCount = 0;
 int BoxMqtt::status;
 String BoxMqtt::CONFIG_PATH = "/config/mqtt.json";
 config_status_t BoxMqtt::configStatus = CONFIG_STATUS_PENDING;
+bool BoxMqtt::isWifiConnectionRequested = false;
 
 void BoxMqtt::begin() {
   BoxMqtt::updateConfiguration();
@@ -90,6 +96,11 @@ void BoxMqtt::updateConfiguration() {
         mqttClid = root[JSON_KEY_CLIENT] | mqttClid;
         mqttCert = root[JSON_KEY___CERT] | mqttCert;
 
+        String mqttTopics = root[JSON_KEY__TOPIC] | "CO2";
+        isPublishCo2 = mqttTopics.indexOf("CO2" >= 0);
+        isPublishBme = mqttTopics.indexOf("BME" >= 0);
+        isPublishBat = mqttTopics.indexOf("BAT" >= 0);
+
         BoxMqtt::configStatus = CONFIG_STATUS__PARSED;   
 
       }
@@ -115,6 +126,7 @@ void BoxMqtt::updateConfiguration() {
 }
 
 void BoxMqtt::checkClients() {
+
   if (wifiClient == NULL || mqttClient == NULL) {
     if (mqttCert != "" && BoxFiles::existsPath(mqttCert)) {
       wifiClient = new WiFiClientSecure();
@@ -127,7 +139,23 @@ void BoxMqtt::checkClients() {
     }
     mqttClient = new PubSubClient(*wifiClient);
     mqttClient->setServer(mqttAddr.c_str(), mqttPort);
+
+    char mqttClidCON[mqttClid.length() + 5];
+    sprintf(mqttClidCON, "%s/%s", mqttClid, "CON");    
+
+    mqttClient->setCallback(callback);
+    mqttClient->subscribe(mqttClidCON);
+
   }  
+
+}
+
+void BoxMqtt::callback(char* topic, byte* payload, unsigned int length) {
+ 
+  if (String(topic).indexOf("CON") >= 0) {
+    BoxMqtt::isWifiConnectionRequested = true;
+  }
+ 
 }
 
 bool BoxMqtt::checkConnect() {
@@ -160,9 +188,6 @@ void BoxMqtt::publish() {
 
     if (connected) {
 
-      char mqttClidCO2[mqttClid.length() + 5];
-      sprintf(mqttClidCO2, "%s/%s", mqttClid, "CO2");
-
       int firstPublishableIndex;
       int numPublished = 0;
       while ((firstPublishableIndex = Measurements::getFirstPublishableIndex()) >= 0) {
@@ -172,15 +197,54 @@ void BoxMqtt::publish() {
 
         DynamicJsonBuffer jsonBuffer;
 
-        JsonObject &rootCo2 = jsonBuffer.createObject();
-        rootCo2["time"] = time;
-        rootCo2["co2"] = measurement.valuesCo2.co2;
-        rootCo2["temperature"] = measurement.valuesCo2.temperature;
-        rootCo2["humidity"] = measurement.valuesCo2.humidity;
-        rootCo2["pressure"] = measurement.valuesBme.pressure;
-        bool successCo2 = publishJson(mqttClient, rootCo2, mqttClidCO2);
+        bool successCo2 = false;
+        if (isPublishCo2) {
 
-        if (successCo2) {
+          char mqttClidCO2[mqttClid.length() + 5];
+          sprintf(mqttClidCO2, "%s/%s", mqttClid, "CO2");
+
+          JsonObject &rootCo2 = jsonBuffer.createObject();
+          rootCo2["time"] = time;
+          rootCo2["client"] = mqttClid;
+          rootCo2["co2"] = measurement.valuesCo2.co2;
+          rootCo2["temperature"] = measurement.valuesCo2.temperature;
+          rootCo2["humidity"] = measurement.valuesCo2.humidity;
+          successCo2 = publishJson(mqttClient, rootCo2, mqttClidCO2);
+
+        }
+
+        bool successBme = false;
+        if (isPublishBme) {
+
+          char mqttClidBME[mqttClid.length() + 5];
+          sprintf(mqttClidBME, "%s/%s", mqttClid, "BME");
+
+          JsonObject &rootBme = jsonBuffer.createObject();
+          rootBme["time"] = time;
+          rootBme["client"] = mqttClid;
+          rootBme["temperature"] = measurement.valuesBme.temperature;
+          rootBme["humidity"] = measurement.valuesBme.humidity;
+          rootBme["pressure"] = measurement.valuesBme.pressure;
+          successBme = publishJson(mqttClient, rootBme, mqttClidBME);
+
+        }
+
+        bool successBat = false;
+        if (isPublishBat) {
+
+          char mqttClidBAT[mqttClid.length() + 5];
+          sprintf(mqttClidBAT, "%s/%s", mqttClid, "BAT");
+
+          JsonObject &rootBat = jsonBuffer.createObject();
+          rootBat["time"] = time;
+          rootBat["client"] = mqttClid;
+          rootBat["percent"] = measurement.valuesBat.percent;
+          rootBat["voltage"] = measurement.valuesBat.voltage;
+          successBat = publishJson(mqttClient, rootBat, mqttClidBAT);          
+
+        }
+
+        if (successCo2 || successBme || successBat) {
           Measurements::setPublished(firstPublishableIndex);
         } else {
           BoxMqtt::status = MQTT_STATUS_FAILURE______PUBLISH;

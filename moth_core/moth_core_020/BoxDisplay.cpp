@@ -678,6 +678,10 @@ void BoxDisplay::renderFooter() {
 
 }
 
+void BoxDisplay::setState(display_state_t state) {
+  displayState = state;
+}
+
 void BoxDisplay::toggleState() {
   if (displayState == DISPLAY_STATE_TABLE) {
     displayState = DISPLAY_STATE_CHART;
@@ -690,12 +694,21 @@ display_state_t BoxDisplay::getState() {
   return displayState;
 }
 
+void BoxDisplay::setTheme(display_theme_t theme) {
+  displayTheme = theme;
+}
+
+
 void BoxDisplay::toggleTheme() {
   if (displayTheme == DISPLAY_THEME_LIGHT) {
     displayTheme = DISPLAY_THEME__DARK;
   } else {
     displayTheme = DISPLAY_THEME_LIGHT;
   }
+}
+
+void BoxDisplay::setValue(display_value_t value) {
+  displayValue = value;
 }
 
 void BoxDisplay::toggleValue() {
