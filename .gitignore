@@ -2,5 +2,6 @@
 *nonrepo*
 sqlite
 
+*.xlsx
 *.skb
 *.gcode

@@ -12,7 +12,7 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 - WiFi connectivity can be used to access current and historic measurements and to change device configuration or to calibrate. Measurements can also be be auto published over the [MQTT](https://de.wikipedia.org/wiki/MQTT) protocol.
 
-- When operated in low power mode (no WiFi, 3 minute display update), the device lasts up to <ins>1 week</ins> on a single battery charge.
+- When operated in low power mode (no WiFi, 3 minute display update), the device lasts around <ins>1 week</ins> on a single battery charge.
 
 - The housing can be wall mounted, with or without theft protection.
 
@@ -40,11 +40,32 @@ A react administration UI for the device:
 
 ---
 
+## Data
+
+- ### On display
+
+The device display supports two display modes, "table" and "chart". In table mode the latest CO₂, temperature and  humidity values are shown numerically
+
+TODO :: image here
+
+In chart mode one of CO₂, temperature, humidity or pressure are shown in a simple chart.
+
+TODO :: image here
+
+- ### Over Wifi
+
+The device hosts a small react-web-application. There are three pages in the application:
+
+  - client.html
+
+- ### MQTT
+
+---
+
 ## License
 
 Please be aware that all software in this project is licensed under the [MIT license](license.txt), while the drawings and 3d-printed parts are licensed under the [Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
 
----
 
 https://github.com/the-butcher/MOTH.CO2.2/assets/84620977/6b267401-aefe-4eec-aebe-592d79e80dc9
 
