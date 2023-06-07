@@ -16,7 +16,6 @@
  * ## mutable variables
  * ################################################
  */
-int64_t timeUpdateCounter = 0;
 
 // https://sites.google.com/a/usapiens.com/opnode/time-zones
 // default CET/CEST, can be overridden in /config/disp.json -> "tzn"
@@ -28,7 +27,7 @@ String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
  * ################################################
  */
 RTC_PCF8523 BoxClock::baseClock;
-
+int64_t BoxClock::timeUpdateCounter = 0;
 
 void BoxClock::begin() {
 
@@ -40,7 +39,7 @@ void BoxClock::begin() {
    *
    * NOTE: This call should be made BEFORE esp32 aquires IP address via DHCP,
    * otherwise SNTP option 42 would be rejected by default.
-   * NOTE: updateFromNtp() function call if made AFTER DHCP-client run
+   * NOTE: optNtpUpdate() function call if made AFTER DHCP-client run
    * will OVERRIDE aquired NTP server address
    */
   sntp_servermode_dhcp(1);    // (optional)
@@ -49,7 +48,7 @@ void BoxClock::begin() {
   // TODO set localtime from BoxClock
 
   // set notification call-back function 
-  sntp_set_time_sync_notification_cb(BoxClock::handleUpdateFromNtp);
+  sntp_set_time_sync_notification_cb(BoxClock::handleNtpUpdate);
 
 
 }
@@ -65,30 +64,21 @@ void BoxClock::setTimezone(String timezone1) {
 }
 
 bool BoxClock::isUpdateable() {
-  return millis() > (timeUpdateCounter * MILLISECONDS_PER_HOUR);
+  return millis() > (BoxClock::timeUpdateCounter * MILLISECONDS_PER_HOUR);
 }
 
-void BoxClock::updateFromNtp() {
+void BoxClock::optNtpUpdate() {
   if (BoxClock::isUpdateable()) { // every MILLISECONDS_PER_HOUR milliseconds
     configTzTime(timezone.c_str(), "pool.ntp.org", "time.nist.gov");
-    timeUpdateCounter++;
+    BoxClock::timeUpdateCounter++;
   }
 }
 
 // Callback function (get's called when time adjusts via NTP)
-void BoxClock::handleUpdateFromNtp(struct timeval *t) {
+void BoxClock::handleNtpUpdate(struct timeval *t) {
   
   struct tm timeinfo;
   getLocalTime(&timeinfo);
-
-  // time_t rawtime;
-  // struct tm * ptm;
-  // time(&rawtime);
-  // ptm = gmtime(&rawtime);
-  // Serial.print("times, ");
-  // Serial.print(ptm->tm_hour);
-  // Serial.print(", ");
-  // Serial.println(timeinfo.tm_hour);
 
   DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
   BoxClock::baseClock.adjust(now);  

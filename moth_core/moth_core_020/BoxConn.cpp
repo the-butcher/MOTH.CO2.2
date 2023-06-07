@@ -65,7 +65,7 @@ int BoxConn::requestedCalibrationReference = -1;
 bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
 bool BoxConn::isRenderStateRequired = false;
-String BoxConn::VNUM = "1.0.004";
+String BoxConn::VNUM = "1.0.005";
 
 void BoxConn::updateConfiguration() {
 
@@ -668,7 +668,7 @@ void BoxConn::handleUpload(AsyncWebServerRequest *request, String filename, size
 }
 
 void BoxConn::handleStationConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-  BoxClock::updateFromNtp(); // give the clock an opportunity to update
+  BoxClock::optNtpUpdate(); // give the clock an opportunity to update
 }
 
 bool BoxConn::checkNumeric(String value) {

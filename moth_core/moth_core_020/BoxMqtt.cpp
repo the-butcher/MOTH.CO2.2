@@ -14,13 +14,14 @@
  * ## constants
  * ################################################
  */
-const String JSON_KEY___ADDR = "srv";
-const String JSON_KEY___PORT = "prt";
-const String JSON_KEY___USER = "usr";
-const String JSON_KEY___PASS = "pwd";
-const String JSON_KEY_CLIENT = "cli";
-const String JSON_KEY___CERT = "crt";
-const String JSON_KEY__TOPIC = "top";
+const String JSON_KEY______ADDR = "srv";
+const String JSON_KEY______PORT = "prt";
+const String JSON_KEY______USER = "usr";
+const String JSON_KEY______PASS = "pwd";
+const String JSON_KEY____CLIENT = "cli";
+const String JSON_KEY______CERT = "crt";
+const String JSON_KEY_____TOPIC = "top";
+const String JSON_KEY___MINUTES = "min";
 
 /**
  * ################################################
@@ -38,6 +39,9 @@ bool isPublishCo2;
 bool isPublishBme;
 bool isPublishBat;
 
+int minPublishableMemBufferIndex = 0;
+String lastPayload = "";
+
 WiFiClient* wifiClient;
 PubSubClient* mqttClient;
 
@@ -51,15 +55,18 @@ int BoxMqtt::status;
 String BoxMqtt::CONFIG_PATH = "/config/mqtt.json";
 config_status_t BoxMqtt::configStatus = CONFIG_STATUS_PENDING;
 bool BoxMqtt::isWifiConnectionRequested = false;
+int BoxMqtt::publishIntervalMinutes = 15; // default :: 15 minutes, will be overridden by config
+
 
 void BoxMqtt::begin() {
   BoxMqtt::updateConfiguration();
 }
 
-void BoxMqtt::loop() {
-  // loop mqttClient to maintain the connection
+bool BoxMqtt::loop() {
   if (mqttClient != NULL && mqttClient->connected()) {
-    mqttClient->loop();
+    return mqttClient->loop();
+  } else {
+    return false;
   }
 }
 
@@ -86,17 +93,20 @@ void BoxMqtt::updateConfiguration() {
       JsonObject &root = jsonBuffer.parseObject(mqttFile);    
       if (root.success()) {
 
-        mqttAddr = root[JSON_KEY___ADDR] | mqttAddr;
-        mqttPort = root[JSON_KEY___PORT] | mqttPort;
-        mqttUser = root[JSON_KEY___USER] | mqttUser;
-        String _mqttPass = root[JSON_KEY___PASS] | mqttPass;
+        BoxMqtt::publishIntervalMinutes = max(1, root[JSON_KEY___MINUTES] | BoxMqtt::publishIntervalMinutes);
+        minPublishableMemBufferIndex = 1; // Measurements::memBufferIndx + BoxMqtt::publishIntervalMinutes;
+
+        mqttAddr = root[JSON_KEY______ADDR] | mqttAddr;
+        mqttPort = root[JSON_KEY______PORT] | mqttPort;
+        mqttUser = root[JSON_KEY______USER] | mqttUser;
+        String _mqttPass = root[JSON_KEY______PASS] | mqttPass;
         if (_mqttPass != "") {
           mqttPass = BoxEncr::decrypt(_mqttPass);
         }
-        mqttClid = root[JSON_KEY_CLIENT] | mqttClid;
-        mqttCert = root[JSON_KEY___CERT] | mqttCert;
+        mqttClid = root[JSON_KEY____CLIENT] | mqttClid;
+        mqttCert = root[JSON_KEY______CERT] | mqttCert;
 
-        String mqttTopics = root[JSON_KEY__TOPIC] | "CO2";
+        String mqttTopics = root[JSON_KEY_____TOPIC] | "CO2";
         isPublishCo2 = mqttTopics.indexOf("CO2" >= 0);
         isPublishBme = mqttTopics.indexOf("BME" >= 0);
         isPublishBat = mqttTopics.indexOf("BAT" >= 0);
@@ -139,32 +149,54 @@ void BoxMqtt::checkClients() {
     }
     mqttClient = new PubSubClient(*wifiClient);
     mqttClient->setServer(mqttAddr.c_str(), mqttPort);
-
-    char mqttClidCON[mqttClid.length() + 5];
-    sprintf(mqttClidCON, "%s/%s", mqttClid, "CON");    
-
-    mqttClient->setCallback(callback);
-    mqttClient->subscribe(mqttClidCON);
-
+    mqttClient->setCallback(BoxMqtt::callback);
   }  
 
 }
 
 void BoxMqtt::callback(char* topic, byte* payload, unsigned int length) {
- 
-  if (String(topic).indexOf("CON") >= 0) {
-    BoxMqtt::isWifiConnectionRequested = true;
+
+  String currPayload = String((char *)payload).substring(0, length);
+  if (currPayload != lastPayload) {
+
+    BoxMqtt::isWifiConnectionRequested = true; // can there be overlap with the wifi still being on (?)
+
+    char mqttClidACK[mqttClid.length() + 5];
+    sprintf(mqttClidACK, "%s/%s", mqttClid, "ACK");    
+
+    char payloadBuf[currPayload.length() + 1];
+    currPayload.toCharArray(payloadBuf, currPayload.length() + 1);  
+
+    mqttClient->publish(mqttClidACK, (uint8_t const *)payloadBuf, currPayload.length() + 1, true); // send an empty retained message to clear the existing message
+
   }
- 
+  lastPayload = currPayload;
+
 }
 
 bool BoxMqtt::checkConnect() {
   if (!mqttClient->connected()) {
+
     if (mqttUser != "" && mqttPass != "") {
-      return mqttClient->connect(mqttClid.c_str(), mqttUser.c_str(), mqttPass.c_str()); // connect with credentials
+      // mqttClient->connect(mqttClid.c_str(), mqttUser.c_str(), mqttPass.c_str()); // connect with credentials
+      mqttClient->connect(mqttClid.c_str(), mqttUser.c_str(), mqttPass.c_str(), 0, 0, 0, 0, 0);
     } else {
-      return mqttClient->connect(mqttClid.c_str()); // connect without credentials
+      mqttClient->connect(mqttClid.c_str()); // connect without credentials
     }
+
+    if (mqttClient->connected()) { // must be connected to subscribe
+
+      char mqttClidCON[mqttClid.length() + 5];
+      sprintf(mqttClidCON, "%s/%s", mqttClid, "CON");    
+      mqttClient->subscribe(mqttClidCON);
+
+      return true;
+
+    } else {
+      return false;
+    }
+
+
   }
   return true;
 }
@@ -177,6 +209,10 @@ bool BoxMqtt::hasFailure() {
   return failureCount >= 5;
 }
 
+bool BoxMqtt::isPublishable() {
+  return BoxMqtt::isConfiguredToBeActive() && Measurements::memBufferIndx >= minPublishableMemBufferIndex;
+}
+
 void BoxMqtt::publish() {
 
   BoxMqtt::status = MQTT_STATUS___________________OK;
@@ -185,7 +221,6 @@ void BoxMqtt::publish() {
     // be sure there are valid wifi and mqtt clients
     BoxMqtt::checkClients();
     bool connected = BoxMqtt::checkConnect();
-
     if (connected) {
 
       int firstPublishableIndex;
@@ -209,7 +244,7 @@ void BoxMqtt::publish() {
           rootCo2["co2"] = measurement.valuesCo2.co2;
           rootCo2["temperature"] = measurement.valuesCo2.temperature;
           rootCo2["humidity"] = measurement.valuesCo2.humidity;
-          successCo2 = publishJson(mqttClient, rootCo2, mqttClidCO2);
+          successCo2 = publishJson(rootCo2, mqttClidCO2);
 
         }
 
@@ -225,7 +260,7 @@ void BoxMqtt::publish() {
           rootBme["temperature"] = measurement.valuesBme.temperature;
           rootBme["humidity"] = measurement.valuesBme.humidity;
           rootBme["pressure"] = measurement.valuesBme.pressure;
-          successBme = publishJson(mqttClient, rootBme, mqttClidBME);
+          successBme = publishJson(rootBme, mqttClidBME);
 
         }
 
@@ -240,7 +275,7 @@ void BoxMqtt::publish() {
           rootBat["client"] = mqttClid;
           rootBat["percent"] = measurement.valuesBat.percent;
           rootBat["voltage"] = measurement.valuesBat.voltage;
-          successBat = publishJson(mqttClient, rootBat, mqttClidBAT);          
+          successBat = publishJson(rootBat, mqttClidBAT);          
 
         }
 
@@ -253,7 +288,14 @@ void BoxMqtt::publish() {
 
       }
 
-    } else {
+      // loop must be called multiple times to get down to incoming messages
+      bool loopSuccess1 = BoxMqtt::loop();
+      bool loopSuccess2 = BoxMqtt::loop();
+
+      // disconnect will call flush and stop on the wifi client
+      // mqttClient->disconnect();      
+
+    } else { // not connected
 
       int state = mqttClient->state();
       if (state == MQTT_CONNECTION_TIMEOUT) {
@@ -280,15 +322,6 @@ void BoxMqtt::publish() {
 
     }
 
-    // disconnect will call flush and stop on the wifi client
-    // mqttClient->disconnect();
-
-    // delete mqttClient;
-    // delete wifiClient;
-
-    // mqttClient = NULL;
-    // wifiClient = NULL;
-
   } else if (mqttAddr == "") { // any config or wifi problem
     BoxMqtt::status = MQTT_STATUS_INVALID_________ADDR;
   } else if (mqttPort <= 0) {
@@ -307,9 +340,11 @@ void BoxMqtt::publish() {
     failureCount++;
   }
 
+  minPublishableMemBufferIndex += BoxMqtt::publishIntervalMinutes;
+
 }
 
-bool BoxMqtt::publishJson(PubSubClient* mqttClient, JsonObject &root, char* mqid) {
+bool BoxMqtt::publishJson(JsonObject &root, char* mqid) {
 
   String outputStr;
   root.printTo(outputStr);

@@ -1,5 +1,3 @@
-// #define NEOPIXEL_HELPER
-
 #include "BoxClock.h"
 #include "BoxConn.h"
 #include "BoxMqtt.h"
@@ -37,12 +35,6 @@ const int BUZZER____CHANNEL = 0;
 const int BUZZER_RESOLUTION = 8; // 0 - 255
 const int BUZZER_______GPIO = GPIO_NUM_17;
 
-#if defined(NEOPIXEL_HELPER)
-#include <Adafruit_NeoPixel.h>
-#define NUMPIXELS 1
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
-#endif
-
 loop_reason_t loopReason = LOOP_REASON___________UNKNOWN;
 loop_reason_t loopAction;
 
@@ -62,9 +54,7 @@ bool isAudio;
 std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
 
 /**
- * -- add possibility to publish bme values, heap values
  * -- perform tests with various configurations, including invalid ones
- * -- think about what could be subscribed by the device (i.e. calibration)
  *
  * -- validate
  *    ✓ preventSleep == false
@@ -79,7 +69,7 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *    ✓ timezone works
  *    ✓ time gets adjusted while permanently being online
  *    ✓ time gets adjusted hourly when offline
- *    ! mqtt gets published hourly when offline
+ *    ✓ mqtt gets published hourly when offline
  *    ✓ stale never shows minus values
  *
  */
@@ -89,12 +79,6 @@ void setup() {
   // de-power the neopixel
   pinMode(NEOPIXEL_POWER, OUTPUT);
   digitalWrite(NEOPIXEL_POWER, LOW);
-
-#if defined(NEOPIXEL_HELPER)
-  digitalWrite(NEOPIXEL_POWER, HIGH);
-  pixels.begin();
-  pixels.setBrightness(16);
-#endif
 
   Serial.begin(115200);
   Wire.begin();
@@ -161,13 +145,6 @@ void handleButton13Change() {
   }
 }
 
-#if defined(NEOPIXEL_HELPER)
-void blink(int color) {
-  pixels.fill(color);
-  pixels.show();
-}
-#endif
-
 void beep() {
   ledcWrite(BUZZER____CHANNEL, 255);
   ledcWriteTone(BUZZER____CHANNEL, BUZZER_______FREQ); // 3755
@@ -179,20 +156,20 @@ void beep() {
  * render either a current chart or current numeric values
  */
 void renderState(bool force) {
-
   if (force || (BoxClock::getDate().secondstime() - renderStateSeconds) >= BoxDisplay::renderStateSeconds) {
 
     renderStateSeconds = BoxClock::getDate().secondstime() - 10; // add some safety to be sure the first state gets rendered
-    
-    bool autoConnect = BoxConn::getMode() == WIFI_OFF && BoxClock::isUpdateable();
+
+    bool publishable = BoxMqtt::isPublishable();
+    bool autoConnect = BoxConn::getMode() == WIFI_OFF && (publishable || BoxClock::isUpdateable());
     if (autoConnect) {
-      BoxConn::on(); // turn wifi on, the station_connected event will take care of adjusting time
+      BoxConn::on(); // turn wifi on, the station_connected event will take care of adjusting time if BoxClock::isUpdateable() is true
     } else {
-      BoxClock::updateFromNtp(); // will only update if enough time has passed
+      BoxClock::optNtpUpdate(); // will only update if BoxClock::isUpdateable() is true, needs to be called explicitly due to no station_connected event
     }
 
     // it was either on in the first place or just forced to be on
-    if (BoxConn::getMode() == WIFI_STA && BoxMqtt::isConfiguredToBeActive()) {
+    if (BoxConn::getMode() == WIFI_STA && publishable) {
       BoxMqtt::publish(); // simply publish
     }
 
@@ -201,16 +178,10 @@ void renderState(bool force) {
     }
 
     BoxDisplay::renderState();
-
   }
-
 }
 
 void loop() {
-
-#if defined(NEOPIXEL_HELPER)
-  blink(0xFF0000); // red - loop entered
-#endif
 
   loopAction = loopReason;
   loopReason = LOOP_REASON___________UNKNOWN; // start new with "unknown"
@@ -326,9 +297,6 @@ void loop() {
     delay(200);
     if (isAudio) {
       beep(); // double beep to signal "ON"
-      // digitalWrite(NEOPIXEL_POWER, HIGH); // power the neopixel
-    } else {
-      // digitalWrite(NEOPIXEL_POWER, LOW); // de-power the neopixel
     }
 
   } else if (loopAction == LOOP_REASON______TOGGLE_VALUE) {
@@ -345,18 +313,10 @@ void loop() {
 
   }
 
-#if defined(NEOPIXEL_HELPER)
-  blink(0xFFFF00); // yellow - running display action
-#endif
-
   if (displayFunc) {
     displayFunc();
     displayFunc = nullptr; // [=]()->void{};
   }
-
-#if defined(NEOPIXEL_HELPER)
-  blink(0x00FF00); // green - presleep
-#endif
 
   // whatever happens here, happens at least once / minute, maybe more often
 
@@ -368,10 +328,6 @@ void loop() {
     if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
       BoxMqtt::loop(); // maintain mqtt connection
     }
-
-#if defined(NEOPIXEL_HELPER)
-    blink(0x00FFFF); // cyan - wifi mode
-#endif
 
     if (BoxConn::isExpireable()) {
       loopReason = LOOP_REASON______WIFI_____OFF; // wifi has expired
@@ -389,7 +345,6 @@ void loop() {
     } else if (BoxConn::isRenderStateRequired) {
       loopReason = LOOP_REASON______RENDER_STATE;
     }
-
 
     int64_t measureWaitSecondsB = min(MEASUREMENT_WAIT_SECONDS_MAX, getMeasurementWaitSeconds()); // not more than 1 second
     if (measureWaitSecondsB <= 0) {
@@ -425,10 +380,6 @@ void loop() {
 
     esp_sleep_enable_gpio_wakeup();
     esp_sleep_enable_timer_wakeup(measureWaitSecondsC * MICROSECONDS_PER_SECOND);
-
-#if defined(NEOPIXEL_HELPER)
-    blink(0x0000FF); // blue - sleeping
-#endif
 
     esp_light_sleep_start();
 

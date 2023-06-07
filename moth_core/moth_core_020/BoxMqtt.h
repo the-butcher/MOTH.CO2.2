@@ -25,20 +25,22 @@ class BoxMqtt {
   
   private:
     static int failureCount;
-    static bool publishJson(PubSubClient* mqttClient, JsonObject &root, char* mqid);
+    static bool publishJson(JsonObject &root, char* mqid);
     static void checkClients();
     static bool checkConnect();
     static void callback(char* topic, byte* payload, unsigned int length);
     
   public:
+    static int publishIntervalMinutes;
     static bool isWifiConnectionRequested;
     static String CONFIG_PATH;
     static config_status_t configStatus;
     static int status;
     static void begin();
-    static void loop();
+    static bool loop();
     static void updateConfiguration();
     static bool isConfiguredToBeActive();
+    static bool isPublishable();
     static void publish();
     static bool hasFailure();
 

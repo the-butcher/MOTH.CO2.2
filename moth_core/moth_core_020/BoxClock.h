@@ -8,7 +8,8 @@ class BoxClock {
   
   private:
     static RTC_PCF8523 baseClock;
-    static void handleUpdateFromNtp(struct timeval *t);
+    static int64_t timeUpdateCounter;
+    static void handleNtpUpdate(struct timeval *t);
 
     
   public:
@@ -17,7 +18,7 @@ class BoxClock {
     static void begin();
     static DateTime getDate();
     static bool isUpdateable();
-    static void updateFromNtp();
+    static void optNtpUpdate();
     static String getTimeString(DateTime date);
     static String getDateTimeString(DateTime date);
     static DataFileDef getDataFileDef(DateTime date);
