@@ -54,11 +54,32 @@ TODO :: image here
 
 - ### Over Wifi
 
-The device hosts a small react-web-application. There are three pages in the application:
+  The device hosts a small react-web-application.
 
   - client.html
 
+    This page resembles the device's tabular view of the latest measurement.
+
+    ![web-app client](/images/client_800.png?raw=true)
+
+  - chart.html
+
+    This page gives access to the full history of measurements. Given the size of the SD-Card, there will be no limit regarding storage, effectively the device will keep an indefinite list of measurements.
+
+    ![web-app client](/images/chart_800.png?raw=true)
+
+  - server.html
+
+    This page gives access to the device's api. View status, configuration, data, upload file, calibrate, reset, ...
+
+    ![web-app client](/images/server_800.png?raw=true)
+
+
 - ### MQTT
+
+  TODO :: describe
+
+- ### TODO :: here or somewhere (!) have a set of basic introductions
 
 ---
 
