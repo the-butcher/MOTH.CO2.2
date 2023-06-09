@@ -92,7 +92,6 @@ void setup() {
   buttonHander12.begin();
   buttonHander13.begin();
 
-  // pinMode(GPIO_NUM_17, OUTPUT); // sound
   ledcSetup(BUZZER____CHANNEL, BUZZER_______FREQ, BUZZER_RESOLUTION);
   ledcAttachPin(BUZZER_______GPIO, BUZZER____CHANNEL);
 
@@ -318,6 +317,13 @@ void loop() {
     displayFunc = nullptr; // [=]()->void{};
   }
 
+  // there could have been an mqtt wifi-on request, lets check for it
+  if (BoxMqtt::isWifiConnectionRequested) {
+    BoxMqtt::isWifiConnectionRequested = false; // wifi conn requested over mqtt
+    loopReason = LOOP_REASON______WIFI______ON;
+    // seems like wifi is not off yet
+  }
+
   // whatever happens here, happens at least once / minute, maybe more often
 
   bool preventSleep = false; // MUST be false in deployment, or battery life will be much shorter
@@ -337,11 +343,6 @@ void loop() {
       loopReason = LOOP_REASON_______HIBERNATION; // user requested hibernation
     } else if (BoxConn::isCo2CalibrationReset) {
       loopReason = LOOP_REASON_RESET_CALIBRATION; // user requested calibration reset
-    } else if (BoxMqtt::isWifiConnectionRequested) {
-      BoxMqtt::isWifiConnectionRequested = false; // wifi conn requested over mqtt
-      if (BoxConn::getMode() == WIFI_OFF) {
-        loopReason = LOOP_REASON______WIFI______ON;
-      }
     } else if (BoxConn::isRenderStateRequired) {
       loopReason = LOOP_REASON______RENDER_STATE;
     }

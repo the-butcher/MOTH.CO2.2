@@ -65,7 +65,7 @@ int BoxConn::requestedCalibrationReference = -1;
 bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
 bool BoxConn::isRenderStateRequired = false;
-String BoxConn::VNUM = "1.0.005";
+String BoxConn::VNUM = "1.0.006";
 
 void BoxConn::updateConfiguration() {
 
@@ -765,7 +765,6 @@ void BoxConn::on() {
 }
 
 void BoxConn::off() {
-
   WiFi.softAPdisconnect(true);
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
