@@ -149,6 +149,159 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       riskHi: 10000
     }
   },
+  'pm010': {
+    label: 'PM 1.0 µg/m³',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pm010));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pm025': {
+    label: 'PM 2.5 µg/m³',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pm025));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pm100': {
+    label: 'PM 10.0 µg/m³',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pm100));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pc003': {
+    label: 'Particle count 0.3µm',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pc003));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pc005': {
+    label: 'Particle count 0.5µm',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pc005));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pc010': {
+    label: 'Particle count 1.0µm',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pc010));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pc025': {
+    label: 'Particle count 2.5µm',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pc025));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pc050': {
+    label: 'Particle count 5.0µm',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pc050));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
+  'pc100': {
+    label: 'Particle count 10.0µm',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.pc100));
+      max = Math.ceil(max / 5) * 5;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 15,
+      riskHi: 45
+    }
+  },
   'percent': {
     label: 'Battery %',
     toDomain: (data: any[]) => {
@@ -170,7 +323,7 @@ const propertyLookup: { [K in string]: IChartProperty } = {
 const ChartApp = () => {
 
   const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  // const boxUrl = `http://192.168.0.66/api`; // when running directly from device
+  // const boxUrl = `http://192.168.0.172/api`; // when running directly from device
 
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartMinX, setChartMinX] = useState<number>();

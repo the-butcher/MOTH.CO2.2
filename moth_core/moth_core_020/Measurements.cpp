@@ -4,6 +4,7 @@
 #include "DataFileDef.h"
 #include "BoxFiles.h"
 #include "SensorBme280.h"
+#include "SensorPmsa003i.h"
 
 /**
  * ################################################
@@ -28,7 +29,10 @@ int Measurements::memBufferSize = 10080; // 10080; // 60 * 24 * 7, every minute 
 int Measurements::memBufferIndx = 0;
 int64_t Measurements::measurementIntervalSeconds = 60; // 1 minute
 Measurement* Measurements::measurements;
+
+// csv settings
 String Measurements::CSV_HEAD = "time; co2; temperature; humidity; temperature_bme; humidity_bme; pressure; percent\r\n";
+char* Measurements::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s\r\n";
 String Measurements::dataFileNameCurr = "";
 
 void Measurements::begin() {
@@ -36,6 +40,11 @@ void Measurements::begin() {
   // https://www.esp32.com/viewtopic.php?t=27771
   Measurements::measurements = (Measurement*) ps_malloc(Measurements::memBufferSize * sizeof(Measurement));
   memset(Measurements::measurements, 0, Measurements::memBufferSize * sizeof(Measurement));
+
+  if (SensorPmsa003i::ACTIVE) {
+    Measurements::CSV_HEAD = "time; co2; temperature; humidity; temperature_bme; humidity_bme; pm010; pm025; pm100; pc003; pc005; pc010; pc025; pc050; pc100; pressure; percent\r\n";
+    Measurements::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s\r\n";
+  }
 
 }
 
@@ -52,18 +61,23 @@ void Measurements::checkCalibrationOffsetBme280() {
   double temperatureOffsetVal = 0.0;
   double temperatureOffsetAvg = 0.0;
   double temperatureOffsetVar = 0.0; // variance
-  for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0; offsetIndex--) {
+
+  for (int offsetIndex = CALIBRATION_INTERVAL_BME280 - 1; offsetIndex >= 0; offsetIndex--) {
     measurement = Measurements::getOffsetMeasurement(offsetIndex);
     temperatureOffsetVal = measurement.valuesBme.temperature - measurement.valuesCo2.temperature;
     temperatureOffsetAvg += temperatureOffsetVal;
   }
-  temperatureOffsetAvg = temperatureOffsetAvg / Measurements::csvBufferSize;
-  for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0; offsetIndex--) {
+
+  temperatureOffsetAvg = temperatureOffsetAvg / CALIBRATION_INTERVAL_BME280;
+
+  for (int offsetIndex = CALIBRATION_INTERVAL_BME280 - 1; offsetIndex >= 0; offsetIndex--) {
     measurement = Measurements::getOffsetMeasurement(offsetIndex);
     temperatureOffsetVal = measurement.valuesBme.temperature - measurement.valuesCo2.temperature;
     temperatureOffsetVar += pow(temperatureOffsetVal - temperatureOffsetAvg, 2);
   }
+
   temperatureOffsetVar = sqrt(temperatureOffsetVar);
+
   if (temperatureOffsetVar < calibrationThreshold) { 
     SensorBme280::setTemperatureOffset(SensorBme280::getTemperatureOffset() + temperatureOffsetAvg);
   } 
@@ -208,23 +222,46 @@ void Measurements::setPublished(int memIndex) {
 
 String Measurements::toCsv(Measurement measurement) {
 
-  char csvBuffer[128];
+  char csvBuffer[256];
 
   DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
 
-  sprintf(csvBuffer, "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s\r\n", 
-    date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
-    String(measurement.valuesCo2.co2), 
-    String(measurement.valuesCo2.temperature, 1), 
-    String(measurement.valuesCo2.humidity, 1), 
-    String(measurement.valuesBme.temperature, 1), 
-    String(measurement.valuesBme.humidity, 1),
-    String(measurement.valuesBme.pressure),
-    String(measurement.valuesBat.percent, 1)
-  );
+  if (SensorPmsa003i::ACTIVE) {
+    sprintf(csvBuffer, Measurements::CSV_FRMT, 
+      date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
+      String(measurement.valuesCo2.co2), 
+      String(measurement.valuesCo2.temperature, 1), 
+      String(measurement.valuesCo2.humidity, 1), 
+      String(measurement.valuesBme.temperature, 1), 
+      String(measurement.valuesBme.humidity, 1),
+      String((int)round(measurement.valuesPms.pm010)), 
+      String((int)round(measurement.valuesPms.pm025)), 
+      String((int)round(measurement.valuesPms.pm100)), 
+      String(measurement.valuesPms.pc003), 
+      String(measurement.valuesPms.pc005), 
+      String(measurement.valuesPms.pc010), 
+      String(measurement.valuesPms.pc025), 
+      String(measurement.valuesPms.pc050), 
+      String(measurement.valuesPms.pc100), 
+      String(measurement.valuesBme.pressure),
+      String(measurement.valuesBat.percent, 1)
+    );
+  } else {
+    sprintf(csvBuffer, Measurements::CSV_FRMT, 
+      date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
+      String(measurement.valuesCo2.co2), 
+      String(measurement.valuesCo2.temperature, 1), 
+      String(measurement.valuesCo2.humidity, 1), 
+      String(measurement.valuesBme.temperature, 1), 
+      String(measurement.valuesBme.humidity, 1),
+      String(measurement.valuesBme.pressure),
+      String(measurement.valuesBat.percent, 1)
+    );
+  }
+
 
   // TODO :: make the number locale configurable
-  for(int i = 0; i < 128; i++) {
+  for(int i = 0; i < 256; i++) {
     if(csvBuffer[i] == '.') {
       csvBuffer[i] = ',';
     }

@@ -8,6 +8,7 @@
 #include "RTClib.h"
 #include <SdFat.h>
 #include "AESLib.h"
+#include "SensorPmsa003i.h"
 
 /**
  * ################################################
@@ -37,6 +38,7 @@ String mqttCert = "";
 
 bool isPublishCo2;
 bool isPublishBme;
+bool isPublishPms;
 bool isPublishBat;
 
 int minPublishableMemBufferIndex = 0;
@@ -108,6 +110,7 @@ void BoxMqtt::updateConfiguration() {
         String mqttTopics = root[JSON_KEY_____TOPIC] | "CO2";
         isPublishCo2 = mqttTopics.indexOf("CO2" >= 0);
         isPublishBme = mqttTopics.indexOf("BME" >= 0);
+        isPublishPms = mqttTopics.indexOf("PMS" >= 0) && SensorPmsa003i::ACTIVE;
         isPublishBat = mqttTopics.indexOf("BAT" >= 0);
 
         BoxMqtt::configStatus = CONFIG_STATUS__PARSED;
@@ -249,6 +252,28 @@ void BoxMqtt::publish() {
           rootBme["humidity"] = measurement.valuesBme.humidity;
           rootBme["pressure"] = measurement.valuesBme.pressure;
           successBme = publishJson(rootBme, mqttClidBME);
+        }
+
+        bool successPms = false;
+        if (isPublishPms) {
+
+          char mqttClidPMS[mqttClid.length() + 5];
+          sprintf(mqttClidPMS, "%s/%s", mqttClid, "PMS");
+
+          JsonObject &rootPms = jsonBuffer.createObject();
+          rootPms["time"] = time;
+          rootPms["client"] = mqttClid;
+          rootPms["pm010"] = (int)round(measurement.valuesPms.pm010);
+          rootPms["pm025"] = (int)round(measurement.valuesPms.pm025);
+          rootPms["pm100"] = (int)round(measurement.valuesPms.pm100);
+          rootPms["pc003"] = measurement.valuesPms.pc003;
+          rootPms["pc005"] = measurement.valuesPms.pc005;
+          rootPms["pc010"] = measurement.valuesPms.pc010;
+          rootPms["pc025"] = measurement.valuesPms.pc025;
+          rootPms["pc050"] = measurement.valuesPms.pc050;
+          rootPms["pc100"] = measurement.valuesPms.pc100;
+          successPms = publishJson(rootPms, mqttClidPMS);
+
         }
 
         bool successBat = false;

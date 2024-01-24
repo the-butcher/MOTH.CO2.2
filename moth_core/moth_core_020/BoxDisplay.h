@@ -33,12 +33,18 @@ typedef enum {
   DISPLAY_THEME__DARK
 } display_theme_t;
 
+/**
+ * the value to be shown in chart
+ */
 typedef enum {
   DISPLAY_VALUE___CO2,
   DISPLAY_VALUE___DEG,
   DISPLAY_VALUE___HUM,
-  DISPLAY_VALUE___HPA
-} display_value_t;
+  DISPLAY_VALUE___HPA,
+  DISPLAY_VALUE__P010,
+  DISPLAY_VALUE__P025,
+  DISPLAY_VALUE__P100
+} display_value_v;
 
 class BoxDisplay { 
   
@@ -68,7 +74,6 @@ class BoxDisplay {
     static String CONFIG_PATH;
     static config_status_t configStatus;
     static int64_t renderStateSeconds;
-    static Thresholds thresholdsCo2;
     static void begin();
     static void clearBuffer();
     static void flushBuffer();
@@ -82,9 +87,11 @@ class BoxDisplay {
     static void setState(display_state_t state);
     static void toggleState();
     static display_state_t getState();
-    static void setValue(display_value_t value);
+    static void setValue(display_value_v value);
+    static void resetValue();
     static void toggleValue();
-    static ValuesCo2 getDisplayValues();
+    static ValuesCo2 getDisplayValuesCo2();
+    static ValuesPms getDisplayValuesPms();
 
 };
 

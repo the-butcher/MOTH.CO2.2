@@ -25,31 +25,39 @@ void ButtonHandler::begin() {
 }
 
 gpio_int_type_t ButtonHandler::getWakeupLevel() {
-  // refLevel = digitalRead(gpin);
   return digitalRead(gpin) == HIGH ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL;
 }
 
 fallrise_t ButtonHandler::getFallRise() {
+
   curLevel = digitalRead(gpin);
   fallrise_t fallRise = FALL_RISE_NONE;
-  if (curLevel != refLevel) {
-    if (curLevel == LOW) {
+
+  if (curLevel != refLevel) { // an actual change
+    if (curLevel == LOW) { // changed to being pressed
       if (esp_timer_get_time() - microsecondsLastFall > MICROSECONDS_MIN_DEBOUNCE) {
         microsecondsLastFall = esp_timer_get_time();
       }
-    } else {
+    } else { // changed to being released
       if (esp_timer_get_time() - microsecondsLastRise > MICROSECONDS_MIN_DEBOUNCE) {
         microsecondsLastRise = esp_timer_get_time();
-        if (microsecondsLastRise - microsecondsLastFall < MICROSECONDS_MAX_FAST) {
+        if (microsecondsLastRise - microsecondsLastFall <= MICROSECONDS_MAX_FAST) {
           fallRise = FALL_RISE_FAST;
-        } else if (microsecondsLastRise - microsecondsLastFall < MICROSECONDS_MAX_SLOW) {
-          fallRise = FALL_RISE_SLOW;
         }
+        // if (microsecondsLastRise - microsecondsLastFall < MICROSECONDS_MAX_FAST) {
+        //   fallRise = FALL_RISE_FAST;
+        // } else if (microsecondsLastRise - microsecondsLastFall < MICROSECONDS_MAX_SLOW) {
+        //   fallRise = FALL_RISE_SLOW;
+        // }
       }
     }
-  } 
+  } else if (curLevel == LOW && esp_timer_get_time() - microsecondsLastFall > MICROSECONDS_MAX_FAST) {
+    fallRise = FALL_RISE_SLOW;
+  }
+
   refLevel = curLevel;
   return fallRise;
+
 }
   
 

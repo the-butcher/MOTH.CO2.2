@@ -13,6 +13,7 @@ class Measurements {
     static int memBufferSize; // count of measurements kept in PSRAM
     static Measurement* measurements;
     static float getSlope(std::function<float(const Measurement)> func);
+    static char* CSV_FRMT;
     
   public:
     static String dataFileNameCurr;

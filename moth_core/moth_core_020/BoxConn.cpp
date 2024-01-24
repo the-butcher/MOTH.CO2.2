@@ -13,6 +13,7 @@
 #include "Network.h"
 #include "SensorScd041.h"
 #include "SensorBme280.h"
+#include "SensorPmsa003i.h"
 #include "BoxFiles.h"
 #include <ArduinoJson.h>
 #include "File32Response.h"
@@ -65,7 +66,8 @@ int BoxConn::requestedCalibrationReference = -1;
 bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
 bool BoxConn::isRenderStateRequired = false;
-String BoxConn::VNUM = "1.0.006";
+
+String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.008.pms" : "1.0.008";
 
 void BoxConn::updateConfiguration() {
 
@@ -204,12 +206,18 @@ void BoxConn::begin() {
     Measurement latestMeasurement = Measurements::getLatestMeasurement();
     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + latestMeasurement.secondstime);
 
-    ValuesCo2 valuesCo2 = BoxDisplay::getDisplayValues();
+    ValuesCo2 valuesCo2 = BoxDisplay::getDisplayValuesCo2();
 
     root["time"] = BoxClock::getDateTimeString(date);
     root["co2"] = valuesCo2.co2;
     root["temperature"] = round(valuesCo2.temperature * 10) / 10.0;
     root["humidity"] = round(valuesCo2.humidity * 10) / 10.0;
+    if (SensorPmsa003i::ACTIVE) {
+      ValuesPms valuesPms = BoxDisplay::getDisplayValuesPms();
+      root["pm010"] = (int)round(valuesPms.pm010);
+      root["pm025"] = (int)round(valuesPms.pm025);
+      root["pm100"] = (int)round(valuesPms.pm100);
+    }
     root["pressure"] = latestMeasurement.valuesBme.pressure;
     root["percent"] = latestMeasurement.valuesBat.percent;
 
@@ -469,6 +477,12 @@ void BoxConn::begin() {
         BoxDisplay::setValue(DISPLAY_VALUE___HUM);
       } else if (requestedDisplay == "value_hpa") {
         BoxDisplay::setValue(DISPLAY_VALUE___HPA);
+      } else if (requestedDisplay == "value_010") {
+        BoxDisplay::setValue(DISPLAY_VALUE__P010);
+      } else if (requestedDisplay == "value_025") {
+        BoxDisplay::setValue(DISPLAY_VALUE__P025);
+      } else if (requestedDisplay == "value_100") {
+        BoxDisplay::setValue(DISPLAY_VALUE__P100);
       } else {
         BoxConn::isRenderStateRequired = false;
         root[CODE] = 400;
