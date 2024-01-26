@@ -7,9 +7,11 @@
 #include "RunningAverage.h"
 
 typedef enum {
-    PMS_____ON,
-    PMS____OFF,
-    PMS_PAUSED
+    PMS____ON_M, // on in measurement interval
+    PMS____ON_D, // on in display interval
+    PMS_____OFF,
+    PMS_PAUSE_M, // paused in measurement interval
+    PMS_PAUSE_D, // paused in display interval
 } pms_mode_t;
 
 class SensorPmsa003i {
@@ -17,24 +19,16 @@ class SensorPmsa003i {
   private:
     static Adafruit_PM25AQI baseSensor;
     static pms_mode_t mode;
-    static RunningAverage avgPm010;
-    static RunningAverage avgPm025;
-    static RunningAverage avgPm100;
-    static RunningAverage avgPc003;
-    static RunningAverage avgPc005;
-    static RunningAverage avgPc010;
-    static RunningAverage avgPc025;
-    static RunningAverage avgPc050;
-    static RunningAverage avgPc100;
 
   public:
     static bool ACTIVE;
     static int WARMUP_SECONDS;
+    static gpio_num_t PMS_ENABLE___GPIO;
     static void setMode(pms_mode_t mode);
     static pms_mode_t getMode();
     static void begin();
     static bool tryRead();
-    static ValuesPms getValues();
+    static ValuesPms values;
     
 };
 

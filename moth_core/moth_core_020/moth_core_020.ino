@@ -19,8 +19,7 @@
 typedef enum {
   LOOP_REASON______WIFI______ON,
   LOOP_REASON______WIFI_____OFF,
-  LOOP_REASON______PMS_______ON,
-  LOOP_REASON______PMS______OFF,
+  LOOP_REASON______TOGGLE___PMS,
   LOOP_REASON______TOGGLE_STATE, // co2, pms, chart
   LOOP_REASON______TOGGLE_THEME, // light dark
   LOOP_REASON______TOGGLE_VALUE, // within state, the acual value being shown (co2, pm1.0, pm2.5, pm10.0), let a long press return to co2
@@ -33,7 +32,7 @@ typedef enum {
   LOOP_REASON___________UNKNOWN
 } loop_reason_t;
 
-const int BUZZER_______FREQ = 1000; // 3755
+const int BUZZER____FREQ_LO = 1000; // 3755
 const int BUZZER____CHANNEL = 0;
 const int BUZZER_RESOLUTION = 8; // 0 - 255
 const int BUZZER_______GPIO = SensorPmsa003i::ACTIVE ? GPIO_NUM_8 : GPIO_NUM_17;
@@ -44,9 +43,10 @@ loop_reason_t loopAction;
 const int64_t MICROSECONDS_PER_SECOND = 1000000; // 1 second
 const int64_t MILLISECONDS_PER_SECOND = 1000; // 1 second
 const int64_t MEASUREMENT_WAIT_SECONDS_MAX = 1;
+const int64_t WARMUP_WAIT_SECONDS_NEVER = 60 * 60 * 24;
 
 int64_t offsetBeginSeconds = 0;
-int64_t renderStateSeconds = 0; // -3 minutes (be sure that even cases, when esp_get_time starts negative (?) the first state gets rendered)
+int64_t lastMemBufferIndex = -2; // the last mem buffer index that got rendered
 
 ButtonHandler buttonHander11(GPIO_NUM_11);
 ButtonHandler buttonHander12(GPIO_NUM_12);
@@ -58,8 +58,6 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
 
 /**
  * -- perform tests with various configurations, including invalid ones
- * -- prevent sleep while the PMS sensor is on
- * -- validate that pms is published to MQTT
  *
  * -- validate
  *    ✓ preventSleep == false
@@ -97,7 +95,7 @@ void setup() {
   buttonHander12.begin();
   buttonHander13.begin();
 
-  ledcSetup(BUZZER____CHANNEL, BUZZER_______FREQ, BUZZER_RESOLUTION);
+  ledcSetup(BUZZER____CHANNEL, BUZZER____FREQ_LO, BUZZER_RESOLUTION);
   ledcAttachPin(BUZZER_______GPIO, BUZZER____CHANNEL);
 
   BoxPack::begin();
@@ -117,19 +115,37 @@ void setup() {
 
 }
 
-int64_t getMeasurementNextSeconds() {
+int64_t getMeasureNextSeconds() {
   return (Measurements::memBufferIndx + 1) * Measurements::measurementIntervalSeconds + offsetBeginSeconds;
 }
 
-int64_t getMeasurementWaitSeconds() {
-  return getMeasurementNextSeconds() - BoxClock::getDate().secondstime();
+int64_t getMeasureWaitSeconds() {
+  return getMeasureNextSeconds() - BoxClock::getDate().secondstime();
+}
+
+int64_t getDisplayNextSeconds() {
+  return (lastMemBufferIndex + BoxDisplay::renderStateSeconds / 60) * Measurements::measurementIntervalSeconds + offsetBeginSeconds;
+}
+
+int64_t getDisplayWaitSeconds() {
+  return getDisplayNextSeconds() - BoxClock::getDate().secondstime();
+}
+
+int64_t getWarmupWaitSeconds() {
+  if (SensorPmsa003i::getMode() == PMS_PAUSE_M) {
+    return getMeasureWaitSeconds() - SensorPmsa003i::WARMUP_SECONDS;
+  } else if (SensorPmsa003i::getMode() == PMS_PAUSE_D) {
+    return getDisplayWaitSeconds() - SensorPmsa003i::WARMUP_SECONDS;
+  } else {
+    return WARMUP_WAIT_SECONDS_NEVER;
+  }
 }
 
 void handleButton11Change() {
   fallrise_t fallrise11 = buttonHander11.getFallRise();
   if (fallrise11 == FALL_RISE_FAST) {
     if (SensorPmsa003i::ACTIVE) {
-      loopReason = SensorPmsa003i::getMode() == PMS____OFF ? LOOP_REASON______PMS_______ON : LOOP_REASON______PMS______OFF;
+      loopReason = LOOP_REASON______TOGGLE___PMS;
     }
   } else if (fallrise11 == FALL_RISE_SLOW) {
     loopReason = BoxConn::getMode() == WIFI_OFF ? LOOP_REASON______WIFI______ON : LOOP_REASON______WIFI_____OFF;
@@ -152,9 +168,9 @@ void handleButton13Change() {
   }
 }
 
-void beep() {
+void beep(int frequency) {
   ledcWrite(BUZZER____CHANNEL, 255);
-  ledcWriteTone(BUZZER____CHANNEL, BUZZER_______FREQ); // 3755
+  ledcWriteTone(BUZZER____CHANNEL, frequency); // 3755
   delay(50);
   ledcWrite(BUZZER____CHANNEL, 0);  
 }
@@ -163,12 +179,11 @@ void beep() {
  * render either a current chart or current numeric values
  */
 void renderState(bool force) {
-  if (
-    force ||
-    (BoxClock::getDate().secondstime() - renderStateSeconds) >= BoxDisplay::renderStateSeconds
-  ) {
+  
+  if (force || getDisplayWaitSeconds() <= 0) {
 
-    renderStateSeconds = BoxClock::getDate().secondstime() - 10; // add some safety to be sure the first state gets rendered
+    // store the last memBufferIndex to know when to redraw the next time
+    lastMemBufferIndex = Measurements::memBufferIndx;
 
     bool publishable = BoxMqtt::isPublishable();
     bool autoConnect = BoxConn::getMode() == WIFI_OFF && (publishable || BoxClock::isUpdateable());
@@ -188,7 +203,9 @@ void renderState(bool force) {
     }
 
     BoxDisplay::renderState();
+
   }
+
 }
 
 bool isAnyButtonPressed() {
@@ -204,19 +221,21 @@ void loop() {
   attachInterrupt(buttonHander12.ipin, handleButton12Change, CHANGE);
   attachInterrupt(buttonHander13.ipin, handleButton13Change, CHANGE);
 
+  int64_t measureWaitSecondsA = getMeasureWaitSeconds();
+  int64_t displayWaitSecondsA = getDisplayWaitSeconds();
+  int64_t warmupWaitSecondsA = getWarmupWaitSeconds();
+
+  if (warmupWaitSecondsA <= 1) {
+    if (SensorPmsa003i::getMode() == PMS_PAUSE_M) {
+      SensorPmsa003i::setMode(PMS____ON_M);
+    } else if (SensorPmsa003i::getMode() == PMS_PAUSE_D) {
+      SensorPmsa003i::setMode(PMS____ON_D);
+    }
+  }
+
   // regardless of loopAction, a measurement will be taken if it is time to do so
   // however, there may be issues when this happens shortly before a measurement ...
   // ... in such cases it can happen that i.e. turning on WiFi consumes enough time to have a negative wait time to the next measurement
-  int64_t measureWaitSecondsA = getMeasurementWaitSeconds();
-
-  // reactivate PMS if there is less time than WARMUP_SECONDS before the next measurement
-  if (measureWaitSecondsA <= SensorPmsa003i::WARMUP_SECONDS && SensorPmsa003i::getMode() == PMS_PAUSED) {
-    SensorPmsa003i::setMode(PMS_____ON);
-  } 
-  if (measureWaitSecondsA <= SensorPmsa003i::WARMUP_SECONDS / 2 && SensorPmsa003i::getMode() == PMS_____ON) {
-    SensorPmsa003i::tryRead();
-  }
-
   if (measureWaitSecondsA <= 1) {
 
     // a final, short delay to hit the same second at all times, as far as possible
@@ -233,16 +252,18 @@ void loop() {
     Measurement measurement = {
       BoxClock::getDate().secondstime(),
       SensorScd041::values,
-      SensorPmsa003i::getValues(),
+      SensorPmsa003i::values,
       SensorBme280::values,
       BoxPack::values,
       true // publishable
     };
     Measurements::putMeasurement(measurement);
 
-    // pause the sensor for 1 Minute - WAKEUP_TIME
-    if (SensorPmsa003i::getMode() == PMS_____ON) {
-      SensorPmsa003i::setMode(PMS_PAUSED);
+    // when the PM sensor is on, pause it after measurement
+    if (SensorPmsa003i::getMode() == PMS____ON_M) {
+      SensorPmsa003i::setMode(PMS_PAUSE_M);
+    } else if (SensorPmsa003i::getMode() == PMS____ON_D) {
+      SensorPmsa003i::setMode(PMS_PAUSE_D);
     }
 
     displayFunc = [=]()->void{ renderState(false); };
@@ -251,7 +272,7 @@ void loop() {
 
   if (loopAction == LOOP_REASON______CALIBRRATION) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     SensorScd041::stopPeriodicMeasurement();
     delay(500);
     uint16_t result = SensorScd041::forceCalibration(BoxConn::requestedCalibrationReference);
@@ -269,7 +290,7 @@ void loop() {
 
   } else if (loopAction == LOOP_REASON_______HIBERNATION) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxConn::isHibernationRequired = false; // does not make a difference, but anyways
 
     BoxConn::off();
@@ -288,61 +309,62 @@ void loop() {
 
   } else if (loopAction == LOOP_REASON_RESET_CALIBRATION) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxConn::isCo2CalibrationReset = false;
     SensorScd041::factoryReset();
 
   } else if (loopAction == LOOP_REASON______WIFI______ON) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxConn::on(); // turn on, dont expire immediately
     displayFunc = [=]()->void{ BoxDisplay::renderQRCode(); };
 
   } else if (loopAction == LOOP_REASON______WIFI_____OFF) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxConn::off();
     displayFunc = [=]()->void{ renderState(true); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE_STATE) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxDisplay::toggleState();
     displayFunc = [=]()->void{  renderState(true); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE_THEME) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxDisplay::toggleTheme();
     displayFunc = [=]()->void{  renderState(true); };
 
-  } else if (loopAction == LOOP_REASON______PMS_______ON) {
+  } else if (loopAction == LOOP_REASON______TOGGLE___PMS) {
 
-    beep(); // confirmation beep
-    SensorPmsa003i::setMode(measureWaitSecondsA <= SensorPmsa003i::WARMUP_SECONDS ? PMS_____ON : PMS_PAUSED);
-    displayFunc = [=]()->void{  renderState(true); }; // this is only to render the PMS active indicator
-
-  } else if (loopAction == LOOP_REASON______PMS______OFF) {
-
-    beep(); // confirmation beep
-    SensorPmsa003i::setMode(PMS____OFF);
+    beep(BUZZER____FREQ_LO);
+    if (SensorPmsa003i::getMode() == PMS____ON_M || SensorPmsa003i::getMode() == PMS_PAUSE_M) { // if in measurement interval mode switch to display interval mode
+      SensorPmsa003i::setMode(PMS_PAUSE_D);
+    } else if (SensorPmsa003i::getMode() == PMS____ON_D || SensorPmsa003i::getMode() == PMS_PAUSE_D) { // if in display interval mode, switch off
+      SensorPmsa003i::setMode(PMS_____OFF);
+      BoxDisplay::resetValue(); // reset to CO2 display (or it may display zero PM values after turning off)
+    } else {
+      SensorPmsa003i::setMode(PMS_PAUSE_M);
+    }
     displayFunc = [=]()->void{  renderState(true); }; // this is only to render the PMS active indicator
 
   } else if (loopAction == LOOP_REASON______TOGGLE_VALUE) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxDisplay::toggleValue();
     displayFunc = [=]()->void{ renderState(true); };
     
   } else if (loopAction == LOOP_REASON______RESET__VALUE) {
     
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxDisplay::resetValue();
     displayFunc = [=]()->void{ renderState(true); };
     
   } else if (loopAction == LOOP_REASON______RENDER_STATE) {
 
-    beep(); // confirmation beep
+    beep(BUZZER____FREQ_LO);
     BoxConn::isRenderStateRequired = false;
     displayFunc = [=]()->void{ renderState(true); };
 
@@ -361,12 +383,8 @@ void loop() {
   }
 
   // whatever happens here, happens at least once / minute, maybe more often depending on user interaction, wifi expiriy, ...
-
   bool forceAwake = false; // MUST be false in deployment, or battery life will be much shorter
-  while (forceAwake || BoxConn::getMode() != WIFI_OFF || SensorPmsa003i::getMode() == PMS_____ON || isAnyButtonPressed()) { // no sleep while wifi is active or pms is active
-
-    // beep();
-    // whatever happens in this loop, happens about once per second
+  while (forceAwake || BoxConn::getMode() != WIFI_OFF || isAnyButtonPressed()) { //  || SensorPmsa003i::getMode() == PMS_____ON no sleep while wifi is active or pms is active
 
     if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
       BoxMqtt::loop(); // maintain mqtt connection
@@ -390,13 +408,13 @@ void loop() {
       break;
     }
 
-    int64_t measureWaitSecondsB = min(MEASUREMENT_WAIT_SECONDS_MAX, getMeasurementWaitSeconds()); // not more than 1 second
-    if (measureWaitSecondsB <= 0) {
+    int64_t waitSecondsB = min(MEASUREMENT_WAIT_SECONDS_MAX, min(getMeasureWaitSeconds(), getWarmupWaitSeconds())); // not more than 1 second
+    if (waitSecondsB <= 0) {
       loopReason = LOOP_REASON_______MEASUREMENT; // time to measure
       break;
     } else {
 
-      int64_t _delay = measureWaitSecondsB * MILLISECONDS_PER_SECOND / 5;
+      int64_t _delay = waitSecondsB * MILLISECONDS_PER_SECOND / 5;
       for (int i = 0; i < 5; i++) {
         delay(_delay); // wait for some time (max 1 second)
         handleButton11Change();
@@ -408,11 +426,8 @@ void loop() {
       }
 
       if (loopReason != LOOP_REASON___________UNKNOWN) {
-        break; // button press during delay
-      } else if (measureWaitSecondsB <= SensorPmsa003i::WARMUP_SECONDS && SensorPmsa003i::getMode() != PMS____OFF) {
-        loopReason = LOOP_REASON_______MEASUREMENT; // loop reason measure used, but actually intent is PMS resume or measure
         break;
-      }
+      } 
 
     }
 
@@ -421,18 +436,15 @@ void loop() {
   detachInterrupt(buttonHander11.ipin);
   detachInterrupt(buttonHander12.ipin);
   detachInterrupt(buttonHander13.ipin);
-
+  
   if (loopReason != LOOP_REASON___________UNKNOWN) { // doublecheck for loop reason and dont let code proceed to sleep phase
     return;
   }
 
   // can go to sleep, but doublecheck that there is no negative sleep
-  int64_t measureWaitSecondsC = getMeasurementWaitSeconds();
-  if (SensorPmsa003i::getMode() != PMS____OFF) {
-    measureWaitSecondsC = measureWaitSecondsC - SensorPmsa003i::WARMUP_SECONDS; // reduce sleep time so the PMS sensor can be woken up in time
-  }
+  int64_t waitSecondsC = min(getMeasureWaitSeconds(), getWarmupWaitSeconds());
 
-  if (measureWaitSecondsC > 1) { // longer than one second --> sleep
+  if (waitSecondsC > 1) { // longer than one second --> sleep
 
     gpio_wakeup_disable(buttonHander11.gpin);
     gpio_wakeup_disable(buttonHander12.gpin);
@@ -443,7 +455,7 @@ void loop() {
     gpio_wakeup_enable(buttonHander13.gpin, buttonHander13.getWakeupLevel());
 
     esp_sleep_enable_gpio_wakeup();
-    esp_sleep_enable_timer_wakeup(measureWaitSecondsC * MICROSECONDS_PER_SECOND);
+    esp_sleep_enable_timer_wakeup(waitSecondsC * MICROSECONDS_PER_SECOND);
 
     esp_light_sleep_start();
 

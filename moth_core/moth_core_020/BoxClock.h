@@ -22,7 +22,6 @@ class BoxClock {
     static String getTimeString(DateTime date);
     static String getDateTimeString(DateTime date);
     static DataFileDef getDataFileDef(DateTime date);
-    // static String getDataFileName(DateTime date);
 
 };
 

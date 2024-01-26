@@ -539,7 +539,7 @@ void BoxDisplay::renderTable() {
     }
 
     BoxDisplay::drawAntialiasedText08(pmsLabel, RECT_CO2, 6, TEXT_OFFSET_Y, textColor);
-    BoxDisplay::drawAntialiasedText36(formatString(String(pms), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
+    BoxDisplay::drawAntialiasedText36(formatString(String(max(0, pms)), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
 
     BoxDisplay::drawAntialiasedText08("ug/m3", RECT_CO2, 138, TEXT_OFFSET_Y, textColor);
     baseDisplay.drawFastVLine(RECT_CO2.xmin + 139, RECT_CO2.ymin + 15, 4, textColor == EPD_BLACK ? EPD_LIGHT : EPD_DARK);
@@ -742,14 +742,19 @@ void BoxDisplay::drawAntialiasedText(String text, Rectangle rectangle, int xRel,
 void BoxDisplay::renderHeader() {
 
   int addressPosX = 6;
-  bool isPms = SensorPmsa003i::getMode() != PMS____OFF;
+  bool isPmsM = SensorPmsa003i::getMode() == PMS____ON_M || SensorPmsa003i::getMode() == PMS_PAUSE_M;
+  bool isPmsD = SensorPmsa003i::getMode() == PMS____ON_D || SensorPmsa003i::getMode() == PMS_PAUSE_D;
   bool isCon = BoxConn::getMode() != WIFI_OFF;
-  if (isPms) {
-    BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 6, TEXT_OFFSET_Y - 2, EPD_BLACK);
-    BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 4, TEXT_OFFSET_Y - 6, EPD_BLACK);
-    BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 9, TEXT_OFFSET_Y - 5, EPD_BLACK);
+  if (isPmsM || isPmsD) {
+    BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 2, TEXT_OFFSET_Y - 2, EPD_BLACK);
+    BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 8, TEXT_OFFSET_Y - 8, EPD_BLACK);
+    if (isPmsM) {
+      BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 2, TEXT_OFFSET_Y - 8, EPD_BLACK);
+      BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 5, TEXT_OFFSET_Y - 5, EPD_BLACK);
+      BoxDisplay::drawAntialiasedText08(".", RECT_TOP, 8, TEXT_OFFSET_Y - 2, EPD_BLACK);
+    }
     if (isCon) {
-      BoxDisplay::drawAntialiasedText08(BoxConn::getAddress(), RECT_TOP, 16, TEXT_OFFSET_Y, EPD_BLACK);
+      BoxDisplay::drawAntialiasedText08(BoxConn::getAddress(), RECT_TOP, 18, TEXT_OFFSET_Y, EPD_BLACK);
     }
   } else if (isCon) {
     BoxDisplay::drawAntialiasedText08(BoxConn::getAddress(), RECT_TOP, 6, TEXT_OFFSET_Y, EPD_BLACK);
@@ -858,7 +863,7 @@ void BoxDisplay::toggleValue() {
 
   if (displayState == DISPLAY_STATE_TABLE) {
 
-    if (SensorPmsa003i::getMode() != PMS____OFF) {
+    if (SensorPmsa003i::getMode() != PMS_____OFF) {
 
       if (displayValueTable == DISPLAY_VALUE___CO2) {
         displayValueTable = DISPLAY_VALUE___HPA;
