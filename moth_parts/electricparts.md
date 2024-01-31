@@ -20,7 +20,7 @@ The list contains references to where i got my parts from, if you get alterntive
 
 <a href="https://www.adafruit.com/product/5303" name="microcontroller">Adafruit ESP32-S2 Feather with BME280</a> The microcontroller. Not an S3, but it has an BME-280 Sensor onboard, thus saving an extra part to be fit into the housing. The processors power is far beyond necessary and the pressure sensor delivers extra precision to the CO₂ sensor.
 
-<img src="https://cdn-shop.adafruit.com/970x728/5303-14.jpg" alt="Adafruit ESP32-S2 Feather with BME280" width="800">
+<img src="https://cdn-shop.adafruit.com/970x728/5303-18.jpg" alt="Adafruit ESP32-S2 Feather with BME280" width="800">
 
 ---
 
