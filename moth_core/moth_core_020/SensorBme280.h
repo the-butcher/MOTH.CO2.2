@@ -12,12 +12,18 @@ class SensorBme280 {
   private:
     static Adafruit_BME280 baseSensor;
     static float temperatureOffset;
+    static float altitudeOffset;
+    static float pressureOffset; // calculated pressure at sea level
     static bool hasBegun;
     static void applyTemperatureOffset();
+    static void applyAltitudeOffset(float pressure);
 
   public:
     static float getTemperatureOffset();
+    static float getAltitude(float pressure);
     static void setTemperatureOffset(float temperatureOffset);
+    static void setAltitudeOffset(float altitudeOffset);
+    static void resetPressureOffset(); // recalculates sea level pressure for the current altitude and pressure setting
     static void begin();
     static bool tryRead();
     static ValuesBme values;

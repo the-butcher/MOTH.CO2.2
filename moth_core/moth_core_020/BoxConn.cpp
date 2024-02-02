@@ -67,7 +67,7 @@ bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
 bool BoxConn::isRenderStateRequired = false;
 
-String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.009.pms" : "1.0.009";
+String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.010.pms" : "1.0.010";
 
 void BoxConn::updateConfiguration() {
 
@@ -213,7 +213,7 @@ void BoxConn::begin() {
     root["temperature"] = round(valuesCo2.temperature * 10) / 10.0;
     root["humidity"] = round(valuesCo2.humidity * 10) / 10.0;
     if (SensorPmsa003i::ACTIVE) {
-      ValuesPms valuesPms = BoxDisplay::getDisplayValuesPms();
+      ValuesPms valuesPms = latestMeasurement.valuesPms;
       root["pm010"] = (int)round(valuesPms.pm010);
       root["pm025"] = (int)round(valuesPms.pm025);
       root["pm100"] = (int)round(valuesPms.pm100);

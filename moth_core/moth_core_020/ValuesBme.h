@@ -5,6 +5,7 @@ typedef struct {
   float temperature;
   float humidity;
   float pressure;
+  float altitude;
 } ValuesBme;
 
 #endif

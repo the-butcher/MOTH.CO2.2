@@ -7,6 +7,9 @@
 #include "qrlib.h"
 #include <Adafruit_GFX.h>
 
+#include <Fonts/smb06pt_b.h>
+#include <Fonts/smb06pt_d.h>
+#include <Fonts/smb06pt_l.h>
 #include <Fonts/smb08pt_b.h>
 #include <Fonts/smb08pt_d.h>
 #include <Fonts/smb08pt_l.h>
@@ -41,6 +44,7 @@ typedef enum {
   DISPLAY_VALUE___DEG,
   DISPLAY_VALUE___HUM,
   DISPLAY_VALUE___HPA,
+  DISPLAY_VALUE___ALT,
   DISPLAY_VALUE__P010,
   DISPLAY_VALUE__P025,
   DISPLAY_VALUE__P100
@@ -60,6 +64,7 @@ class BoxDisplay {
     static void fillRectangle(Rectangle rectangle, uint16_t color);
     static void drawOuterBorders(uint16_t color);
     static void drawInnerBorders(uint16_t color);
+    static void drawAntialiasedText06(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
     static void drawAntialiasedText08(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
     static void drawAntialiasedText20(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
     static void drawAntialiasedText36(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
@@ -69,14 +74,14 @@ class BoxDisplay {
     static void renderChart();
     static void renderTable();
     static float celsiusToFahrenheit(float celsius);
+    static void clearBuffer();
+    static void flushBuffer();
     
   public:
     static String CONFIG_PATH;
     static config_status_t configStatus;
     static int64_t renderStateSeconds;
     static void begin();
-    static void clearBuffer();
-    static void flushBuffer();
     static void updateConfiguration();
     static void renderCalibration(String messageA, String messageB);
     static void renderState();
@@ -91,7 +96,7 @@ class BoxDisplay {
     static void resetValue();
     static void toggleValue();
     static ValuesCo2 getDisplayValuesCo2();
-    static ValuesPms getDisplayValuesPms();
+    static bool hasSignificantChange();
 
 };
 
