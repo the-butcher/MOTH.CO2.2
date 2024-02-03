@@ -42,36 +42,37 @@ const char FORMAT_STALE[] = "%3s%% stale";
 
 const int limitPosX = 287;
 const int charDimX6 = 7;
+const float zero = 0;
 
 const Rectangle RECT_TOP = {
-  1,
-  1,
-  295,
-  22
+    1,
+    1,
+    295,
+    22
 };
 const Rectangle RECT_BOT = {
-  1,
-  106,
-  295,
-  127
+    1,
+    106,
+    295,
+    127
 };
 const Rectangle RECT_CO2 = {
-  1,
-  22,
-  197,
-  106
+    1,
+    22,
+    197,
+    106
 };
 const Rectangle RECT_DEG = {
-  197,
-  22,
-  295,
-  64
+    197,
+    22,
+    295,
+    64
 };
 const Rectangle RECT_HUM = {
-  197,
-  64,
-  295,
-  106
+    197,
+    64,
+    295,
+    106
 };
 const Rectangle RECT_BAT = {
     RECT_BOT.xmax - 65,
@@ -110,20 +111,20 @@ Thresholds thresholdsHighlight;
 int chartMeasurementCount = 60;
 bool ssc = false;
 bool c2f = false; // if true show values in fahrenheit
-float cor = 0.0; // if true try to use the bme280 sensor's temperature for display temperature correction
+float cor = 0.0;  // if true try to use the bme280 sensor's temperature for display temperature correction
 
 int16_t tbx, tby;
 uint16_t tbw, tbh;
 
 const int16_t EPD_DC = 10;
 const int16_t EPD_CS = 9;
-const int16_t EPD_BUSY = 14;  // A4 -> has been solder-connected to the busy pad
-const int16_t SRAM_CS = -1; 
-const int16_t EPD_RESET = SensorPmsa003i::ACTIVE ? 18 : 8; // A0 -> has been bridged to the reset pin 
+const int16_t EPD_BUSY = 14; // A4 -> has been solder-connected to the busy pad
+const int16_t SRAM_CS = -1;
+const int16_t EPD_RESET = SensorPmsa003i::ACTIVE ? 18 : 8; // A0 -> has been bridged to the reset pin
 
 /**
  * ################################################
- * ## static class variabales                     
+ * ## static class variabales
  * ################################################
  */
 String BoxDisplay::CONFIG_PATH = "/config/disp.json";
@@ -149,7 +150,7 @@ void BoxDisplay::updateConfiguration() {
 
   BoxDisplay::configStatus = CONFIG_STATUS_PENDING;
 
-  int co2WarnHi =  800;
+  int co2WarnHi = 800;
   int co2RiskHi = 1000;
 
   int pmsWarnHi = 15;
@@ -163,13 +164,12 @@ void BoxDisplay::updateConfiguration() {
   int humRiskLo = 25;
   int humWarnLo = 30;
   int humWarnHi = 60;
-  int humRiskHi = 65;  
+  int humRiskHi = 65;
 
-  
   int displayUpdateMinutes = 3;
   float temperatureOffsetScd041 = SensorScd041::getTemperatureOffset();
   float temperatureOffsetBme280 = SensorBme280::getTemperatureOffset();
-  float altitudeOffsetBme280 = 230; //153;
+  float altitudeOffsetBme280 = 0;
 
   String timezone = BoxClock::getTimezone();
 
@@ -184,7 +184,7 @@ void BoxDisplay::updateConfiguration() {
       BoxDisplay::configStatus = CONFIG_STATUS__LOADED;
 
       StaticJsonBuffer<1024> jsonBuffer;
-      JsonObject &root = jsonBuffer.parseObject(dispFile);    
+      JsonObject &root = jsonBuffer.parseObject(dispFile);
       if (root.success()) {
 
         displayUpdateMinutes = root[JSON_KEY___MINUTES] | displayUpdateMinutes;
@@ -204,7 +204,7 @@ void BoxDisplay::updateConfiguration() {
 
         temperatureOffsetScd041 = root[JSON_KEY_______DEG][JSON_KEY____OFFSET][0] | temperatureOffsetScd041;
         temperatureOffsetBme280 = root[JSON_KEY_______DEG][JSON_KEY____OFFSET][1] | temperatureOffsetBme280;
-        altitudeOffsetBme280 = root[JSON_KEY__ALTITUDE] | altitudeOffsetBme280; 
+        altitudeOffsetBme280 = root[JSON_KEY__ALTITUDE] | altitudeOffsetBme280;
         c2f = root[JSON_KEY_______DEG][JSON_KEY_______C2F] | c2f;
         cor = root[JSON_KEY_______DEG][JSON_KEY_______COR] | cor;
 
@@ -214,46 +214,43 @@ void BoxDisplay::updateConfiguration() {
         humRiskHi = root[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | humRiskHi;
 
         BoxDisplay::configStatus = CONFIG_STATUS__PARSED;
-
       }
 
       dispFile.close();
-
     }
-  
   } else {
     BoxDisplay::configStatus = CONFIG_STATUS_MISSING;
   }
 
   thresholdsCo2 = {
-    0,
-    0,
-    co2WarnHi,
-    co2RiskHi,
-  };  
+      0,
+      0,
+      co2WarnHi,
+      co2RiskHi,
+  };
   thresholdsPms = {
-    0,
-    0,
-    pmsWarnHi,
-    pmsRiskHi,
-  };  
+      0,
+      0,
+      pmsWarnHi,
+      pmsRiskHi,
+  };
   thresholdsTemperature = {
-    degRiskLo,
-    degWarnLo,
-    degWarnHi,
-    degRiskHi
+      degRiskLo,
+      degWarnLo,
+      degWarnHi,
+      degRiskHi
   };
   thresholdsHumidity = {
-    humRiskLo,
-    humWarnLo,
-    humWarnHi,
-    humRiskHi
+      humRiskLo,
+      humWarnLo,
+      humWarnHi,
+      humRiskHi
   };
   thresholdsHighlight = {
-    0,
-    0,
-    10,
-    20
+      0,
+      0,
+      10,
+      20
   };
 
   SensorScd041::setTemperatureOffset(temperatureOffsetScd041);
@@ -263,7 +260,6 @@ void BoxDisplay::updateConfiguration() {
 
   // min elapsed time before a display state update
   BoxDisplay::renderStateSeconds = max(60, displayUpdateMinutes * 60);
-
 }
 
 bool BoxDisplay::isWarn(float value, Thresholds thresholds) {
@@ -343,7 +339,6 @@ void BoxDisplay::renderQRCode() {
       BoxDisplay::drawAntialiasedText06(BoxConn::getNetworkPass(), RECT_TOP, 75, 60, EPD_BLACK);
     }
     BoxDisplay::drawAntialiasedText06("open", RECT_TOP, 193, 89, EPD_BLACK);
-
   }
 
   char addressBuf[address.length() + 1];
@@ -400,6 +395,7 @@ void BoxDisplay::drawOuterBorders(uint16_t color) {
   baseDisplay.drawFastVLine(1, 0, 128, color);
   baseDisplay.drawFastVLine(294, 0, 128, color);
   baseDisplay.drawFastVLine(295, 0, 128, color);
+
 }
 
 void BoxDisplay::drawInnerBorders(uint16_t color) {
@@ -409,6 +405,7 @@ void BoxDisplay::drawInnerBorders(uint16_t color) {
 
   baseDisplay.drawFastVLine(196, 21, 86, color);
   baseDisplay.drawFastVLine(197, 22, 86, color);
+  
 }
 
 void BoxDisplay::renderState() {
@@ -472,23 +469,19 @@ ValuesCo2 BoxDisplay::getDisplayValuesCo2() {
 
       // return the corrected values
       return {
-        latestMeasurement.valuesCo2.co2,
-        temperature,
-        humidity
+          latestMeasurement.valuesCo2.co2,
+          temperature,
+          humidity
       };
-
     } else {
       return latestMeasurement.valuesCo2;
     }
-
-
   } else {
     return latestMeasurement.valuesCo2;
   }
-
 }
 
-void BoxDisplay::renderTable() {  
+void BoxDisplay::renderTable() {
 
   BoxDisplay::clearBuffer();
 
@@ -518,19 +511,18 @@ void BoxDisplay::renderTable() {
 
     BoxDisplay::drawAntialiasedText36(formatString(String(co2), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
     BoxDisplay::drawAntialiasedText06("CO²", RECT_CO2, 6, TEXT_OFFSET_Y, textColor); // font has been altered to display superscript 2 as subscript 2
-    BoxDisplay::drawAntialiasedText06("ppm", RECT_CO2, charPosValueX - charDimX6  * 3, TEXT_OFFSET_Y, textColor);
+    BoxDisplay::drawAntialiasedText06("ppm", RECT_CO2, charPosValueX - charDimX6 * 3, TEXT_OFFSET_Y, textColor);
 
     int yScale = 5;
-    int yMax = RECT_CO2.ymax - 7;  
+    int yMax = RECT_CO2.ymax - 7;
     for (int percent = 0; percent <= 10; percent++) {
-      baseDisplay.drawFastHLine(RECT_CO2.xmin + 6, yMax - percent * yScale, 12, percent % 5 == 0 ? textColor: vertColor);
+      baseDisplay.drawFastHLine(RECT_CO2.xmin + 6, yMax - percent * yScale, 12, percent % 5 == 0 ? textColor : vertColor);
     }
 
     int yDim = round(stale * yScale);
     for (int y = -1; y <= 1; y++) {
       baseDisplay.drawFastHLine(RECT_CO2.xmin + 8, yMax - yDim + y, 8, textColor);
-    }    
-
+    }
   } else if (displayValueTable == DISPLAY_VALUE___HPA) {
 
     int hpa = Measurements::getLatestMeasurement().valuesBme.pressure / 100.0;
@@ -543,8 +535,7 @@ void BoxDisplay::renderTable() {
     BoxDisplay::drawAntialiasedText06("pressure", RECT_CO2, 6, TEXT_OFFSET_Y, textColor);
     BoxDisplay::drawAntialiasedText36(formatString(String(hpa), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
 
-    BoxDisplay::drawAntialiasedText06("hPa", RECT_CO2, charPosValueX - charDimX6  * 3, TEXT_OFFSET_Y, textColor);
-
+    BoxDisplay::drawAntialiasedText06("hPa", RECT_CO2, charPosValueX - charDimX6 * 3, TEXT_OFFSET_Y, textColor);
   } else if (displayValueTable == DISPLAY_VALUE___ALT) {
 
     int alt = round(Measurements::getLatestMeasurement().valuesBme.altitude);
@@ -558,7 +549,6 @@ void BoxDisplay::renderTable() {
     BoxDisplay::drawAntialiasedText36(formatString(String(alt), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
 
     BoxDisplay::drawAntialiasedText06("m", RECT_CO2, charPosValueX - charDimX6 * 1, TEXT_OFFSET_Y, textColor);
-
   } else {
 
     int pms;
@@ -585,7 +575,7 @@ void BoxDisplay::renderTable() {
     BoxDisplay::drawAntialiasedText06(pmsLabel, RECT_CO2, 6, TEXT_OFFSET_Y, textColor);
     BoxDisplay::drawAntialiasedText36(formatString(String(max(0, pms)), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
 
-    BoxDisplay::drawAntialiasedText06("µg/m3", RECT_CO2, charPosValueX - charDimX6  * 5, TEXT_OFFSET_Y, textColor);
+    BoxDisplay::drawAntialiasedText06("µg/m3", RECT_CO2, charPosValueX - charDimX6 * 5, TEXT_OFFSET_Y, textColor);
 
   }
 
@@ -593,7 +583,7 @@ void BoxDisplay::renderTable() {
   fillColor = getFillColor(temperature, thresholdsTemperature);
   if (c2f) {
     temperature = BoxDisplay::celsiusToFahrenheit(temperature);
-  }  
+  }
   int temperature10 = round(temperature * 10.0);
   int temperatureFix = floor(temperature10 / 10.0);
   int temperatureFrc = abs(temperature10 % 10);
@@ -622,7 +612,6 @@ void BoxDisplay::renderTable() {
   BoxDisplay::renderFooter();
 
   BoxDisplay::flushBuffer();
-
 }
 
 void BoxDisplay::renderChart() {
@@ -638,10 +627,12 @@ void BoxDisplay::renderChart() {
   if (displayValueChart == DISPLAY_VALUE___CO2) {
     for (int i = 0; i < displayableMeasurementCount; i++) {
       measurement = Measurements::getOffsetMeasurement(i);
-      if (measurement.valuesCo2.co2 > 1500) {
+      if (measurement.valuesCo2.co2 > 1200) {
         maxValue = 3000; // 0, 1000, 2000, (3000)
-      } else if (measurement.valuesCo2.co2 > 3000) {
-        maxValue = 4500; // 0, 1500, 4000, (4500)
+      } else if (measurement.valuesCo2.co2 > 2400) {
+        maxValue = 4500; // 0, 1500, 3000, (4500)
+      } else if (measurement.valuesCo2.co2 > 3600) {
+        maxValue = 6000; // 0, 2000, 4000, (6000)
       }
     }
   } else if (displayValueChart == DISPLAY_VALUE___DEG) {
@@ -660,10 +651,10 @@ void BoxDisplay::renderChart() {
     for (int i = 0; i < displayableMeasurementCount; i++) {
       measurement = Measurements::getOffsetMeasurement(i);
       pressureAvg += measurement.valuesBme.pressure / 100.0;
-    }  
-    pressureAvg /= displayableMeasurementCount; // lets say it is 998
+    }
+    pressureAvg /= displayableMeasurementCount;     // lets say it is 998
     minValue = floor(pressureAvg / 10.0) * 10 - 10; // 99.8 -> 99 -> 990 -> 980
-    maxValue = ceil(pressureAvg / 10.0) * 10 + 10; // 99.8 -> 100 -> 1000 -> 1010
+    maxValue = ceil(pressureAvg / 10.0) * 10 + 10;  // 99.8 -> 100 -> 1000 -> 1010
   } else if (displayValueChart == DISPLAY_VALUE___ALT) {
     maxValue = 450;
     for (int i = 0; i < displayableMeasurementCount; i++) {
@@ -743,7 +734,7 @@ void BoxDisplay::renderChart() {
     BoxDisplay::drawAntialiasedText06("pm 2.5 µg/m3", RECT_CO2, limitPosX - charDimX6 * 12, charPosLabelY, textColor);
   } else if (displayValueChart == DISPLAY_VALUE__P100) {
     BoxDisplay::drawAntialiasedText06("pm 10.0 µg/m3", RECT_CO2, limitPosX - charDimX6 * 13, charPosLabelY, textColor);
-  }  
+  }
 
   int minX;
   int minY;
@@ -767,12 +758,12 @@ void BoxDisplay::renderChart() {
       curValue = measurement.valuesBme.pressure / 100.0;
     } else if (displayValueChart == DISPLAY_VALUE___ALT) {
       curValue = measurement.valuesBme.altitude;
-    } else if (displayValueChart == DISPLAY_VALUE__P010) {    
-      curValue = measurement.valuesPms.pm010;
-    } else if (displayValueChart == DISPLAY_VALUE__P025) {    
-      curValue = measurement.valuesPms.pm025;
-    } else if (displayValueChart == DISPLAY_VALUE__P100) {    
-      curValue = measurement.valuesPms.pm100;
+    } else if (displayValueChart == DISPLAY_VALUE__P010) {
+      curValue = max(zero, measurement.valuesPms.pm010);
+    } else if (displayValueChart == DISPLAY_VALUE__P025) {
+      curValue = max(zero, measurement.valuesPms.pm025);
+    } else if (displayValueChart == DISPLAY_VALUE__P100) {
+      curValue = max(zero, measurement.valuesPms.pm100);
     }
 
     minX = limitPosX + 1 - (i + 1) * displayableBarWidth;
@@ -783,7 +774,6 @@ void BoxDisplay::renderChart() {
     for (int b = 1; b < displayableBarWidth - 1; b++) {
       baseDisplay.drawFastVLine(minX + b, minY, dimY, EPD_BLACK);
     }
-     
   }
 
   BoxDisplay::renderHeader();
@@ -825,7 +815,7 @@ void BoxDisplay::drawAntialiasedText(String text, Rectangle rectangle, int xRel,
   baseDisplay.setFont(fontB);
   baseDisplay.setTextColor(color);
   baseDisplay.print(text);
-  
+
 }
 
 void BoxDisplay::renderHeader() {
@@ -860,7 +850,7 @@ void BoxDisplay::renderHeader() {
   } else {
     BoxDisplay::drawAntialiasedText06(csvCountFormatted.c_str(), RECT_TOP, limitPosX - csvCountFormatted.length() * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
   }
-  
+
 }
 
 void BoxDisplay::renderFooter() {
@@ -875,19 +865,17 @@ void BoxDisplay::renderFooter() {
   // right border battery contact
   baseDisplay.drawFastVLine(RECT_BAT.xmax, RECT_BAT.ymin + 2, (RECT_BAT.ymax - RECT_BAT.ymin - 4), EPD_BLACK);
   // battery internal
-  BoxDisplay::fillRectangle({
-    RECT_BAT.xmin + 1,
-    RECT_BAT.ymin + 1,
-    RECT_BAT.xmax - 1,
-    RECT_BAT.ymax - 1
-  }, EPD_WHITE);
+  BoxDisplay::fillRectangle({RECT_BAT.xmin + 1,
+                             RECT_BAT.ymin + 1,
+                             RECT_BAT.xmax - 1,
+                             RECT_BAT.ymax - 1},
+                            EPD_WHITE);
   // percentage
-  BoxDisplay::fillRectangle({
-    RECT_BAT.xmin + 2,
-    RECT_BAT.ymin + 2,
-    RECT_BAT.xmin + round(RECT_BAT.xmax - RECT_BAT.xmin) * valuesBat.percent * 0.01 - 2,
-    RECT_BAT.ymax - 2
-  }, EPD_BLACK);
+  BoxDisplay::fillRectangle({RECT_BAT.xmin + 2,
+                             RECT_BAT.ymin + 2,
+                             RECT_BAT.xmin + round(RECT_BAT.xmax - RECT_BAT.xmin) * valuesBat.percent * 0.01 - 2,
+                             RECT_BAT.ymax - 2},
+                            EPD_BLACK);
 
   String timeFormatted = BoxClock::getDateTimeDisplayString(BoxClock::getDate());
   BoxDisplay::drawAntialiasedText06(timeFormatted, RECT_BOT, 6, TEXT_OFFSET_Y, EPD_BLACK);
@@ -913,7 +901,6 @@ display_state_t BoxDisplay::getState() {
 void BoxDisplay::setTheme(display_theme_t theme) {
   displayTheme = theme;
 }
-
 
 void BoxDisplay::toggleTheme() {
   if (displayTheme == DISPLAY_THEME_LIGHT) {
@@ -945,15 +932,12 @@ void BoxDisplay::resetValue() {
     } else {
       chartMeasurementCount = 30;
     }
-  } 
+  }
 }
 
 void BoxDisplay::toggleValue() {
-
   if (displayState == DISPLAY_STATE_TABLE) {
-
     if (SensorPmsa003i::getMode() != PMS_____OFF) {
-
       if (displayValueTable == DISPLAY_VALUE___CO2) {
         displayValueTable = DISPLAY_VALUE___HPA;
       } else if (displayValueTable == DISPLAY_VALUE___HPA) {
@@ -964,12 +948,11 @@ void BoxDisplay::toggleValue() {
         displayValueTable = DISPLAY_VALUE__P025;
       } else if (displayValueTable == DISPLAY_VALUE__P025) {
         displayValueTable = DISPLAY_VALUE__P100;
-      } else {
+      }
+      else {
         displayValueTable = DISPLAY_VALUE___CO2;
       }
-
     } else {
-
       if (displayValueTable == DISPLAY_VALUE___CO2) {
         displayValueTable = DISPLAY_VALUE___HPA;
       } else if (displayValueTable == DISPLAY_VALUE___HPA) {
@@ -977,13 +960,9 @@ void BoxDisplay::toggleValue() {
       } else {
         displayValueTable = DISPLAY_VALUE___CO2;
       }
-
     }
-
   } else { // chart
-    
     if (SensorPmsa003i::ACTIVE) {
-
       if (displayValueChart == DISPLAY_VALUE___CO2) {
         displayValueChart = DISPLAY_VALUE___DEG;
       } else if (displayValueChart == DISPLAY_VALUE___DEG) {
@@ -1001,9 +980,7 @@ void BoxDisplay::toggleValue() {
       } else {
         displayValueChart = DISPLAY_VALUE___CO2;
       }
-
     } else {
-
       if (displayValueChart == DISPLAY_VALUE___CO2) {
         displayValueChart = DISPLAY_VALUE___DEG;
       } else if (displayValueChart == DISPLAY_VALUE___DEG) {
@@ -1015,12 +992,8 @@ void BoxDisplay::toggleValue() {
       } else {
         displayValueChart = DISPLAY_VALUE___CO2;
       }
-
     }
-
-
   }
-
 }
 
 String BoxDisplay::formatString(String value, char const *format) {
