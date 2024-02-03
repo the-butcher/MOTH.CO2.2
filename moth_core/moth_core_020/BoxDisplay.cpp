@@ -342,7 +342,7 @@ void BoxDisplay::renderQRCode() {
     if (networkPass != "") {
       BoxDisplay::drawAntialiasedText06(BoxConn::getNetworkPass(), RECT_TOP, 75, 60, EPD_BLACK);
     }
-    BoxDisplay::drawAntialiasedText06("open", RECT_TOP, 192, 89, EPD_BLACK);
+    BoxDisplay::drawAntialiasedText06("open", RECT_TOP, 193, 89, EPD_BLACK);
 
   }
 
@@ -871,9 +871,9 @@ void BoxDisplay::renderFooter() {
   BoxDisplay::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, limitPosX - charDimX6 * 6, TEXT_OFFSET_Y, EPD_BLACK);
 
   // main battery frame
-  BoxDisplay::fillRectangle(RECT_BAT, EPD_DARK);
+  BoxDisplay::fillRectangle(RECT_BAT, EPD_BLACK);
   // right border battery contact
-  baseDisplay.drawFastVLine(RECT_BAT.xmax, RECT_BAT.ymin + 2, (RECT_BAT.ymax - RECT_BAT.ymin - 4), EPD_DARK);
+  baseDisplay.drawFastVLine(RECT_BAT.xmax, RECT_BAT.ymin + 2, (RECT_BAT.ymax - RECT_BAT.ymin - 4), EPD_BLACK);
   // battery internal
   BoxDisplay::fillRectangle({
     RECT_BAT.xmin + 1,
@@ -887,7 +887,7 @@ void BoxDisplay::renderFooter() {
     RECT_BAT.ymin + 2,
     RECT_BAT.xmin + round(RECT_BAT.xmax - RECT_BAT.xmin) * valuesBat.percent * 0.01 - 2,
     RECT_BAT.ymax - 2
-  }, EPD_DARK);
+  }, EPD_BLACK);
 
   String timeFormatted = BoxClock::getDateTimeDisplayString(BoxClock::getDate());
   BoxDisplay::drawAntialiasedText06(timeFormatted, RECT_BOT, 6, TEXT_OFFSET_Y, EPD_BLACK);
