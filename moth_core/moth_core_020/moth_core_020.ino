@@ -181,7 +181,7 @@ void beep(int frequency) {
  */
 void renderState(bool force) {
 
-  if (force || getDisplayWaitSeconds() <= 0) {
+  if (force || getDisplayWaitSeconds() <= 0 || BoxDisplay::hasSignificantChange()) {
 
     // store the last memBufferIndex to know when to redraw the next time
     lastMemBufferIndex = Measurements::memBufferIndx;

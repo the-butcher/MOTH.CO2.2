@@ -873,7 +873,7 @@ void BoxDisplay::renderFooter() {
   // percentage
   BoxDisplay::fillRectangle({RECT_BAT.xmin + 2,
                              RECT_BAT.ymin + 2,
-                             RECT_BAT.xmin + round(RECT_BAT.xmax - RECT_BAT.xmin) * valuesBat.percent * 0.01 - 2,
+                             RECT_BAT.xmin + round((RECT_BAT.xmax - RECT_BAT.xmin) * valuesBat.percent * 0.01) - 2,
                              RECT_BAT.ymax - 2},
                             EPD_BLACK);
 
