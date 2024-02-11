@@ -146,53 +146,6 @@ void Measurements::putMeasurement(Measurement measurement) {
   }
 }
 
-float Measurements::getTemperatureSlope() {
-  return getSlope([&] (const Measurement measurement) { return measurement.valuesCo2.temperature; });
-}
-
-float Measurements::getHumiditySlope() {
-  return getSlope([&] (const Measurement measurement) { return measurement.valuesCo2.humidity; });
-}
-
-float Measurements::getSlope(std::function<float(const Measurement)> func) {
-  
-  // pass x and y arrays (pointers), lrCoef pointer, and n. The lrCoef array is comprised of the slope=lrCoef[0] and intercept=lrCoef[1]. n is length of the x and y arrays.
-  // http://en.wikipedia.org/wiki/Simple_linear_regression
-  // http://jwbrooks.blogspot.com/2014/02/arduino-linear-regression-function.html
-
-  // dont calculate before enough values are available
-  if (memBufferIndx >= Measurements::regBufferSize) {
-
-    float sumX = 0;
-    float sumY = 0;
-    float sumXY = 0;
-    float sumXX = 0;
-    float x;
-    float y;
-    Measurement measurement = Measurements::getOffsetMeasurement(0);
-    float xRef = measurement.secondstime / 60.0;
-    for (int offsetIndex = 0; offsetIndex < Measurements::regBufferSize; offsetIndex++) {
-      measurement = Measurements::getOffsetMeasurement(offsetIndex);
-      x = measurement.secondstime / 60.0 - xRef;
-      y = func(measurement);
-      sumX += x;
-      sumY += y;
-      sumXY += x * y;
-      sumXX += x * x;
-    }
-
-    return (Measurements::regBufferSize * sumXY - sumX * sumY) / (Measurements::regBufferSize * sumXX - sumX * sumX);
-
-  } else {
-    return 0;
-  }
-
-  // simple linear regression algorithm
-  // lrCoef[0]=(n*sum_xy-sum_x*sum_y)/(n*sum_xx-sum_x*sum_x);
-  // lrCoef[1]=(sum_y/n)-((lrCoef[0]*sum_x)/n);
-
-}
-
 Measurement Measurements::getMeasurement(int memIndex) {
   return Measurements::measurements[memIndex];
 }

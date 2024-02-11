@@ -30,8 +30,6 @@ class Measurements {
     static int getFirstPublishableIndex();
     static void setPublished(int memIndex);
     static int getPublishableCount();
-    static float getTemperatureSlope();
-    static float getHumiditySlope();
     static String toCsv(Measurement measurement);
     static float toMagnus(float temperatureDeg);
 
