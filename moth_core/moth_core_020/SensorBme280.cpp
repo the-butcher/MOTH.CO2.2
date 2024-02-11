@@ -8,6 +8,11 @@
 const float ALTITUDE__EXP = 0.190284;
 const float ALTITUDE_MULT = 44307.69396;
 
+const Adafruit_BME280::sensor_mode MODE_FORCED = (Adafruit_BME280::sensor_mode) 0b01;
+const Adafruit_BME280::sensor_sampling SAMPLING_X1 = (Adafruit_BME280::sensor_sampling) 0b001;
+const Adafruit_BME280::sensor_filter FILTER_OFF = (Adafruit_BME280::sensor_filter) 0b000;
+const Adafruit_BME280::standby_duration STANDBY_MS_1000 = (Adafruit_BME280::standby_duration) 0b101;
+
 /**
  * ################################################
  * ## mutable variables
@@ -28,6 +33,7 @@ bool SensorBme280::hasBegun = false;
 
 void SensorBme280::begin() {
   SensorBme280::baseSensor.begin();
+  SensorBme280::baseSensor.setSampling(MODE_FORCED, SAMPLING_X1, SAMPLING_X1, SAMPLING_X1, FILTER_OFF, STANDBY_MS_1000); // as of https://www.mouser.com/datasheet/2/783/BST-BME280-DS002-1509607.pdf for weather measurements
   SensorBme280::applyTemperatureOffset();
   SensorBme280::hasBegun = true;
 }
@@ -54,6 +60,11 @@ void SensorBme280::resetPressureOffset() {
 }
 
 bool SensorBme280::tryRead() {
+  SensorBme280::baseSensor.takeForcedMeasurementNoDelay();
+  return true;
+}
+
+ValuesBme SensorBme280::getValues() {
   float pressure = SensorBme280::baseSensor.readPressure();
   if (SensorBme280::pressureOffset == 0) {
     SensorBme280::applyAltitudeOffset(pressure);
@@ -64,7 +75,7 @@ bool SensorBme280::tryRead() {
     pressure,
     SensorBme280::getAltitude(pressure)
   };
-  return true;
+  return SensorBme280::values;  
 }
 
 void SensorBme280::applyTemperatureOffset() {

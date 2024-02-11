@@ -44,11 +44,6 @@ fallrise_t ButtonHandler::getFallRise() {
         if (microsecondsLastRise - microsecondsLastFall <= MICROSECONDS_MAX_FAST) {
           fallRise = FALL_RISE_FAST;
         }
-        // if (microsecondsLastRise - microsecondsLastFall < MICROSECONDS_MAX_FAST) {
-        //   fallRise = FALL_RISE_FAST;
-        // } else if (microsecondsLastRise - microsecondsLastFall < MICROSECONDS_MAX_SLOW) {
-        //   fallRise = FALL_RISE_SLOW;
-        // }
       }
     }
   } else if (curLevel == LOW && esp_timer_get_time() - microsecondsLastFall > MICROSECONDS_MAX_FAST) {

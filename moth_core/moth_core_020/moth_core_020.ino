@@ -1,3 +1,5 @@
+#define USE_NEOPIXEL = 1;
+
 #include "BoxClock.h"
 #include "BoxConn.h"
 #include "BoxMqtt.h"
@@ -13,6 +15,16 @@
 #include "SensorBme280.h" // wrapper for bme280 sensor
 #include "SensorScd041.h" // wrapper for scd41 sensor
 #include "SensorPmsa003i.h"
+
+#ifdef USE_NEOPIXEL
+#include <Adafruit_NeoPixel.h>
+const uint32_t COLOR___WHITE = 0x909090;
+const uint32_t COLOR_____RED = 0xFF0000;
+const uint32_t COLOR__YELLOW = 0x909000;
+const uint32_t COLOR____BLUE = 0x0000FF;
+const uint32_t COLOR____CYAN = 0x00FFFF;
+const uint32_t COLOR_MAGENTA = 0x00FFFF;
+#endif
 
 #include "driver/rtc_io.h"
 
@@ -32,25 +44,35 @@ typedef enum {
   LOOP_REASON___________UNKNOWN
 } loop_reason_t;
 
+typedef enum {
+    SENSORS_TRYREAD, // sensors need to read before measurement can be taken
+    SENSORS_GETVALS // sensors can provide values from measurements previously taken
+} sensors_mode_t;
+
 const int BUZZER____FREQ_LO = 1000; // 3755
 const int BUZZER____CHANNEL = 0;
 const int BUZZER_RESOLUTION = 8; // 0 - 255
 const int BUZZER_______GPIO = SensorPmsa003i::ACTIVE ? GPIO_NUM_8 : GPIO_NUM_17;
 
+
+
 loop_reason_t loopReason = LOOP_REASON___________UNKNOWN;
 loop_reason_t loopAction;
+
+sensors_mode_t sensorsMode = SENSORS_TRYREAD; // start with SENSORS_TRYREAD (measurement needs to be taken)
 
 const int64_t MICROSECONDS_PER_SECOND = 1000000; // 1 second
 const int64_t MILLISECONDS_PER_SECOND = 1000;    // 1 second
 const int64_t MEASUREMENT_WAIT_SECONDS_MAX = 1;
-const int64_t WARMUP_WAIT_SECONDS_NEVER = 60 * 60 * 24;
+const int64_t WAIT_SECONDS_NEVER = 60 * 60 * 24; // 24 hours, which will effectively never be waited for due to other (shorter) timeouts
+const int64_t TRYREAD_SECONDS = 6;
 
 int64_t offsetBeginSeconds = 0;
 int64_t lastMemBufferIndex = -2; // the last mem buffer index that got rendered
 
 ButtonHandler buttonHander11(GPIO_NUM_11);
 ButtonHandler buttonHander12(GPIO_NUM_12);
-ButtonHandler buttonHander13(GPIO_NUM_13);
+ButtonHandler buttonHander13(GPIO_NUM_6); // GPIO_NUM_6 if pin 13 was unsoldered and bridged to from GPIO_NUM_6, GPIO_NUM_13 if no bridge is present
 
 bool isAudio;
 
@@ -77,11 +99,19 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *
  */
 
+#ifdef USE_NEOPIXEL
+  Adafruit_NeoPixel pixels(1, GPIO_NUM_33, NEO_GRB + NEO_KHZ800); 
+#endif
+
 void setup() {
 
   // de-power the neopixel
+#ifdef USE_NEOPIXEL
+  pixels.begin();
+#else
   pinMode(NEOPIXEL_POWER, OUTPUT);
   digitalWrite(NEOPIXEL_POWER, LOW);
+#endif
 
   Serial.begin(115200);
   Wire.begin();
@@ -112,6 +142,7 @@ void setup() {
   SensorPmsa003i::begin();
 
   offsetBeginSeconds = BoxClock::getDate().secondstime();
+
 }
 
 int64_t getMeasureNextSeconds() {
@@ -130,6 +161,14 @@ int64_t getDisplayWaitSeconds() {
   return getDisplayNextSeconds() - BoxClock::getDate().secondstime();
 }
 
+int64_t getTryReadWaitSeconds() {
+  if (sensorsMode == SENSORS_TRYREAD) {
+    return getMeasureWaitSeconds() - TRYREAD_SECONDS; // 5 seconds is the command duration of a single shot measurement
+  } else {
+    return WAIT_SECONDS_NEVER;
+  }
+}
+
 int64_t getWarmupWaitSeconds() {
   if (SensorPmsa003i::getMode() == PMS_PAUSE_M) {
     return getMeasureWaitSeconds() - SensorPmsa003i::WARMUP_SECONDS;
@@ -138,7 +177,7 @@ int64_t getWarmupWaitSeconds() {
     return getDisplayWaitSeconds() - SensorPmsa003i::WARMUP_SECONDS;
   }
   else {
-    return WARMUP_WAIT_SECONDS_NEVER;
+    return WAIT_SECONDS_NEVER;
   }
 }
 
@@ -216,6 +255,11 @@ bool isAnyButtonPressed() {
 
 void loop() {
 
+#ifdef USE_NEOPIXEL
+  pixels.setPixelColor(0, COLOR__YELLOW);
+  pixels.show();
+#endif
+
   loopAction = loopReason;
   loopReason = LOOP_REASON___________UNKNOWN; // start new with "unknown"
 
@@ -223,43 +267,69 @@ void loop() {
   attachInterrupt(buttonHander12.ipin, handleButton12Change, CHANGE);
   attachInterrupt(buttonHander13.ipin, handleButton13Change, CHANGE);
 
-  int64_t measureWaitSecondsA = getMeasureWaitSeconds();
-  int64_t displayWaitSecondsA = getDisplayWaitSeconds();
   int64_t warmupWaitSecondsA = getWarmupWaitSeconds();
-
   if (warmupWaitSecondsA <= 1) {
+
     if (SensorPmsa003i::getMode() == PMS_PAUSE_M) {
       SensorPmsa003i::setMode(PMS____ON_M);
     } else if (SensorPmsa003i::getMode() == PMS_PAUSE_D) {
       SensorPmsa003i::setMode(PMS____ON_D);
     }
+
+  }
+
+  int64_t tryReadWaitSecondsA = getTryReadWaitSeconds();
+  if (tryReadWaitSecondsA <= 1) {
+
+#ifdef USE_NEOPIXEL
+    pixels.setPixelColor(0, COLOR_____RED); // red for measuring
+    pixels.show();
+#endif
+
+    SensorBme280::tryRead();
+    SensorScd041::tryRead(); // delays 5000 ms (no button press possible during that time)
+    SensorPmsa003i::tryRead();
+    BoxPack::tryRead();
+
+    sensorsMode = SENSORS_GETVALS;
+
+#ifdef USE_NEOPIXEL
+    pixels.setPixelColor(0, COLOR__YELLOW);
+    pixels.show();
+#endif    
+
   }
 
   // regardless of loopAction, a measurement will be taken if it is time to do so
   // however, there may be issues when this happens shortly before a measurement ...
   // ... in such cases it can happen that i.e. turning on WiFi consumes enough time to have a negative wait time to the next measurement
+  int64_t measureWaitSecondsA = getMeasureWaitSeconds();
   if (measureWaitSecondsA <= 1) {
+
+#ifdef USE_NEOPIXEL
+    pixels.setPixelColor(0, COLOR_MAGENTA); // magenta
+    pixels.show();
+#endif    
 
     // a final, short delay to hit the same second at all times, as far as possible
     if (measureWaitSecondsA == 1) {
       delay(MILLISECONDS_PER_SECOND);
     }
 
-    SensorBme280::tryRead();
-    SensorScd041::tryRead();
-    SensorPmsa003i::tryRead();
-    BoxPack::tryRead();
-    SensorScd041::setPressure(SensorBme280::values.pressure / 100.0);
-
+    ValuesBme valuesBme = SensorBme280::getValues();
     Measurement measurement = {
         BoxClock::getDate().secondstime(),
-        SensorScd041::values,
+        SensorScd041::getValues(),
         SensorPmsa003i::values,
-        SensorBme280::values,
+        valuesBme,
         BoxPack::values,
         true // publishable
     };
     Measurements::putMeasurement(measurement);
+
+    SensorScd041::setPressure(valuesBme.pressure / 100.0);
+
+    sensorsMode = SENSORS_TRYREAD; // only after reading a measurement, another read can be tried
 
     // when the PM sensor is on, pause it after measurement
     if (SensorPmsa003i::getMode() == PMS____ON_M) {
@@ -269,6 +339,12 @@ void loop() {
     }
 
     displayFunc = [=]() -> void { renderState(false); };
+
+
+#ifdef USE_NEOPIXEL
+    pixels.setPixelColor(0, COLOR__YELLOW); // back to green
+    pixels.show();
+#endif        
 
   }
 
@@ -289,6 +365,7 @@ void loop() {
     } else {
       displayFunc = [=]() -> void { BoxDisplay::renderMothInfo("success (" + String(result - 0x8000) + ")"); };
     }
+
   } else if (loopAction == LOOP_REASON_______HIBERNATION) {
 
     beep(BUZZER____FREQ_LO);
@@ -313,27 +390,32 @@ void loop() {
     beep(BUZZER____FREQ_LO);
     BoxConn::isCo2CalibrationReset = false;
     SensorScd041::factoryReset();
+
   } else if (loopAction == LOOP_REASON______WIFI______ON) {
 
     beep(BUZZER____FREQ_LO);
     BoxConn::on(); // turn on, dont expire immediately
     displayFunc = [=]() -> void { BoxDisplay::renderQRCode(); };
+
   } else if (loopAction == LOOP_REASON______WIFI_____OFF) {
 
     beep(BUZZER____FREQ_LO);
     BoxConn::off();
     displayFunc = [=]() -> void { renderState(true); };
+
   }
   else if (loopAction == LOOP_REASON______TOGGLE_STATE) {
 
     beep(BUZZER____FREQ_LO);
     BoxDisplay::toggleState();
     displayFunc = [=]() -> void { renderState(true); };
+
   } else if (loopAction == LOOP_REASON______TOGGLE_THEME) {
 
     beep(BUZZER____FREQ_LO);
     BoxDisplay::toggleTheme();
     displayFunc = [=]() -> void { renderState(true); };
+
   } else if (loopAction == LOOP_REASON______TOGGLE___PMS) {
 
     beep(BUZZER____FREQ_LO);
@@ -346,6 +428,7 @@ void loop() {
       SensorPmsa003i::setMode(PMS_PAUSE_M);
     }
     displayFunc = [=]() -> void { renderState(true); }; // this is only to render the PMS active indicator
+
   } else if (loopAction == LOOP_REASON______TOGGLE_VALUE) {
 
     beep(BUZZER____FREQ_LO);
@@ -367,8 +450,20 @@ void loop() {
   }
 
   if (displayFunc) {
+
+#ifdef USE_NEOPIXEL
+  pixels.setPixelColor(0, COLOR___WHITE); // white/gray for drawing the display
+  pixels.show();
+#endif
+
     displayFunc();
     displayFunc = nullptr; // [=]()->void{};
+
+#ifdef USE_NEOPIXEL
+  pixels.setPixelColor(0, COLOR__YELLOW); // back to yellow
+  pixels.show();
+#endif
+
   }
 
   // there could have been an mqtt wifi-on request, lets check for it
@@ -377,6 +472,11 @@ void loop() {
     loopReason = LOOP_REASON______WIFI______ON;
     // seems like wifi is not off yet
   }
+
+#ifdef USE_NEOPIXEL
+  pixels.setPixelColor(0, COLOR____CYAN); // cyan, will either stay cyan when i.e. wifi is on, or turn to blue in a millisecond when sleeping
+  pixels.show();
+#endif
 
   // whatever happens here, happens at least once / minute, maybe more often depending on user interaction, wifi expiriy, ...
   bool forceAwake = false; // MUST be false in deployment, or battery life will be much shorter
@@ -408,7 +508,7 @@ void loop() {
       break;
     }
 
-    int64_t waitSecondsB = min(MEASUREMENT_WAIT_SECONDS_MAX, min(getMeasureWaitSeconds(), getWarmupWaitSeconds())); // not more than 1 second
+    int64_t waitSecondsB = min(MEASUREMENT_WAIT_SECONDS_MAX, min(getMeasureWaitSeconds(), min(getTryReadWaitSeconds(), getWarmupWaitSeconds()))); // not more than 1 second
     if (waitSecondsB <= 0) {
       loopReason = LOOP_REASON_______MEASUREMENT; // time to measure
       break;
@@ -429,6 +529,7 @@ void loop() {
       if (loopReason != LOOP_REASON___________UNKNOWN) {
         break;
       }
+
     }
   }
 
@@ -441,9 +542,14 @@ void loop() {
   }
 
   // can go to sleep, but doublecheck that there is no negative sleep
-  int64_t waitSecondsC = min(getMeasureWaitSeconds(), getWarmupWaitSeconds());
+  int64_t waitSecondsC = min(getMeasureWaitSeconds(), min( getTryReadWaitSeconds(), getWarmupWaitSeconds()));
 
   if (waitSecondsC > 1) { // longer than one second --> sleep
+
+#ifdef USE_NEOPIXEL
+  pixels.setPixelColor(0, COLOR____BLUE);
+  pixels.show();
+#endif  
 
     gpio_wakeup_disable(buttonHander11.gpin);
     gpio_wakeup_disable(buttonHander12.gpin);

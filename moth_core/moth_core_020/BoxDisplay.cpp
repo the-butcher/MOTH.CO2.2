@@ -863,7 +863,7 @@ void BoxDisplay::renderFooter() {
   // main battery frame
   BoxDisplay::fillRectangle(RECT_BAT, EPD_BLACK);
   // right border battery contact
-  baseDisplay.drawFastVLine(RECT_BAT.xmax, RECT_BAT.ymin + 2, (RECT_BAT.ymax - RECT_BAT.ymin - 4), EPD_BLACK);
+  baseDisplay.drawFastVLine(RECT_BAT.xmax - 1, RECT_BAT.ymin + 3, (RECT_BAT.ymax - RECT_BAT.ymin - 6), EPD_BLACK);
   // battery internal
   BoxDisplay::fillRectangle({RECT_BAT.xmin + 1,
                              RECT_BAT.ymin + 1,
@@ -873,7 +873,7 @@ void BoxDisplay::renderFooter() {
   // percentage
   BoxDisplay::fillRectangle({RECT_BAT.xmin + 2,
                              RECT_BAT.ymin + 2,
-                             RECT_BAT.xmin + round((RECT_BAT.xmax - RECT_BAT.xmin) * valuesBat.percent * 0.01) - 2,
+                             RECT_BAT.xmin + 2 + round((RECT_BAT.xmax - RECT_BAT.xmin - 4) * valuesBat.percent * 0.01), // need to add padding
                              RECT_BAT.ymax - 2},
                             EPD_BLACK);
 

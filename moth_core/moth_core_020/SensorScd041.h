@@ -11,6 +11,7 @@ class SensorScd041 {
     static SensirionI2CScd4x baseSensor;
     static float temperatureOffset;
     static bool hasBegun;
+    static ValuesCo2 values;
     static void applyTemperatureOffset();
    
   public:
@@ -23,7 +24,7 @@ class SensorScd041 {
     static void setPressure(float pressure);
     static uint16_t forceCalibration(int reference);
     static void factoryReset();
-    static ValuesCo2 values;
+    static ValuesCo2 getValues();
 
 };
 
