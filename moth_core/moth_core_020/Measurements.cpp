@@ -28,12 +28,16 @@ int Measurements::csvBufferSize = 60; // 60;
 int Measurements::memBufferSize = 10080; // 10080; // 60 * 24 * 7, every minute over the last 7 days (space-wise it could also handle 14 days)
 int Measurements::memBufferIndx = 0;
 
+int Measurements::lowBufferSize = 12; // size of the low-pass filter data
+float Measurements::lowBufferVals[12];
+float Measurements::lowBufferMult = 0.0;
+
 int64_t Measurements::measurementIntervalSeconds = 60; // 1 minute
 Measurement* Measurements::measurements;
 
 // csv settings
-String Measurements::CSV_HEAD = "time; co2; temperature; humidity; temperature_bme; humidity_bme; pressure; percent\r\n";
-char* Measurements::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s\r\n";
+String Measurements::CSV_HEAD = "time; co2; co2_raw; temperature; humidity; temperature_bme; humidity_bme; pressure; percent\r\n";
+char* Measurements::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s\r\n";
 String Measurements::dataFileNameCurr = "";
 
 void Measurements::begin() {
@@ -42,9 +46,13 @@ void Measurements::begin() {
   Measurements::measurements = (Measurement*) ps_malloc(Measurements::memBufferSize * sizeof(Measurement));
   memset(Measurements::measurements, 0, Measurements::memBufferSize * sizeof(Measurement));
 
+  // https://github.com/LinnesLab/KickFilters/blob/master/KickFilters.h
+  float tau = 1.0 / (2.0 * PI);
+  Measurements::lowBufferMult = 1.0 / Measurements::lowBufferSize / (tau + 1.0 / Measurements::lowBufferSize);
+
   if (SensorPmsa003i::ACTIVE) {
-    Measurements::CSV_HEAD = "time; co2; temperature; humidity; temperature_bme; humidity_bme; pm010; pm025; pm100; pc003; pc005; pc010; pc025; pc050; pc100; pressure; percent\r\n";
-    Measurements::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s\r\n";
+    Measurements::CSV_HEAD = "time; co2; co2_raw; temperature; humidity; temperature_bme; humidity_bme; pm010; pm025; pm100; pc003; pc005; pc010; pc025; pc050; pc100; pressure; percent\r\n";
+    Measurements::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s; %s\r\n";
   }
 
 }
@@ -128,7 +136,7 @@ int Measurements::getCsvBufferIndex() {
 }
 
 Measurement Measurements::getOffsetMeasurement(int offset) {
-  return Measurements::measurements[(Measurements::memBufferIndx - offset - 1) % Measurements::memBufferSize];
+  return Measurements::measurements[(max(0, Measurements::memBufferIndx - offset - 1)) % Measurements::memBufferSize];
 }
 
 Measurement Measurements::getLatestMeasurement() {
@@ -136,14 +144,45 @@ Measurement Measurements::getLatestMeasurement() {
 }
 
 void Measurements::putMeasurement(Measurement measurement) {
+
+  if (Measurements::memBufferIndx == 0) {
+    // upon first measurement fill the low-pass buffer with values
+    for (int i = 0; i < Measurements::lowBufferSize; i++) { 
+      Measurements::lowBufferVals[i] = measurement.valuesCo2.co2;
+    }
+  }
+
   Measurements::measurements[Measurements::memBufferIndx % Measurements::memBufferSize] = measurement;
-  memBufferIndx++;
+  Measurements::memBufferIndx++;
+
   if (Measurements::memBufferIndx % CALIBRATION_INTERVAL_BME280 == 0) { // csv buffer turnaround
     Measurements::checkCalibrationOffsetBme280();
   }
+
   if (Measurements::memBufferIndx % Measurements::csvBufferSize == 0) { // csv buffer turnaround
     Measurements::saveToFile();
   }
+    
+  // https://github.com/LinnesLab/KickFilters/blob/master/KickFilters.h
+  // for easier measurement lookup, low-pass buffer array has been reversed
+  int indexO = Measurements::lowBufferSize; // 12
+  int indexY = indexO - 1; // 11
+  int co2Y = Measurements::getOffsetMeasurement(indexY).valuesCo2.co2Raw;    
+  Measurements::lowBufferVals[indexY] = co2Y * Measurements::lowBufferMult; // multiply oldest element with alpha
+  while (indexO > 1) {
+
+    indexO--; // first iteration :: 11, last iteration :: 1
+    indexY = indexO - 1; // first iteration :: 10, last iteration : 0
+
+    float lowPassO = Measurements::lowBufferVals[indexO];
+    co2Y = Measurements::getOffsetMeasurement(indexY).valuesCo2.co2Raw;    
+    Measurements::lowBufferVals[indexY] = lowPassO + (co2Y - lowPassO) * Measurements::lowBufferMult;
+
+  }
+
+  // apply corrected co2 value to latest measurement
+  Measurements::measurements[(Measurements::memBufferIndx - 1) % Measurements::memBufferSize].valuesCo2.co2 = (int)round(Measurements::lowBufferVals[0]);
+
 }
 
 Measurement Measurements::getMeasurement(int memIndex) {
@@ -184,6 +223,7 @@ String Measurements::toCsv(Measurement measurement) {
     sprintf(csvBuffer, Measurements::CSV_FRMT, 
       date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
       String(measurement.valuesCo2.co2), 
+      String(measurement.valuesCo2.co2Raw), 
       String(measurement.valuesCo2.temperature, 1), 
       String(measurement.valuesCo2.humidity, 1), 
       String(measurement.valuesBme.temperature, 1), 
@@ -204,6 +244,7 @@ String Measurements::toCsv(Measurement measurement) {
     sprintf(csvBuffer, Measurements::CSV_FRMT, 
       date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(),
       String(measurement.valuesCo2.co2), 
+      String(measurement.valuesCo2.co2Raw), 
       String(measurement.valuesCo2.temperature, 1), 
       String(measurement.valuesCo2.humidity, 1), 
       String(measurement.valuesBme.temperature, 1), 

@@ -63,14 +63,9 @@ ValuesCo2 SensorScd041::getValues() {
     SensorScd041::values = { 
       co2, 
       temperature, 
-      humidity 
+      humidity,
+      co2 
     };    
-  } else {
-    SensorScd041::values = { 
-      -1, 
-      -1, 
-      -1
-    }; 
   }
   return SensorScd041::values;  
 }

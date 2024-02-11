@@ -11,8 +11,10 @@ class Measurements {
     static void checkCalibrationOffsetBme280();
     static int regBufferSize; // regression value count
     static int memBufferSize; // count of measurements kept in PSRAM
+    static int lowBufferSize; // low-pass filter size
+    static float lowBufferVals[];
+    static float lowBufferMult; // low-pass filter multiplicator (alpha)
     static Measurement* measurements;
-    static float getSlope(std::function<float(const Measurement)> func);
     static char* CSV_FRMT;
     
   public:

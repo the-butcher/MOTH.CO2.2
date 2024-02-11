@@ -1,4 +1,4 @@
-#define USE_NEOPIXEL = 1;
+// #define USE_NEOPIXEL = 1;
 
 #include "BoxClock.h"
 #include "BoxConn.h"
