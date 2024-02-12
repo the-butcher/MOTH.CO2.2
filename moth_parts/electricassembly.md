@@ -23,7 +23,7 @@ Solder all pins (not RST, not D13) to the microcontroller. After soldering you c
 
 3d-print [STL "supports2"](supports2.stl), clean printed parts with a file or sandpaper, cleanup holes with a 2mm drill if required. Use 6 M2 x 5mm screws and 6 M2 nuts to connect the feather esp32-s2 microcontroller and the scd-41 sensor. Try not to touch the CO₂ sensors central part to avoid contamination. Connect microcontroller, RTC and scd-41 sensor with the Stemma QT cables (not pictured).
 
-I removed the yellow leds from both RTC amd scd-41 with a scalpel. This will significantly prolong battery lifetime, but you must be aware that it will void the warranty for the respective parts.
+I removed the yellow leds from both RTC and scd-41 with a scalpel. This will significantly prolong battery lifetime, but you must be aware that it will void the warranty for the respective parts.
 
 <img src="../images/s2_scd41_800.png" alt= "s2 scd41 and supports" width="800">
 
