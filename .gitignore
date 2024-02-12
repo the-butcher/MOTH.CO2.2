@@ -5,3 +5,5 @@ sqlite
 *.xlsx
 *.skb
 *.gcode
+
+AutoSave*

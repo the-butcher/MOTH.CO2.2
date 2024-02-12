@@ -23,6 +23,8 @@ Solder all pins (not RST, not D13) to the microcontroller. After soldering you c
 
 3d-print [STL "supports2"](supports2.stl), clean printed parts with a file or sandpaper, cleanup holes with a 2mm drill if required. Use 6 M2 x 5mm screws and 6 M2 nuts to connect the feather esp32-s2 microcontroller and the scd-41 sensor. Try not to touch the CO₂ sensors central part to avoid contamination. Connect microcontroller, RTC and scd-41 sensor with the Stemma QT cables (not pictured).
 
+I removed the yellow leds from both RTC amd scd-41 with a scalpel. This will significantly prolong battery lifetime, but you must be aware that it will void the warranty for the respective parts.
+
 <img src="../images/s2_scd41_800.png" alt= "s2 scd41 and supports" width="800">
 
 ---
@@ -33,7 +35,8 @@ Carefully reattach to display to get a unit of display, microcontroller, RTC and
 
 ---
 
-Connect the pinhole corresponding to the microcontrollers A5 pin to the display RST pinhole. Normally the display would have been hardwirded to be microcontrollers reset button, but we need to be able to reset the display at runtime and this gives the possiblity to do so.
+- Connect the pinhole corresponding to the microcontrollers A5 pin to the display RST pinhole. Normally the display would have been hardwirded to be microcontrollers reset button, but we need to be able to reset the display at runtime and this gives the possiblity to do so.
+- Connect the pinhole corresponding to the microcontrollers D6 pin to the pinhole corresponding to the microcontrollers A13 pin. This allows for operation of the C-Button on the display without having the microcontrollers red led on.
 
 <img src="../images/reset_800.png" alt= "s2 scd41 display" width="800">
 

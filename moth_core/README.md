@@ -70,6 +70,8 @@ documentation (please do not use the documented version on the device, but a cle
 ```
 {
   "min": 3, <<< display update time in minutes
+  "ssc": true, <<< allow shorter display update when a significant value change occured
+  "alt": 153, <<< base altitude of the device
   "tzn": "CET-1CEST,M3.5.0,M10.5.0/3", <<< timezone
   "co2": {
     "wHi": 800, <<< co2 warn limit
@@ -121,6 +123,8 @@ example:
 ```
 {
   "min": 3,
+  "ssc": true,
+  "alt": 153,
   "tzn": "CET-1CEST,M3.5.0,M10.5.0/3",
   "co2": {
     "wHi": 800,

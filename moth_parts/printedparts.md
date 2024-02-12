@@ -40,11 +40,18 @@ The supports serve to connect microcontroller, RTC and the CO₂ sensor and also
 
 ---
 
-### [Buttons](buttons.stl)
+### [Buttons](buttons.stl) and [Buttons springs](buttons_tpu.stl)
 
 The buttons can later be used to toggle wifi, display and acoustic feedback.
 
 <img src="../images/buttons.png" alt="upper housing" width="800">
+
+Separate the buttons and clean with sandpaper.
+
+<img src="../images/buttons_tpu.png" alt="upper housing" width="800">
+
+This part needs to be printed with TPU. It adds flexible action to the buttons and also maintains some pressure on the button so there will be no loose sound when moving the device.
+Once printed, remove the rafts with a sharp knive and clean up very precice for later fit.
 
 ---
 

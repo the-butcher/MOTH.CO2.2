@@ -30,18 +30,27 @@ I had to file a little edge off the buzzer to make battery and buzzer fit nicely
 
 ---
 
-Place the buttons into the lower housing, if you keep the housing positioned like in the picture, everything will stay in place during the next step.
+Seat the assembled buttons into the assembly and be sure each button can operate freely.
 
 <img src="../images/assembly04.png" alt= "buttons in lower housing" width="800">
 
 ---
 
-Now you can slide the upper housing with the electric assembly attached to it into the lower housing and add 4 M2 x 8mm screws for final attachment.
+Place the lower housing upright so it can accept the rest of the assembly.
 
 <img src="../images/assembly05.png" alt= "final attachment" width="800">
 
 ---
 
+Insert the assembly, buttons first, be sure all cables go in smoothly and dont block one the threads that connect lower and upper housing.
+Once inserted add 4 M2 x 8mm screws for final attachment.
+
+<img src="../images/assembly06.png" alt= "final attachment" width="800">
+
+---
+
 Fully assembled.
+
+<img src="../images/assembly07.png" alt= "final attachment" width="800">
 
 <img src="../images/assembly05_pic.png" alt= "final attachment" width="800">
