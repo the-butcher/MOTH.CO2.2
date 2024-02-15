@@ -20,6 +20,7 @@ class BoxClock {
     static bool isUpdateable();
     static void optNtpUpdate();
     static String getDateTimeDisplayString(DateTime date);
+    static String getTimeDisplayString(DateTime date);
     static String getDateTimeString(DateTime date);
     static DataFileDef getDataFileDef(DateTime date);
 

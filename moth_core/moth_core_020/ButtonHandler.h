@@ -2,6 +2,7 @@
 #define ButtonHandler_h
 
 #include "Arduino.h"
+#include "LoopReason.h"
 
 typedef enum {
   FALL_RISE_FAST,
@@ -22,6 +23,9 @@ class ButtonHandler {
     void begin();
     gpio_num_t gpin;
     uint8_t ipin;
+    ButtonAction buttonActionFast;
+    ButtonAction buttonActionSlow;
+    String extraLabel;
     gpio_int_type_t getWakeupLevel();
     fallrise_t getFallRise();
 

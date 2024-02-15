@@ -18,13 +18,13 @@ class SensorBme280 {
     static ValuesBme values;
     static void applyTemperatureOffset();
     static void applyAltitudeOffset(float pressure);
+    static float getAltitude(float pressure);
 
   public:
     static float getTemperatureOffset();
-    static float getAltitude(float pressure);
     static void setTemperatureOffset(float temperatureOffset);
     static void setAltitudeOffset(float altitudeOffset);
-    static void resetPressureOffset(); // recalculates sea level pressure for the current altitude and pressure setting
+    static void updateAltitude(float altitudeUpdate);
     static void begin();
     static bool tryRead();
     static ValuesBme getValues();

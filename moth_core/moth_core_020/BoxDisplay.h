@@ -40,15 +40,27 @@ typedef enum {
  * the value to be shown in chart
  */
 typedef enum {
-  DISPLAY_VALUE___CO2,
-  DISPLAY_VALUE___DEG,
-  DISPLAY_VALUE___HUM,
-  DISPLAY_VALUE___HPA,
-  DISPLAY_VALUE___ALT,
-  DISPLAY_VALUE__P010,
-  DISPLAY_VALUE__P025,
-  DISPLAY_VALUE__P100
-} display_value_v;
+  DISPLAY_VAL_C___CO2,
+  DISPLAY_VAL_C___DEG,
+  DISPLAY_VAL_C___HUM,
+  DISPLAY_VAL_C___HPA,
+  DISPLAY_VAL_C___ALT,
+  DISPLAY_VAL_C__P010,
+  DISPLAY_VAL_C__P025,
+  DISPLAY_VAL_C__P100
+} display_val_c_v;
+
+/**
+ * the value to be shown in table
+ */
+typedef enum {
+  DISPLAY_VAL_T___CO2,
+  DISPLAY_VAL_T___HPA,
+  DISPLAY_VAL_T___ALT,
+  DISPLAY_VAL_T__P010,
+  DISPLAY_VAL_T__P025,
+  DISPLAY_VAL_T__P100
+} display_val_t_v;
 
 class BoxDisplay { 
   
@@ -78,6 +90,12 @@ class BoxDisplay {
     static void flushBuffer();
     
   public:
+    static String SYMBOL__PM_M;
+    static String SYMBOL__PM_D;
+    static String SYMBOL__WIFI;
+    static String SYMBOL_THEME;
+    static String SYMBOL_TABLE;
+    static String SYMBOL_CHART;
     static String CONFIG_PATH;
     static config_status_t configStatus;
     static int64_t renderStateSeconds;
@@ -89,14 +107,20 @@ class BoxDisplay {
     static void renderQRCode();
     static void setTheme(display_theme_t theme);
     static void toggleTheme();
+    static display_theme_t getTheme();
     static void setState(display_state_t state);
     static void toggleState();
     static display_state_t getState();
-    static void setValue(display_value_v value);
-    static void resetValue();
-    static void toggleValue();
+    static void setValueTable(display_val_t_v value);
+    static display_val_t_v getValueTable();
+    static void setValueChart(display_val_c_v value);
+    static void toggleValueFw();
+    static void toggleValueBw();
     static ValuesCo2 getDisplayValuesCo2();
     static bool hasSignificantChange();
+    static void toggleChartMeasurementHoursFw();
+    static void toggleChartMeasurementHoursBw();
+    static int getChartMeasurementHours();
 
 };
 

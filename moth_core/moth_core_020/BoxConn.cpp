@@ -470,19 +470,24 @@ void BoxConn::begin() {
       } else if (requestedDisplay == "theme_dark") {
         BoxDisplay::setTheme(DISPLAY_THEME__DARK);
       } else if (requestedDisplay == "value_co2") {
-        BoxDisplay::setValue(DISPLAY_VALUE___CO2);
+        BoxDisplay::setValueTable(DISPLAY_VAL_T___CO2);
+        BoxDisplay::setValueChart(DISPLAY_VAL_C___CO2);
       } else if (requestedDisplay == "value_deg") {
-        BoxDisplay::setValue(DISPLAY_VALUE___DEG);
+        BoxDisplay::setValueChart(DISPLAY_VAL_C___DEG);
       } else if (requestedDisplay == "value_hum") {
-        BoxDisplay::setValue(DISPLAY_VALUE___HUM);
+        BoxDisplay::setValueChart(DISPLAY_VAL_C___HUM);
       } else if (requestedDisplay == "value_hpa") {
-        BoxDisplay::setValue(DISPLAY_VALUE___HPA);
+        BoxDisplay::setValueTable(DISPLAY_VAL_T___HPA);
+        BoxDisplay::setValueChart(DISPLAY_VAL_C___HPA);
       } else if (requestedDisplay == "value_010") {
-        BoxDisplay::setValue(DISPLAY_VALUE__P010);
+        BoxDisplay::setValueTable(DISPLAY_VAL_T__P010);
+        BoxDisplay::setValueChart(DISPLAY_VAL_C__P010);
       } else if (requestedDisplay == "value_025") {
-        BoxDisplay::setValue(DISPLAY_VALUE__P025);
+        BoxDisplay::setValueTable(DISPLAY_VAL_T__P025);
+        BoxDisplay::setValueChart(DISPLAY_VAL_C__P025);
       } else if (requestedDisplay == "value_100") {
-        BoxDisplay::setValue(DISPLAY_VALUE__P100);
+        BoxDisplay::setValueTable(DISPLAY_VAL_T__P100);
+        BoxDisplay::setValueChart(DISPLAY_VAL_C__P100);
       } else {
         BoxConn::isRenderStateRequired = false;
         root[CODE] = 400;
@@ -830,3 +835,4 @@ String BoxConn::getNetworkPass() {
 wifi_mode_t BoxConn::getMode() {
   return mode;
 }
+

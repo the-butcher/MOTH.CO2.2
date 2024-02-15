@@ -185,6 +185,13 @@ void Measurements::putMeasurement(Measurement measurement) {
 
 }
 
+/**
+ * on the latest measurement replace the bme values (i.e. for a change in altitude without an actual measurement having been made)
+ */
+void Measurements::putValuesBme(ValuesBme valuesBme) {
+  Measurements::measurements[(Measurements::memBufferIndx - 1) % Measurements::memBufferSize].valuesBme = valuesBme;
+}
+
 Measurement Measurements::getMeasurement(int memIndex) {
   return Measurements::measurements[memIndex];
 }

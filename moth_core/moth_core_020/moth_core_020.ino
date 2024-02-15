@@ -8,6 +8,8 @@
 #include "BoxFiles.h"
 #include "BoxDisplay.h"
 #include "ButtonHandler.h"
+#include "ButtonHandlers.h"
+#include "LoopReason.h"
 
 #include "Measurements.h"
 #include "Measurement.h"
@@ -29,22 +31,6 @@ const uint32_t COLOR_MAGENTA = 0x00FFFF;
 #include "driver/rtc_io.h"
 
 typedef enum {
-  LOOP_REASON______WIFI______ON,
-  LOOP_REASON______WIFI_____OFF,
-  LOOP_REASON______TOGGLE___PMS,
-  LOOP_REASON______TOGGLE_STATE, // co2, pms, chart
-  LOOP_REASON______TOGGLE_THEME, // light dark
-  LOOP_REASON______TOGGLE_VALUE, // within state, the acual value being shown (co2, pm1.0, pm2.5, pm10.0), let a long press return to co2
-  LOOP_REASON______RESET__VALUE,
-  LOOP_REASON______RENDER_STATE, // a simple re-render
-  LOOP_REASON_______MEASUREMENT, // time for a measurement or for sensor wakeup
-  LOOP_REASON______CALIBRRATION, // calibrate the sensor to a given reference value
-  LOOP_REASON_______HIBERNATION, // hibernate the device
-  LOOP_REASON_RESET_CALIBRATION, // reset SCD41 to factory
-  LOOP_REASON___________UNKNOWN
-} loop_reason_t;
-
-typedef enum {
     SENSORS_TRYREAD, // sensors need to read before measurement can be taken
     SENSORS_GETVALS // sensors can provide values from measurements previously taken
 } sensors_mode_t;
@@ -53,8 +39,6 @@ const int BUZZER____FREQ_LO = 1000; // 3755
 const int BUZZER____CHANNEL = 0;
 const int BUZZER_RESOLUTION = 8; // 0 - 255
 const int BUZZER_______GPIO = SensorPmsa003i::ACTIVE ? GPIO_NUM_8 : GPIO_NUM_17;
-
-
 
 loop_reason_t loopReason = LOOP_REASON___________UNKNOWN;
 loop_reason_t loopAction;
@@ -70,13 +54,12 @@ const int64_t TRYREAD_SECONDS = 6;
 int64_t offsetBeginSeconds = 0;
 int64_t lastMemBufferIndex = -2; // the last mem buffer index that got rendered
 
-ButtonHandler buttonHander11(GPIO_NUM_11);
-ButtonHandler buttonHander12(GPIO_NUM_12);
-ButtonHandler buttonHander13(GPIO_NUM_6); // GPIO_NUM_6 if pin 13 was unsoldered and bridged to from GPIO_NUM_6, GPIO_NUM_13 if no bridge is present
-
 bool isAudio;
 
 std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
+// TODO :: define functions for all buttons (maybe attachable to the button handlers)
+// this could maybe create the possibility to move the handleButtonChangeA, ... methods to the button handlers
+// could there be a typedef that holds both action AND display character for that action
 
 /**
  * -- perform tests with various configurations, including invalid ones
@@ -88,15 +71,10 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *    ✓ file response is working
  *    ✓ mqtt config was successfully read
  *    ✓ encr was successfully read
- *    ✓ display config was successfully read
- *    ✓ folder listing is working
- *    ✓ upload is working
  *    ✓ timezone works
  *    ✓ time gets adjusted while permanently being online
  *    ✓ time gets adjusted hourly when offline
  *    ✓ mqtt gets published hourly when offline
- *    ✓ stale never shows minus values
- *
  */
 
 #ifdef USE_NEOPIXEL
@@ -105,10 +83,10 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
 
 void setup() {
 
-  // de-power the neopixel
 #ifdef USE_NEOPIXEL
   pixels.begin();
 #else
+  // de-power the neopixel
   pinMode(NEOPIXEL_POWER, OUTPUT);
   digitalWrite(NEOPIXEL_POWER, LOW);
 #endif
@@ -121,10 +99,6 @@ void setup() {
   BoxClock::begin();
   BoxDisplay::begin(); // needs BoxFiles to be ready because it will read config
 
-  buttonHander11.begin();
-  buttonHander12.begin();
-  buttonHander13.begin();
-
   ledcSetup(BUZZER____CHANNEL, BUZZER____FREQ_LO, BUZZER_RESOLUTION);
   ledcAttachPin(BUZZER_______GPIO, BUZZER____CHANNEL);
 
@@ -136,6 +110,8 @@ void setup() {
 
   BoxPack::tryRead(); // need to read, or no battery values will be present in the starting info
   BoxDisplay::renderMothInfo(BoxConn::VNUM);
+
+  ButtonHandlers::begin();
 
   SensorBme280::begin();
   SensorScd041::begin();
@@ -181,36 +157,46 @@ int64_t getWarmupWaitSeconds() {
   }
 }
 
-void handleButton11Change() {
-  fallrise_t fallrise11 = buttonHander11.getFallRise();
+void handleButtonChangeA() {
+  fallrise_t fallrise11 = ButtonHandlers::A.getFallRise();
   if (fallrise11 == FALL_RISE_FAST) {
-    if (SensorPmsa003i::ACTIVE) {
-      loopReason = LOOP_REASON______TOGGLE___PMS;
+    if (ButtonHandlers::A.buttonActionFast.loopReason != LOOP_REASON___________UNKNOWN) {
+      loopReason = ButtonHandlers::A.buttonActionFast.loopReason;
     }
   } else if (fallrise11 == FALL_RISE_SLOW) {
-    loopReason = BoxConn::getMode() == WIFI_OFF ? LOOP_REASON______WIFI______ON : LOOP_REASON______WIFI_____OFF;
+    if (ButtonHandlers::A.buttonActionSlow.loopReason != LOOP_REASON___________UNKNOWN) {
+      loopReason = ButtonHandlers::A.buttonActionSlow.loopReason;
+    }
   }
 }
-void handleButton12Change() {
-  fallrise_t fallrise12 = buttonHander12.getFallRise();
+void handleButtonChangeB() {
+  fallrise_t fallrise12 = ButtonHandlers::B.getFallRise();
   if (fallrise12 == FALL_RISE_FAST) {
-    loopReason = LOOP_REASON______TOGGLE_STATE;
+    if (ButtonHandlers::B.buttonActionFast.loopReason != LOOP_REASON___________UNKNOWN) {
+      loopReason = ButtonHandlers::B.buttonActionFast.loopReason;
+    }
   } else if (fallrise12 == FALL_RISE_SLOW) {
-    loopReason = LOOP_REASON______TOGGLE_THEME;
+    if (ButtonHandlers::B.buttonActionSlow.loopReason != LOOP_REASON___________UNKNOWN) {
+      loopReason = ButtonHandlers::B.buttonActionSlow.loopReason;
+    }
   }
 }
-void handleButton13Change() {
-  fallrise_t fallrise13 = buttonHander13.getFallRise();
+void handleButtonChangeC() {
+  fallrise_t fallrise13 = ButtonHandlers::C.getFallRise();
   if (fallrise13 == FALL_RISE_FAST) {
-    loopReason = LOOP_REASON______TOGGLE_VALUE;
+    if (ButtonHandlers::C.buttonActionFast.loopReason != LOOP_REASON___________UNKNOWN) {
+      loopReason = ButtonHandlers::C.buttonActionFast.loopReason;
+    }
   } else if (fallrise13 == FALL_RISE_SLOW) {
-    loopReason = LOOP_REASON______RESET__VALUE;
+    if (ButtonHandlers::C.buttonActionSlow.loopReason != LOOP_REASON___________UNKNOWN) {
+      loopReason = ButtonHandlers::C.buttonActionSlow.loopReason;
+    }
   }
 }
 
 void beep(int frequency) {
-  ledcWrite(BUZZER____CHANNEL, 255);
-  ledcWriteTone(BUZZER____CHANNEL, frequency); // 3755
+  ledcWrite(BUZZER____CHANNEL, 180);
+  ledcWriteTone(BUZZER____CHANNEL, frequency);
   delay(50);
   ledcWrite(BUZZER____CHANNEL, 0);
 }
@@ -250,7 +236,7 @@ void renderState(bool force) {
 }
 
 bool isAnyButtonPressed() {
-  return buttonHander11.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || buttonHander12.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || buttonHander13.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL;
+  return ButtonHandlers::A.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || ButtonHandlers::B.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || ButtonHandlers::C.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL;
 }
 
 void loop() {
@@ -263,9 +249,9 @@ void loop() {
   loopAction = loopReason;
   loopReason = LOOP_REASON___________UNKNOWN; // start new with "unknown"
 
-  attachInterrupt(buttonHander11.ipin, handleButton11Change, CHANGE);
-  attachInterrupt(buttonHander12.ipin, handleButton12Change, CHANGE);
-  attachInterrupt(buttonHander13.ipin, handleButton13Change, CHANGE);
+  attachInterrupt(ButtonHandlers::A.ipin, handleButtonChangeA, CHANGE);
+  attachInterrupt(ButtonHandlers::B.ipin, handleButtonChangeB, CHANGE);
+  attachInterrupt(ButtonHandlers::C.ipin, handleButtonChangeC, CHANGE);
 
   int64_t warmupWaitSecondsA = getWarmupWaitSeconds();
   if (warmupWaitSecondsA <= 1) {
@@ -403,8 +389,7 @@ void loop() {
     BoxConn::off();
     displayFunc = [=]() -> void { renderState(true); };
 
-  }
-  else if (loopAction == LOOP_REASON______TOGGLE_STATE) {
+  } else if (loopAction == LOOP_REASON______TOGGLE_STATE) {
 
     beep(BUZZER____FREQ_LO);
     BoxDisplay::toggleState();
@@ -423,23 +408,59 @@ void loop() {
       SensorPmsa003i::setMode(PMS_PAUSE_D);
     } else if (SensorPmsa003i::getMode() == PMS____ON_D || SensorPmsa003i::getMode() == PMS_PAUSE_D) { // if in display interval mode, switch off
       SensorPmsa003i::setMode(PMS_____OFF);
-      BoxDisplay::resetValue(); // reset to CO2 display (or it may display zero PM values after turning off)
+      // TODO :: 
     } else {
       SensorPmsa003i::setMode(PMS_PAUSE_M);
     }
     displayFunc = [=]() -> void { renderState(true); }; // this is only to render the PMS active indicator
 
-  } else if (loopAction == LOOP_REASON______TOGGLE_VALUE) {
+  } else if (loopAction == LOOP_REASON___TOGGLE_VALUE_FW) {
 
     beep(BUZZER____FREQ_LO);
-    BoxDisplay::toggleValue();
+    BoxDisplay::toggleValueFw();
     displayFunc = [=]() -> void { renderState(true); };
 
-  } else if (loopAction == LOOP_REASON______RESET__VALUE) {
+  } else if (loopAction == LOOP_REASON___TOGGLE_VALUE_BW) {
 
     beep(BUZZER____FREQ_LO);
-    BoxDisplay::resetValue();
+    BoxDisplay::toggleValueBw();
     displayFunc = [=]() -> void { renderState(true); };
+
+  } else if (loopAction == LOOP_REASON___TOGGLE_HOURS_FW) {
+
+    beep(BUZZER____FREQ_LO);
+    BoxDisplay::toggleChartMeasurementHoursFw();
+    displayFunc = [=]() -> void { renderState(true); };
+
+  } else if (loopAction == LOOP_REASON___TOGGLE_HOURS_BW) {
+
+    beep(BUZZER____FREQ_LO);
+    BoxDisplay::toggleChartMeasurementHoursBw();
+    displayFunc = [=]() -> void { renderState(true); };
+
+  } else if (loopAction == LOOP_REASON___ADD_10_ALTITUDE) { 
+
+    beep(BUZZER____FREQ_LO);
+    SensorBme280::updateAltitude(10);
+    displayFunc = [=]() -> void { renderState(true); };    
+
+  } else if (loopAction == LOOP_REASON___ADD_50_ALTITUDE) {
+
+    beep(BUZZER____FREQ_LO);
+    SensorBme280::updateAltitude(50);
+    displayFunc = [=]() -> void { renderState(true); };    
+
+  } else if (loopAction == LOOP_REASON___DEL_10_ALTITUDE) {
+
+    beep(BUZZER____FREQ_LO);
+    SensorBme280::updateAltitude(-10);
+    displayFunc = [=]() -> void { renderState(true); };    
+
+  } else if (loopAction == LOOP_REASON___DEL_50_ALTITUDE) {
+
+    beep(BUZZER____FREQ_LO);
+    SensorBme280::updateAltitude(-50);
+    displayFunc = [=]() -> void { renderState(true); };    
 
   } else if (loopAction == LOOP_REASON______RENDER_STATE) {
 
@@ -447,6 +468,20 @@ void loop() {
     BoxConn::isRenderStateRequired = false;
     displayFunc = [=]() -> void { renderState(true); };
 
+  }
+
+  // depending on display state, reassign the button handlers
+  if (BoxDisplay::getState() == DISPLAY_STATE_TABLE) {
+    if (BoxDisplay::getValueTable() == DISPLAY_VAL_T___ALT) {
+      ButtonHandlers::assignAltitudeModifiers(); // altitude on A and B
+    } else {
+      // some value other than altitude
+      ButtonHandlers::assignWifiAndPms(); // wifi on pms(?) on A
+      ButtonHandlers::assignThemeAndState(); // theme and state on B
+    }
+  } else {
+    ButtonHandlers::assignChartHours(); // hours modifier on A
+    ButtonHandlers::assignThemeAndState(); // theme and state on B
   }
 
   if (displayFunc) {
@@ -479,7 +514,7 @@ void loop() {
 #endif
 
   // whatever happens here, happens at least once / minute, maybe more often depending on user interaction, wifi expiriy, ...
-  bool forceAwake = false; // MUST be false in deployment, or battery life will be much shorter
+  bool forceAwake = true; // MUST be false in deployment, or battery life will be much shorter
   while (forceAwake || BoxConn::getMode() != WIFI_OFF || isAnyButtonPressed()) { //  || SensorPmsa003i::getMode() == PMS_____ON no sleep while wifi is active or pms is active
 
     if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
@@ -490,20 +525,16 @@ void loop() {
     if (BoxConn::isExpireable()) {
       loopReason = LOOP_REASON______WIFI_____OFF; // wifi has expired
       break;
-    }
-    else if (BoxConn::requestedCalibrationReference >= 400) {
+    } else if (BoxConn::requestedCalibrationReference >= 400) {
       loopReason = LOOP_REASON______CALIBRRATION; // user requested calibration
       break;
-    }
-    else if (BoxConn::isHibernationRequired) {
+    } else if (BoxConn::isHibernationRequired) {
       loopReason = LOOP_REASON_______HIBERNATION; // user requested hibernation
       break;
-    }
-    else if (BoxConn::isCo2CalibrationReset) {
+    } else if (BoxConn::isCo2CalibrationReset) {
       loopReason = LOOP_REASON_RESET_CALIBRATION; // user requested calibration reset
       break;
-    }
-    else if (BoxConn::isRenderStateRequired) {
+    } else if (BoxConn::isRenderStateRequired) {
       loopReason = LOOP_REASON______RENDER_STATE;
       break;
     }
@@ -518,9 +549,9 @@ void loop() {
       int64_t _delay = waitSecondsB * MILLISECONDS_PER_SECOND / 5;
       for (int i = 0; i < 5; i++) {
         delay(_delay); // wait for some time (max 1 second)
-        handleButton11Change();
-        handleButton12Change();
-        handleButton13Change();
+        handleButtonChangeA();
+        handleButtonChangeB();
+        handleButtonChangeC();
         if (loopReason != LOOP_REASON___________UNKNOWN) {
           break;
         }
@@ -533,9 +564,9 @@ void loop() {
     }
   }
 
-  detachInterrupt(buttonHander11.ipin);
-  detachInterrupt(buttonHander12.ipin);
-  detachInterrupt(buttonHander13.ipin);
+  detachInterrupt(ButtonHandlers::A.ipin);
+  detachInterrupt(ButtonHandlers::B.ipin);
+  detachInterrupt(ButtonHandlers::C.ipin);
 
   if (loopReason != LOOP_REASON___________UNKNOWN) { // doublecheck for loop reason and dont let code proceed to sleep phase
     return;
@@ -551,13 +582,13 @@ void loop() {
   pixels.show();
 #endif  
 
-    gpio_wakeup_disable(buttonHander11.gpin);
-    gpio_wakeup_disable(buttonHander12.gpin);
-    gpio_wakeup_disable(buttonHander13.gpin);
+    gpio_wakeup_disable(ButtonHandlers::A.gpin);
+    gpio_wakeup_disable(ButtonHandlers::B.gpin);
+    gpio_wakeup_disable(ButtonHandlers::C.gpin);
 
-    gpio_wakeup_enable(buttonHander11.gpin, buttonHander11.getWakeupLevel());
-    gpio_wakeup_enable(buttonHander12.gpin, buttonHander12.getWakeupLevel());
-    gpio_wakeup_enable(buttonHander13.gpin, buttonHander13.getWakeupLevel());
+    gpio_wakeup_enable(ButtonHandlers::A.gpin, ButtonHandlers::A.getWakeupLevel());
+    gpio_wakeup_enable(ButtonHandlers::B.gpin, ButtonHandlers::B.getWakeupLevel());
+    gpio_wakeup_enable(ButtonHandlers::C.gpin, ButtonHandlers::C.getWakeupLevel());
 
     esp_sleep_enable_gpio_wakeup();
     esp_sleep_enable_timer_wakeup(waitSecondsC * MICROSECONDS_PER_SECOND);
@@ -566,9 +597,9 @@ void loop() {
 
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
     if (wakeup_reason == ESP_SLEEP_WAKEUP_GPIO) {
-      handleButton11Change();
-      handleButton12Change();
-      handleButton13Change();
+      handleButtonChangeA();
+      handleButtonChangeB();
+      handleButtonChangeC();
     }
     else if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) {
       loopReason = LOOP_REASON_______MEASUREMENT;

@@ -1,4 +1,5 @@
 #include "SensorBme280.h"
+#include "Measurements.h"
 
 /**
  * ################################################
@@ -55,10 +56,6 @@ void SensorBme280::setAltitudeOffset(float altitudeOffset) {
   SensorBme280::pressureOffset = 0; // triggers a recalculation upon next measurement
 }
 
-void SensorBme280::resetPressureOffset() {
-  SensorBme280::pressureOffset = 0; // triggers a recalculation upon next measurement
-}
-
 bool SensorBme280::tryRead() {
   SensorBme280::baseSensor.takeForcedMeasurementNoDelay();
   return true;
@@ -76,6 +73,12 @@ ValuesBme SensorBme280::getValues() {
     SensorBme280::getAltitude(pressure)
   };
   return SensorBme280::values;  
+}
+
+void SensorBme280::updateAltitude(float altitudeUpdate) {
+  SensorBme280::setAltitudeOffset(SensorBme280::values.altitude + altitudeUpdate);
+  ValuesBme valuesBme = SensorBme280::getValues();
+  Measurements::putValuesBme(valuesBme);
 }
 
 void SensorBme280::applyTemperatureOffset() {

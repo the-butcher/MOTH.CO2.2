@@ -25,6 +25,7 @@ class Measurements {
     static int memBufferIndx;
     static void begin();
     static void putMeasurement(Measurement measurement);
+    static void putValuesBme(ValuesBme valuesBme);
     static int getCsvBufferIndex();
     static Measurement getOffsetMeasurement(int offset);
     static Measurement getLatestMeasurement();
