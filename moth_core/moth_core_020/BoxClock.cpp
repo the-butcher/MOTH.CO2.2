@@ -109,12 +109,12 @@ DataFileDef BoxClock::getDataFileDef(DateTime date) {
 
 String BoxClock::getDateTimeDisplayString(DateTime date) {
   char timeBuffer[32];
-  sprintf(timeBuffer, "%02d.%02d.%04d, %02d:%02d", date.day(), date.month(), date.year(), date.hour(), date.minute());
+  sprintf(timeBuffer, "%02d.%02d.%04d,%02d:%02d", date.day(), date.month(), date.year(), date.hour(), date.minute());
   return timeBuffer;
 }
 
-String BoxClock::getTimeDisplayString(DateTime date) {
-  char timeBuffer[16];
-  sprintf(timeBuffer, "%02d:%02d", date.hour(), date.minute());
-  return timeBuffer;
-}
+// String BoxClock::getTimeDisplayString(DateTime date) {
+//   char timeBuffer[16];
+//   sprintf(timeBuffer, "%02d:%02d", date.hour(), date.minute());
+//   return timeBuffer;
+// }

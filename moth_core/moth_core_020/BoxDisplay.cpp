@@ -44,6 +44,7 @@ const char FORMAT_STALE[] = "%3s%% stale";
 const int limitPosX = 287;
 const int charDimX6 = 7;
 const float zero = 0;
+const float one = 1;
 
 const Rectangle RECT_TOP = {
     1,
@@ -76,17 +77,17 @@ const Rectangle RECT_HUM = {
     106
 };
 const Rectangle RECT_BAT = {
-    RECT_BOT.xmax - 65,
+    RECT_BOT.xmax - 60,
     RECT_BOT.ymin + 7,
-    RECT_BOT.xmax - 40,
+    RECT_BOT.xmax - 38,
     RECT_BOT.ymin + 18
 };
-const Rectangle RECT__SD = {
-    RECT_TOP.xmax - 50,
-    RECT_TOP.ymin + 9,
-    RECT_TOP.xmax - 40,
-    RECT_TOP.ymin + 18
-};
+// const Rectangle RECT__SD = {
+//     RECT_TOP.xmax - 50,
+//     RECT_TOP.ymin + 9,
+//     RECT_TOP.xmax - 40,
+//     RECT_TOP.ymin + 18
+// };
 int TEXT_OFFSET_Y = 16;
 
 /**
@@ -637,13 +638,13 @@ void BoxDisplay::renderChart() {
   if (displayValueChart == DISPLAY_VAL_C___CO2) {
     for (int i = 0; i < displayableMeasurementCount; i++) {
       measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours);
-      if (measurement.valuesCo2.co2 > 1200) {
-        maxValue = 3000; // 0, 1000, 2000, (3000)
+      if (measurement.valuesCo2.co2 > 3600) {
+        maxValue = 6000; // 0, 2000, 4000, (6000)
       } else if (measurement.valuesCo2.co2 > 2400) {
         maxValue = 4500; // 0, 1500, 3000, (4500)
-      } else if (measurement.valuesCo2.co2 > 3600) {
-        maxValue = 6000; // 0, 2000, 4000, (6000)
-      }
+      } else if (measurement.valuesCo2.co2 > 1200) {
+        maxValue = 3000; // 0, 1000, 2000, (3000)
+      } 
     }
   } else if (displayValueChart == DISPLAY_VAL_C___DEG) {
     if (c2f) {
@@ -669,40 +670,40 @@ void BoxDisplay::renderChart() {
     maxValue = 450;
     for (int i = 0; i < displayableMeasurementCount; i++) {
       measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours);
-      if (measurement.valuesBme.altitude > 400) {
-        maxValue = 900; // 0, 300, 600, (900)
+      if (measurement.valuesBme.altitude > 1600) {
+        maxValue = 3600; // 0, 1200, 2400, 3600
       } else if (measurement.valuesBme.altitude > 800) {
         maxValue = 1800; // 0, 600, 1200, (1800)
-      } else if (measurement.valuesBme.altitude > 1600) {
-        maxValue = 3600; // 0, 1200, 2400, 3600
-      }
+      } else if (measurement.valuesBme.altitude > 400) {
+        maxValue = 900; // 0, 300, 600, (900)
+      } 
     }
   } else if (displayValueChart == DISPLAY_VAL_C__P010) {
     maxValue = 9;
     for (int i = 0; i < displayableMeasurementCount; i++) {
       for (int h = 0; h < chartMeasurementHours; h++) {
         measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h); // dont skip any measurements
-        if (measurement.valuesPms.pm010 > 5) {
-          maxValue = 15;
-        } else if (measurement.valuesPms.pm010 > 15) {
-          maxValue = 45;
-        } else if (measurement.valuesPms.pm010 > 45) {
-          maxValue = 90; // 0, 30, 60, (90)
-        }
+        if (measurement.valuesPms.pm010 > 36) {
+          maxValue = max(90, maxValue); // 0, 30, 60, (90)
+        } else if (measurement.valuesPms.pm010 > 12) {
+          maxValue = max(45, maxValue); // 0, 15, 30, (45)
+        } else if (measurement.valuesPms.pm010 > 7) {
+          maxValue = max(15, maxValue); // 0, 5, 10, (15)
+        } 
       }
     }
   } else if (displayValueChart == DISPLAY_VAL_C__P025) {
-    maxValue = 9;
+    maxValue = 9; // 0, 3, 6, (9)
     for (int i = 0; i < displayableMeasurementCount; i++) {
       for (int h = 0; h < chartMeasurementHours; h++) {
         measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h); // dont skip any measurements
-        if (measurement.valuesPms.pm025 > 5) {
-          maxValue = 15;
-        } else if (measurement.valuesPms.pm025 > 15) {
-          maxValue = 45;
-        } else if (measurement.valuesPms.pm010 > 45) {
-          maxValue = 90; // 0, 30, 60, (90)
-        }
+        if (measurement.valuesPms.pm025 > 36) {
+          maxValue = max(90, maxValue); // 0, 30, 60, (90)
+        } else if (measurement.valuesPms.pm025 > 12) {
+          maxValue = max(45, maxValue); // 0, 15, 30, (45)
+        } else if (measurement.valuesPms.pm025 > 7) {
+          maxValue = max(15, maxValue); // 0, 5, 10, (15)
+        } 
       }
     }
   } else if (displayValueChart == DISPLAY_VAL_C__P100) {
@@ -710,13 +711,13 @@ void BoxDisplay::renderChart() {
     for (int i = 0; i < displayableMeasurementCount; i++) {
       for (int h = 0; h < chartMeasurementHours; h++) {
         measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h); // dont skip any measurements
-        if (measurement.valuesPms.pm100 > 5) {
-          maxValue = 15;
-        } else if (measurement.valuesPms.pm100 > 15) {
-          maxValue = 45;
-        } else if (measurement.valuesPms.pm010 > 45) {
-          maxValue = 90; // 0, 30, 60, (90)
-        }
+        if (measurement.valuesPms.pm100 > 36) {
+          maxValue = max(90, maxValue); // 0, 30, 60, (90)
+        } else if (measurement.valuesPms.pm100 > 12) {
+          maxValue = max(45, maxValue); // 0, 15, 30, (45)
+        } else if (measurement.valuesPms.pm100 > 7) {
+          maxValue = max(15, maxValue); // 0, 5, 10, (15)
+        } 
       }
     }
   }
@@ -734,32 +735,25 @@ void BoxDisplay::renderChart() {
   baseDisplay.drawFastHLine(1, 77, 296, EPD_LIGHT);
   BoxDisplay::drawAntialiasedText06(label0, RECT_CO2, charPosValueX - charDimX6 * label0.length(), 80, EPD_BLACK);
 
-  String titleUnit;
+  String title;
   if (displayValueChart == DISPLAY_VAL_C___CO2) {
-    titleUnit = "CO² ppm";
+    title = "CO² ppm," + String(chartMeasurementHours) + "h"; // the sup 2 has been modified in the font to display as sub
   } else if (displayValueChart == DISPLAY_VAL_C___DEG) {
-    titleUnit = c2f ? "°F" : "°C";
+    title = c2f ? "temperature °F," : "temperature °C," + String(chartMeasurementHours) + "h";
   } else if (displayValueChart == DISPLAY_VAL_C___HUM) {
-    titleUnit = "humidity %";
+    title = "humidity %," + String(chartMeasurementHours) + "h";
   } else if (displayValueChart == DISPLAY_VAL_C___HPA) {
-    titleUnit = "pressure hPa";
+    title = "pressure hPa," + String(chartMeasurementHours) + "h";
   } else if (displayValueChart == DISPLAY_VAL_C___ALT) {
-    titleUnit = "altitude m";
+    title = "altitude m," + String(chartMeasurementHours) + "h";
   } else if (displayValueChart == DISPLAY_VAL_C__P010) {
-    titleUnit = "pm 1.0 µg/m3";
+    title = "pm 1.0 µg/m3," + String(chartMeasurementHours) + "h";
   } else if (displayValueChart == DISPLAY_VAL_C__P025) {
-    titleUnit = "pm 2.5 µg/m3";
+    title = "pm 2.5 µg/m3," + String(chartMeasurementHours) + "h";
   } else if (displayValueChart == DISPLAY_VAL_C__P100) {
-    titleUnit = "pm 10.0 µg/m3";
+    title = "pm 10.0 µg/m3," + String(chartMeasurementHours) + "h";
   }
-  char titleBuffer[48];
-  sprintf(titleBuffer, "%s, %dh", titleUnit, chartMeasurementHours);
-  String title = String(titleBuffer);
-
-  Serial.println(titleUnit);
-  Serial.println(title);
-
-  BoxDisplay::drawAntialiasedText06(title, RECT_CO2, limitPosX - title.length() * 7, charPosLabelY, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText06(title, RECT_CO2, limitPosX - title.length() * charDimX6 + 3, charPosLabelY, EPD_BLACK);
 
   int minX;
   int minY;
@@ -774,15 +768,40 @@ void BoxDisplay::renderChart() {
     measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours);
 
     if (displayValueChart == DISPLAY_VAL_C___CO2) {
-      curValue = measurement.valuesCo2.co2;
+      curValue = zero;
+      for (int h = 0; h < chartMeasurementHours; h++) {
+        measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h);
+        curValue += measurement.valuesCo2.co2;
+      }
+      curValue = curValue * one / chartMeasurementHours;
     } else if (displayValueChart == DISPLAY_VAL_C___DEG) {
-      curValue = measurement.valuesCo2.temperature;
+      curValue = zero;
+      for (int h = 0; h < chartMeasurementHours; h++) {
+        measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h);
+        curValue += measurement.valuesCo2.temperature;
+      }
+      curValue = curValue * one / chartMeasurementHours;      
     } else if (displayValueChart == DISPLAY_VAL_C___HUM) {
-      curValue = measurement.valuesCo2.humidity;
+      curValue = zero;
+      for (int h = 0; h < chartMeasurementHours; h++) {
+        measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h);
+        curValue += measurement.valuesCo2.humidity;
+      }
+      curValue = curValue * one / chartMeasurementHours;       
     } else if (displayValueChart == DISPLAY_VAL_C___HPA) {
-      curValue = measurement.valuesBme.pressure / 100.0;
+      curValue = zero;
+      for (int h = 0; h < chartMeasurementHours; h++) {
+        measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h);
+        curValue += measurement.valuesBme.pressure;
+      }
+      curValue = curValue * one / chartMeasurementHours / 100.0;       
     } else if (displayValueChart == DISPLAY_VAL_C___ALT) {
-      curValue = measurement.valuesBme.altitude;
+      curValue = zero;
+      for (int h = 0; h < chartMeasurementHours; h++) {
+        measurement = Measurements::getOffsetMeasurement(i * chartMeasurementHours + h);
+        curValue += measurement.valuesBme.altitude;
+      }
+      curValue = curValue * one / chartMeasurementHours;         
     } else if (displayValueChart == DISPLAY_VAL_C__P010) {
       curValue = zero;
       for (int h = 0; h < chartMeasurementHours; h++) {
@@ -913,16 +932,16 @@ void BoxDisplay::renderFooter() {
 
   int charPosFooter = 6;
   if (isPmsM || isPmsD) {
-    BoxDisplay::drawAntialiasedText08(isPmsM ? BoxDisplay::SYMBOL__PM_M : BoxDisplay::SYMBOL__PM_D, RECT_BOT, 6, TEXT_OFFSET_Y + 2, EPD_BLACK);
+    BoxDisplay::drawAntialiasedText08(isPmsM ? BoxDisplay::SYMBOL__PM_M : BoxDisplay::SYMBOL__PM_D, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
     charPosFooter += 13;
   } 
 
   if (isCon) {
     String address = BoxConn::getAddress();
     BoxDisplay::drawAntialiasedText06(BoxConn::getAddress(), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
-    String timeFormatted = BoxClock::getTimeDisplayString(BoxClock::getDate());
+    String timeFormatted = BoxClock::getDateTimeDisplayString(BoxClock::getDate());
     BoxDisplay::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
-    BoxDisplay::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter + (address.length() + 2) * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
+    BoxDisplay::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter + (address.length() + 1) * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
   } else {
     String timeFormatted = BoxClock::getDateTimeDisplayString(BoxClock::getDate());
     BoxDisplay::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);

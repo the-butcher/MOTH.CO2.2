@@ -28,6 +28,9 @@ void SensorPmsa003i::begin() {
     pinMode(SensorPmsa003i::PMS_ENABLE___GPIO, OUTPUT);
     digitalWrite(SensorPmsa003i::PMS_ENABLE___GPIO, LOW);
 
+    // initial set of values
+    SensorPmsa003i::values = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+
   }
 
 }
@@ -56,10 +59,10 @@ bool SensorPmsa003i::tryRead() {
   if (SensorPmsa003i::ACTIVE) {
 
     PM25_AQI_Data data;
-    if (SensorPmsa003i::getMode() == PMS_____OFF || !SensorPmsa003i::baseSensor.read(&data)) { // if off or not readable
+    if (SensorPmsa003i::getMode() == PMS_____OFF) { // if off or not readable
       SensorPmsa003i::values = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
       return false;
-    } else {
+    } else if ((SensorPmsa003i::getMode() == PMS____ON_M || SensorPmsa003i::getMode() == PMS____ON_D) && SensorPmsa003i::baseSensor.read(&data)) {
       values = {
         data.pm10_standard,
         data.pm25_standard,
@@ -74,9 +77,10 @@ bool SensorPmsa003i::tryRead() {
       return true;
     }
 
-  } else {
-    return false;
   }
+
+  // not active, was not ON or could not read
+  return false;
 
 }
 

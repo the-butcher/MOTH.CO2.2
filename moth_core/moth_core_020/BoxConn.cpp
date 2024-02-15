@@ -67,7 +67,7 @@ bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
 bool BoxConn::isRenderStateRequired = false;
 
-String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.010.pms" : "1.0.010";
+String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.011.pms" : "1.0.011";
 
 void BoxConn::updateConfiguration() {
 

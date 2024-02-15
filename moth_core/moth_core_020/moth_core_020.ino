@@ -274,8 +274,6 @@ void loop() {
 
     SensorBme280::tryRead();
     SensorScd041::tryRead(); // delays 5000 ms (no button press possible during that time)
-    SensorPmsa003i::tryRead();
-    BoxPack::tryRead();
 
     sensorsMode = SENSORS_GETVALS;
 
@@ -301,6 +299,10 @@ void loop() {
     if (measureWaitSecondsA == 1) {
       delay(MILLISECONDS_PER_SECOND);
     }
+
+    // if the PMS is read in the SCD41 and BME280 tryread section, it will be 10 seconds early the fan may not have run long enough as of spec
+    SensorPmsa003i::tryRead();
+    BoxPack::tryRead();
 
     ValuesBme valuesBme = SensorBme280::getValues();
     Measurement measurement = {
@@ -514,7 +516,7 @@ void loop() {
 #endif
 
   // whatever happens here, happens at least once / minute, maybe more often depending on user interaction, wifi expiriy, ...
-  bool forceAwake = true; // MUST be false in deployment, or battery life will be much shorter
+  bool forceAwake = false; // MUST be false in deployment, or battery life will be much shorter
   while (forceAwake || BoxConn::getMode() != WIFI_OFF || isAnyButtonPressed()) { //  || SensorPmsa003i::getMode() == PMS_____ON no sleep while wifi is active or pms is active
 
     if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
