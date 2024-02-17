@@ -33,7 +33,7 @@ void ButtonHandlers::begin() {
 void ButtonHandlers::assignWifiAndPms() {
   ButtonHandlers::A.buttonActionFast = {
     SensorPmsa003i::ACTIVE ? LOOP_REASON______TOGGLE___PMS : LOOP_REASON___________UNKNOWN,
-    BoxDisplay::SYMBOL__PM_M
+    SensorPmsa003i::ACTIVE ? BoxDisplay::SYMBOL__PM_M : ""
   };
   ButtonHandlers::A.buttonActionSlow = {
     BoxConn::getMode() == WIFI_OFF ? LOOP_REASON______WIFI______ON : LOOP_REASON______WIFI_____OFF,

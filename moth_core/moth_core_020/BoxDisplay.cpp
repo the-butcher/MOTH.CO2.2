@@ -880,9 +880,10 @@ void BoxDisplay::renderHeader() {
   BoxDisplay::drawAntialiasedText08(ButtonHandlers::A.buttonActionFast.label, RECT_TOP, 6 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
   BoxDisplay::drawAntialiasedText06(ButtonHandlers::A.extraLabel,             RECT_TOP, 6 + charDimX6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
 
-  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionSlow.label, RECT_TOP, 136, TEXT_OFFSET_Y, EPD_BLACK);
-  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionFast.label, RECT_TOP, 136 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
-  BoxDisplay::drawAntialiasedText06(ButtonHandlers::B.extraLabel,             RECT_TOP, 136 + charDimX6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
+  int midPos = SensorPmsa003i::ACTIVE ? 136 : 127;
+  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionSlow.label, RECT_TOP, midPos, TEXT_OFFSET_Y, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionFast.label, RECT_TOP, midPos + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText06(ButtonHandlers::B.extraLabel,             RECT_TOP, midPos + charDimX6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
 
   BoxDisplay::drawAntialiasedText08(ButtonHandlers::C.buttonActionSlow.label, RECT_TOP, 264, TEXT_OFFSET_Y, EPD_BLACK);
   BoxDisplay::drawAntialiasedText08(ButtonHandlers::C.buttonActionFast.label, RECT_TOP, 264 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
