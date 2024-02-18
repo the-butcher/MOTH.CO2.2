@@ -20,12 +20,12 @@
 
 #ifdef USE_NEOPIXEL
 #include <Adafruit_NeoPixel.h>
-const uint32_t COLOR___WHITE = 0x909090;
+const uint32_t COLOR___WHITE = 0x666666;
 const uint32_t COLOR_____RED = 0xFF0000;
-const uint32_t COLOR__YELLOW = 0x909000;
+const uint32_t COLOR__YELLOW = 0x666600;
 const uint32_t COLOR____BLUE = 0x0000FF;
-const uint32_t COLOR____CYAN = 0x00FFFF;
-const uint32_t COLOR_MAGENTA = 0x00FFFF;
+const uint32_t COLOR____CYAN = 0x006666;
+const uint32_t COLOR_MAGENTA = 0x660066;
 #endif
 
 #include "driver/rtc_io.h"

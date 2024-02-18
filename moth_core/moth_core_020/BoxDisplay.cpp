@@ -61,26 +61,26 @@ const Rectangle RECT_BOT = {
 const Rectangle RECT_CO2 = {
     1,
     22,
-    197,
+    207,
     106
 };
 const Rectangle RECT_DEG = {
-    197,
+    207,
     22,
     295,
     64
 };
 const Rectangle RECT_HUM = {
-    197,
+    207,
     64,
     295,
     106
 };
 const Rectangle RECT_BAT = {
-    RECT_BOT.xmax - 60,
-    RECT_BOT.ymin + 7,
-    RECT_BOT.xmax - 38,
-    RECT_BOT.ymin + 18
+    RECT_BOT.xmax - 17,
+    RECT_BOT.ymin + 6,
+    RECT_BOT.xmax - 7,
+    RECT_BOT.ymin + 19
 };
 // const Rectangle RECT__SD = {
 //     RECT_TOP.xmax - 50,
@@ -384,8 +384,8 @@ void BoxDisplay::renderMothInfo(String info) {
   // skip header for clean screen
   BoxDisplay::renderFooter();
 
-  drawAntialiasedText20("moth", RECT_TOP, 8, 100, EPD_BLACK);
-  drawAntialiasedText06(info, RECT_TOP, 110, 100, EPD_BLACK);
+  drawAntialiasedText18("moth", RECT_TOP, 8, 98, EPD_BLACK);
+  drawAntialiasedText06(info, RECT_TOP, 105, 98, EPD_BLACK);
 
   BoxDisplay::flushBuffer();
 
@@ -411,11 +411,11 @@ void BoxDisplay::drawOuterBorders(uint16_t color) {
 
 void BoxDisplay::drawInnerBorders(uint16_t color) {
 
-  baseDisplay.drawFastHLine(196, 63, 100, color);
-  baseDisplay.drawFastHLine(196, 64, 100, color);
+  baseDisplay.drawFastHLine(206, 63, 100, color);
+  baseDisplay.drawFastHLine(206, 64, 100, color);
 
-  baseDisplay.drawFastVLine(196, 21, 86, color);
-  baseDisplay.drawFastVLine(197, 22, 86, color);
+  baseDisplay.drawFastVLine(206, 21, 86, color);
+  baseDisplay.drawFastVLine(207, 22, 86, color);
   
 }
 
@@ -505,12 +505,25 @@ void BoxDisplay::renderTable() {
   float temperature = displayValuesCo2.temperature;
   float humidity = displayValuesCo2.humidity;
 
-  int charPosValueX = 188;
 
+  String title;
+  int xPosMainValue = 36;
+  int charPosValueX = 193;
+  int charPosFinalX;
   if (displayValueTable == DISPLAY_VAL_T___CO2) {
 
     int co2 = displayValuesCo2.co2;
-    float stale = max(0.0, min(10.0, (co2 - 425.0) / 380.0)); // don't allow negative stale values
+    float stale = max(0.0, min(10.0, (co2 - 425.0) / 380.0)); // don't allow negative stale values. max out at 10
+    float staleWarn = max(0.0, min(10.0, (thresholdsCo2.warnHi - 425.0) / 380.0)); 
+    float staleRisk = max(0.0, min(10.0, (thresholdsCo2.riskHi - 425.0) / 380.0)); 
+
+    float staleMax = 2.5;
+    if (stale > 4) {
+      staleMax = 10;
+    } else if (stale > 2) {
+      staleMax = 5;
+    }
+    int staleDif = 70 / staleMax; // height of 1 percent, 20 for staleMax 2.5, 10 for staleMax 5, 5 for staleMax 10
 
     textColor = getTextColor(co2, thresholdsCo2);
     fillColor = getFillColor(co2, thresholdsCo2);
@@ -520,20 +533,51 @@ void BoxDisplay::renderTable() {
       BoxDisplay::fillRectangle(RECT_CO2, fillColor);
     }
 
-    BoxDisplay::drawAntialiasedText36(formatString(String(co2), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
-    BoxDisplay::drawAntialiasedText06("CO²", RECT_CO2, 6, TEXT_OFFSET_Y, textColor); // font has been altered to display superscript 2 as subscript 2
-    BoxDisplay::drawAntialiasedText06("ppm", RECT_CO2, charPosValueX - charDimX6 * 3, TEXT_OFFSET_Y, textColor);
+    title = "CO² ppm";
+    charPosFinalX = charPosValueX - charDimX6 * 7;
+    BoxDisplay::drawAntialiasedText36(formatString(String(co2), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
 
-    int yScale = 5;
-    int yMax = RECT_CO2.ymax - 7;
-    for (int percent = 0; percent <= 10; percent++) {
-      baseDisplay.drawFastHLine(RECT_CO2.xmin + 6, yMax - percent * yScale, 12, percent % 5 == 0 ? textColor : vertColor);
+    int yMax = RECT_CO2.ymax - 7; // bottom limit of rebreathe indicator
+    int yDim = round(stale * staleDif);
+    int yDimWarn = round(staleWarn * staleDif);
+    int yDimRisk = round(staleRisk * staleDif);
+    int yDimMax = round(staleMax * staleDif);
+
+    //draw 3px wide indicators for warn and risk
+    // baseDisplay.drawFastHLine(RECT_CO2.xmin + 6, yMax, charDimX6 * 3, textColor);
+    int xBarMin = 8;
+    int xBarMax = 13;
+    for (int i = xBarMin; i <= xBarMax; i++) {
+      baseDisplay.drawFastVLine(i, yMax - yDimWarn, yDimWarn, EPD_WHITE); // good
+      baseDisplay.drawFastVLine(i, yMax - yDimRisk, yDimRisk - yDimWarn, vertColor); // warn
+      baseDisplay.drawFastVLine(i, yMax - yDimMax, yDimMax - yDimRisk, EPD_BLACK); // risk
+    }
+    
+    if (BoxDisplay::isRisk(co2, thresholdsCo2)) { // when in risk, the risk area needs to be outlined
+      baseDisplay.drawFastVLine(xBarMin, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
+      baseDisplay.drawFastVLine(xBarMax, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
+      baseDisplay.drawFastHLine(xBarMin, yMax - yDimMax, xBarMax - xBarMin + 1, vertColor);
+    } else if (!BoxDisplay::isWarn(co2, thresholdsCo2)) { // when not warn and not risk, the good area needs to be outlined
+      baseDisplay.drawFastVLine(xBarMin, yMax - yDimWarn, yDimWarn, vertColor);
+      baseDisplay.drawFastVLine(xBarMax, yMax - yDimWarn, yDimWarn, vertColor);
+      baseDisplay.drawFastHLine(xBarMin, yMax, xBarMax - xBarMin + 1, vertColor);
     }
 
-    int yDim = round(stale * yScale);
-    for (int y = -1; y <= 1; y++) {
-      baseDisplay.drawFastHLine(RECT_CO2.xmin + 8, yMax - yDim + y, 8, textColor);
-    }
+    baseDisplay.drawFastHLine(xBarMax + 3, yMax - yDim, 17, textColor);
+
+    int yTxt = RECT_CO2.ymax - RECT_CO2.ymin - yDim - 10;  // (stale < staleMax / 2 ? 2 : 2);
+
+    int stale10 = round(stale * 10.0);
+    int staleFix = floor(stale10 / 10.0);
+    int staleFrc = abs(stale10 % 10);
+
+    // draw a narrowed percentage number
+    BoxDisplay::drawAntialiasedText06("%", RECT_CO2, xBarMax + 2, yTxt + 14, textColor);
+    BoxDisplay::drawAntialiasedText06(String(staleFix), RECT_CO2, xBarMax + 2, yTxt, textColor);
+    BoxDisplay::drawAntialiasedText06(".", RECT_CO2, xBarMax + 7, yTxt, textColor);
+    BoxDisplay::drawAntialiasedText06(String(staleFrc), RECT_CO2, xBarMax + 12, yTxt, textColor);
+
+
   } else if (displayValueTable == DISPLAY_VAL_T___HPA) {
 
     int hpa = Measurements::getLatestMeasurement().valuesBme.pressure / 100.0;
@@ -543,10 +587,10 @@ void BoxDisplay::renderTable() {
 
     BoxDisplay::fillRectangle(RECT_CO2, fillColor);
 
-    BoxDisplay::drawAntialiasedText06("pressure", RECT_CO2, 6, TEXT_OFFSET_Y, textColor);
-    BoxDisplay::drawAntialiasedText36(formatString(String(hpa), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
+    title = "pressure hPa";
+    charPosFinalX = charPosValueX - charDimX6 * title.length();
+    BoxDisplay::drawAntialiasedText36(formatString(String(hpa), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
 
-    BoxDisplay::drawAntialiasedText06("hPa", RECT_CO2, charPosValueX - charDimX6 * 3, TEXT_OFFSET_Y, textColor);
   } else if (displayValueTable == DISPLAY_VAL_T___ALT) {
 
     int alt = round(Measurements::getLatestMeasurement().valuesBme.altitude);
@@ -556,24 +600,25 @@ void BoxDisplay::renderTable() {
 
     BoxDisplay::fillRectangle(RECT_CO2, fillColor);
 
-    BoxDisplay::drawAntialiasedText06("altitude", RECT_CO2, 6, TEXT_OFFSET_Y, textColor);
-    BoxDisplay::drawAntialiasedText36(formatString(String(alt), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
+    title = "altitude m";
+    charPosFinalX = charPosValueX - charDimX6 * title.length();
+    BoxDisplay::drawAntialiasedText36(formatString(String(alt), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
 
-    BoxDisplay::drawAntialiasedText06("m", RECT_CO2, charPosValueX - charDimX6 * 1, TEXT_OFFSET_Y, textColor);
   } else {
 
     int pms;
-    String pmsLabel;
+    // String pmsLabel;
     if (displayValueTable == DISPLAY_VAL_T__P010) {
       pms = round(displayValuesPms.pm010);
-      pmsLabel = "pm 1.0";
+      title = "pm 1.0 µg/m3";
     } else if (displayValueTable == DISPLAY_VAL_T__P025) {
       pms = round(displayValuesPms.pm025);
-      pmsLabel = "pm 2.5";
+      title = "pm 2.5 µg/m3";
     } else if (displayValueTable == DISPLAY_VAL_T__P100) {
       pms = round(displayValuesPms.pm100);
-      pmsLabel = "pm 10.0";
+      title = "pm 10.0 µg/m3";
     }
+    charPosFinalX = charPosValueX - charDimX6 * title.length();
 
     textColor = getTextColor(pms, thresholdsPms);
     fillColor = getFillColor(pms, thresholdsPms);
@@ -583,12 +628,10 @@ void BoxDisplay::renderTable() {
       BoxDisplay::fillRectangle(RECT_CO2, fillColor);
     }
 
-    BoxDisplay::drawAntialiasedText06(pmsLabel, RECT_CO2, 6, TEXT_OFFSET_Y, textColor);
-    BoxDisplay::drawAntialiasedText36(formatString(String(max(0, pms)), FORMAT_4_DIGIT), RECT_CO2, 28, 76, textColor);
-
-    BoxDisplay::drawAntialiasedText06("µg/m3", RECT_CO2, charPosValueX - charDimX6 * 5, TEXT_OFFSET_Y, textColor);
+    BoxDisplay::drawAntialiasedText36(formatString(String(max(0, pms)), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
 
   }
+  BoxDisplay::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
 
   textColor = getTextColor(temperature, thresholdsTemperature);
   fillColor = getFillColor(temperature, thresholdsTemperature);
@@ -601,10 +644,10 @@ void BoxDisplay::renderTable() {
   if (fillColor != EPD_WHITE) {
     BoxDisplay::fillRectangle(RECT_DEG, fillColor);
   }
-  BoxDisplay::drawAntialiasedText20(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 4, 35, textColor);
-  BoxDisplay::drawAntialiasedText06(c2f ? "°F" : "°C", RECT_DEG, 90 - charDimX6 * 2, TEXT_OFFSET_Y, textColor);
-  BoxDisplay::drawAntialiasedText08(".", RECT_DEG, 72, 35, textColor);
-  BoxDisplay::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 82, 35, textColor);
+  BoxDisplay::drawAntialiasedText18(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 0, 35, textColor);
+  BoxDisplay::drawAntialiasedText06(c2f ? "°F" : "°C", RECT_DEG, 80 - charDimX6 * 2, TEXT_OFFSET_Y + 2, textColor);
+  BoxDisplay::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
+  BoxDisplay::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
 
   textColor = getTextColor(humidity, thresholdsHumidity);
   fillColor = getFillColor(humidity, thresholdsHumidity);
@@ -614,15 +657,16 @@ void BoxDisplay::renderTable() {
   if (fillColor != EPD_WHITE) {
     BoxDisplay::fillRectangle(RECT_HUM, fillColor);
   }
-  BoxDisplay::drawAntialiasedText20(formatString(String(humidityFix), FORMAT_3_DIGIT), RECT_HUM, 4, 35, textColor);
-  BoxDisplay::drawAntialiasedText06("%", RECT_HUM, 90 - charDimX6 * 1, TEXT_OFFSET_Y, textColor);
-  BoxDisplay::drawAntialiasedText08(".", RECT_HUM, 72, 35, textColor);
-  BoxDisplay::drawAntialiasedText08(String(humidityFrc), RECT_HUM, 82, 35, textColor);
+  BoxDisplay::drawAntialiasedText18(formatString(String(humidityFix), FORMAT_3_DIGIT), RECT_HUM, 0, 35, textColor);
+  BoxDisplay::drawAntialiasedText06("%", RECT_HUM, 80 - charDimX6 * 1, TEXT_OFFSET_Y + 2, textColor);
+  BoxDisplay::drawAntialiasedText08(".", RECT_HUM, 63, 35, textColor);
+  BoxDisplay::drawAntialiasedText08(String(humidityFrc), RECT_HUM, 72, 35, textColor);
 
   BoxDisplay::renderHeader();
   BoxDisplay::renderFooter();
 
   BoxDisplay::flushBuffer();
+  
 }
 
 void BoxDisplay::renderChart() {
@@ -847,8 +891,8 @@ void BoxDisplay::drawAntialiasedText08(String text, Rectangle rectangle, int xRe
   drawAntialiasedText(text, rectangle, xRel, yRel, color, &smb08pt_l, &smb08pt_d, &smb08pt_b);
 }
 
-void BoxDisplay::drawAntialiasedText20(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color) {
-  drawAntialiasedText(text, rectangle, xRel, yRel, color, &smb20pt_l, &smb20pt_d, &smb20pt_b);
+void BoxDisplay::drawAntialiasedText18(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color) {
+  drawAntialiasedText(text, rectangle, xRel, yRel, color, &smb18pt_l, &smb18pt_d, &smb18pt_b);
 }
 
 void BoxDisplay::drawAntialiasedText36(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color) {
@@ -880,10 +924,9 @@ void BoxDisplay::renderHeader() {
   BoxDisplay::drawAntialiasedText08(ButtonHandlers::A.buttonActionFast.label, RECT_TOP, 6 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
   BoxDisplay::drawAntialiasedText06(ButtonHandlers::A.extraLabel,             RECT_TOP, 6 + charDimX6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
 
-  int midPos = SensorPmsa003i::ACTIVE ? 136 : 127;
-  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionSlow.label, RECT_TOP, midPos, TEXT_OFFSET_Y, EPD_BLACK);
-  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionFast.label, RECT_TOP, midPos + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
-  BoxDisplay::drawAntialiasedText06(ButtonHandlers::B.extraLabel,             RECT_TOP, midPos + charDimX6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionSlow.label, RECT_TOP, 135, TEXT_OFFSET_Y, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText08(ButtonHandlers::B.buttonActionFast.label, RECT_TOP, 135 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText06(ButtonHandlers::B.extraLabel,             RECT_TOP, 135 + charDimX6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
 
   BoxDisplay::drawAntialiasedText08(ButtonHandlers::C.buttonActionSlow.label, RECT_TOP, 264, TEXT_OFFSET_Y, EPD_BLACK);
   BoxDisplay::drawAntialiasedText08(ButtonHandlers::C.buttonActionFast.label, RECT_TOP, 264 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
@@ -907,31 +950,38 @@ void BoxDisplay::renderFooter() {
   ValuesBat valuesBat = BoxPack::values;
 
   String cellPercentFormatted = formatString(String(valuesBat.percent, 0), FORMAT_CELL_PERCENT);
-  BoxDisplay::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, limitPosX - charDimX6 * 6, TEXT_OFFSET_Y, EPD_BLACK);
+  BoxDisplay::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, limitPosX - 14 - charDimX6 * cellPercentFormatted.length(), TEXT_OFFSET_Y, EPD_BLACK);
 
   // main battery frame
-  BoxDisplay::fillRectangle(RECT_BAT, EPD_BLACK);
-  // right border battery contact
-  baseDisplay.drawFastVLine(RECT_BAT.xmax - 1, RECT_BAT.ymin + 3, (RECT_BAT.ymax - RECT_BAT.ymin - 6), EPD_BLACK);
-  // battery internal
-  BoxDisplay::fillRectangle({RECT_BAT.xmin + 1,
-                             RECT_BAT.ymin + 1,
-                             RECT_BAT.xmax - 1,
-                             RECT_BAT.ymax - 1},
-                            EPD_WHITE);
-  // percentage
-  BoxDisplay::fillRectangle({RECT_BAT.xmin + 2,
-                             RECT_BAT.ymin + 2,
-                             RECT_BAT.xmin + 2 + round((RECT_BAT.xmax - RECT_BAT.xmin - 4) * valuesBat.percent * 0.01), // need to add padding
-                             RECT_BAT.ymax - 2},
-                            EPD_BLACK);
+  BoxDisplay::fillRectangle(RECT_BAT, EPD_DARK);
 
+  // percentage
+  BoxDisplay::fillRectangle({
+    RECT_BAT.xmin, 
+    RECT_BAT.ymax - round((RECT_BAT.ymax - RECT_BAT.ymin) * valuesBat.percent * 0.01),
+    RECT_BAT.xmax,
+    RECT_BAT.ymax
+  }, EPD_BLACK);
+
+  // battery contact clip
+  baseDisplay.drawFastHLine(
+    RECT_BAT.xmin + 1, 
+    RECT_BAT.ymin + 1,
+    2,
+    EPD_WHITE
+  );
+  baseDisplay.drawFastHLine(
+    RECT_BAT.xmax - 3, 
+    RECT_BAT.ymin + 1,
+    2,
+    EPD_WHITE
+  );
 
   bool isPmsM = SensorPmsa003i::getMode() == PMS____ON_M || SensorPmsa003i::getMode() == PMS_PAUSE_M;
   bool isPmsD = SensorPmsa003i::getMode() == PMS____ON_D || SensorPmsa003i::getMode() == PMS_PAUSE_D;
   bool isCon = BoxConn::getMode() != WIFI_OFF;
 
-  int charPosFooter = 6;
+  int charPosFooter = 7;
   if (isPmsM || isPmsD) {
     BoxDisplay::drawAntialiasedText08(isPmsM ? BoxDisplay::SYMBOL__PM_M : BoxDisplay::SYMBOL__PM_D, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
     charPosFooter += 13;

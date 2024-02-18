@@ -13,9 +13,9 @@
 #include <Fonts/smb08pt_b.h>
 #include <Fonts/smb08pt_d.h>
 #include <Fonts/smb08pt_l.h>
-#include <Fonts/smb20pt_b.h>
-#include <Fonts/smb20pt_d.h>
-#include <Fonts/smb20pt_l.h>
+#include <Fonts/smb18pt_b.h>
+#include <Fonts/smb18pt_d.h>
+#include <Fonts/smb18pt_l.h>
 #include <Fonts/smb36pt_b.h>
 #include <Fonts/smb36pt_d.h>
 #include <Fonts/smb36pt_l.h>
@@ -78,7 +78,7 @@ class BoxDisplay {
     static void drawInnerBorders(uint16_t color);
     static void drawAntialiasedText06(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
     static void drawAntialiasedText08(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
-    static void drawAntialiasedText20(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
+    static void drawAntialiasedText18(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
     static void drawAntialiasedText36(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
     static void drawAntialiasedText(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color, const GFXfont *fontL, const GFXfont *fontD, const GFXfont *fontB);
     static bool isWarn(float value, Thresholds thresholds);
