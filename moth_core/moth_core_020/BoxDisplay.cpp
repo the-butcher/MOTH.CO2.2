@@ -31,6 +31,7 @@ const String JSON_KEY_RISK__LOW = "rLo";
 const String JSON_KEY_WARN__LOW = "wLo";
 const String JSON_KEY_WARN_HIGH = "wHi";
 const String JSON_KEY_RISK_HIGH = "rHi";
+const String JSON_KEY_REFERENCE = "ref";
 const String JSON_KEY_______C2F = "c2f";
 const String JSON_KEY_______COR = "cor";
 
@@ -77,17 +78,11 @@ const Rectangle RECT_HUM = {
     106
 };
 const Rectangle RECT_BAT = {
-    RECT_BOT.xmax - 17,
+    RECT_BOT.xmax - 16,
     RECT_BOT.ymin + 6,
     RECT_BOT.xmax - 7,
     RECT_BOT.ymin + 19
 };
-// const Rectangle RECT__SD = {
-//     RECT_TOP.xmax - 50,
-//     RECT_TOP.ymin + 9,
-//     RECT_TOP.xmax - 40,
-//     RECT_TOP.ymin + 18
-// };
 int TEXT_OFFSET_Y = 16;
 
 /**
@@ -163,6 +158,7 @@ void BoxDisplay::updateConfiguration() {
 
   int co2WarnHi = 800;
   int co2RiskHi = 1000;
+  int co2Rfrnce = SensorScd041::getCo2Reference();
 
   int pmsWarnHi = 15;
   int pmsRiskHi = 50;
@@ -204,6 +200,7 @@ void BoxDisplay::updateConfiguration() {
 
         co2WarnHi = root[JSON_KEY_______CO2][JSON_KEY_WARN_HIGH] | co2WarnHi;
         co2RiskHi = root[JSON_KEY_______CO2][JSON_KEY_RISK_HIGH] | co2RiskHi;
+        co2Rfrnce = root[JSON_KEY_______CO2][JSON_KEY_REFERENCE] | co2Rfrnce;
 
         pmsWarnHi = root[JSON_KEY_______PMS][JSON_KEY_WARN_HIGH] | pmsWarnHi;
         pmsRiskHi = root[JSON_KEY_______PMS][JSON_KEY_RISK_HIGH] | pmsRiskHi;
@@ -512,10 +509,11 @@ void BoxDisplay::renderTable() {
   int charPosFinalX;
   if (displayValueTable == DISPLAY_VAL_T___CO2) {
 
+    int co2Reference = SensorScd041::getCo2Reference();
     int co2 = displayValuesCo2.co2;
-    float stale = max(0.0, min(10.0, (co2 - 425.0) / 380.0)); // don't allow negative stale values. max out at 10
-    float staleWarn = max(0.0, min(10.0, (thresholdsCo2.warnHi - 425.0) / 380.0)); 
-    float staleRisk = max(0.0, min(10.0, (thresholdsCo2.riskHi - 425.0) / 380.0)); 
+    float stale = max(0.0, min(10.0, (co2 - co2Reference) / 380.0)); // don't allow negative stale values. max out at 10
+    float staleWarn = max(0.0, min(10.0, (thresholdsCo2.warnHi - co2Reference) / 380.0)); 
+    float staleRisk = max(0.0, min(10.0, (thresholdsCo2.riskHi - co2Reference) / 380.0)); 
 
     float staleMax = 2.5;
     if (stale > 4) {
@@ -563,19 +561,33 @@ void BoxDisplay::renderTable() {
       baseDisplay.drawFastHLine(xBarMin, yMax, xBarMax - xBarMin + 1, vertColor);
     }
 
-    baseDisplay.drawFastHLine(xBarMax + 3, yMax - yDim, 17, textColor);
 
     int yTxt = RECT_CO2.ymax - RECT_CO2.ymin - yDim - 10;  // (stale < staleMax / 2 ? 2 : 2);
+    int yPrc = yTxt; // the percent sign
+    int xPrc = xBarMax + 19;
+    int xLin = 24;
 
     int stale10 = round(stale * 10.0);
     int staleFix = floor(stale10 / 10.0);
     int staleFrc = abs(stale10 % 10);
 
+    if (stale > 8.5) {
+      yTxt += 14;
+      yPrc += 14;
+    } else if (co2 >= 1000) { // wrap percent, shorten line
+      yPrc += 14;
+      xPrc = xBarMax + 2;
+      xLin -= charDimX6;
+    }
+
     // draw a narrowed percentage number
-    BoxDisplay::drawAntialiasedText06("%", RECT_CO2, xBarMax + 2, yTxt + 14, textColor);
+    baseDisplay.drawFastHLine(xBarMax + 3, yMax - yDim, xLin, textColor);
     BoxDisplay::drawAntialiasedText06(String(staleFix), RECT_CO2, xBarMax + 2, yTxt, textColor);
-    BoxDisplay::drawAntialiasedText06(".", RECT_CO2, xBarMax + 7, yTxt, textColor);
-    BoxDisplay::drawAntialiasedText06(String(staleFrc), RECT_CO2, xBarMax + 12, yTxt, textColor);
+    if (stale < 10) {
+      BoxDisplay::drawAntialiasedText06(".", RECT_CO2, xBarMax + 7, yTxt, textColor);
+      BoxDisplay::drawAntialiasedText06(String(staleFrc), RECT_CO2, xBarMax + 12, yTxt, textColor);    
+    }
+    BoxDisplay::drawAntialiasedText06("%", RECT_CO2, xPrc, yPrc, textColor);
 
 
   } else if (displayValueTable == DISPLAY_VAL_T___HPA) {
@@ -953,12 +965,12 @@ void BoxDisplay::renderFooter() {
   BoxDisplay::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, limitPosX - 14 - charDimX6 * cellPercentFormatted.length(), TEXT_OFFSET_Y, EPD_BLACK);
 
   // main battery frame
-  BoxDisplay::fillRectangle(RECT_BAT, EPD_DARK);
+  BoxDisplay::fillRectangle(RECT_BAT, EPD_LIGHT);
 
   // percentage
   BoxDisplay::fillRectangle({
     RECT_BAT.xmin, 
-    RECT_BAT.ymax - round((RECT_BAT.ymax - RECT_BAT.ymin) * valuesBat.percent * 0.01),
+    RECT_BAT.ymax - 3 - (int)round((RECT_BAT.ymax - RECT_BAT.ymin - 3) * valuesBat.percent * 0.01),
     RECT_BAT.xmax,
     RECT_BAT.ymax
   }, EPD_BLACK);

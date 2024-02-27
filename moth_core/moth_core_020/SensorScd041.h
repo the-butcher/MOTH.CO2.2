@@ -10,6 +10,7 @@ class SensorScd041 {
   private:
     static SensirionI2CScd4x baseSensor;
     static float temperatureOffset;
+    static int co2Reference;
     static bool hasBegun;
     static ValuesCo2 values;
     static void applyTemperatureOffset();
@@ -17,6 +18,8 @@ class SensorScd041 {
   public:
     static float getTemperatureOffset();
     static void setTemperatureOffset(float temperatureOffset);
+    static int getCo2Reference();
+    static void setCo2Reference(int co2Reference);
     static void begin();
     static void startPeriodicMeasurement();
     static void stopPeriodicMeasurement();

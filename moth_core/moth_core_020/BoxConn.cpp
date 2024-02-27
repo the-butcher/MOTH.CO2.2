@@ -168,6 +168,7 @@ void BoxConn::begin() {
     root["heap"] = ESP.getFreeHeap();
     root["sram"] = ESP.getPsramSize();
     root["freq"] = ESP.getCpuFreqMHz();
+    root["co2r"] = SensorScd041::getCo2Reference();
     root["boff"] = SensorBme280::getTemperatureOffset();
 
     JsonObject &encrJo = root.createNestedObject("encr");

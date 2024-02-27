@@ -74,6 +74,7 @@ documentation (please do not use the documented version on the device, but a cle
   "alt": 153, <<< base altitude of the device
   "tzn": "CET-1CEST,M3.5.0,M10.5.0/3", <<< timezone
   "co2": {
+    "ref": 425, <<< co2 reference value for stale calculation
     "wHi": 800, <<< co2 warn limit
     "rHi": 1000 <<< co2 risk limit
   },
@@ -127,6 +128,7 @@ example:
   "alt": 153,
   "tzn": "CET-1CEST,M3.5.0,M10.5.0/3",
   "co2": {
+    "ref": 425,
     "wHi": 800,
     "rHi": 1000
   },

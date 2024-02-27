@@ -339,10 +339,27 @@ void loop() {
   if (loopAction == LOOP_REASON______CALIBRRATION) {
 
     beep(BUZZER____FREQ_LO);
-    SensorScd041::stopPeriodicMeasurement();
-    delay(500);
-    uint16_t result = SensorScd041::forceCalibration(BoxConn::requestedCalibrationReference);
-    delay(400);
+    SensorScd041::stopPeriodicMeasurement(); // no effect
+
+    /**
+     * assumption is that the last three measurement are used as average reference value
+     * but with single shot this may be noisy, therefore the average is subtracted from the requested value and 
+     * the current low pass filter value is added in an attempt for compensation
+     */
+    Measurement measurement;
+    int lowPassValue;
+    int avgHistValue = 0;
+    for (int offset = 0; offset < 3; offset++) {
+      measurement = Measurements::getOffsetMeasurement(offset);
+      if (offset == 0) {
+        lowPassValue = measurement.valuesCo2.co2; // subtract the low-pass filtered value
+      }
+      avgHistValue += measurement.valuesCo2.co2Raw; // add the average of the last three measurements
+    }
+
+    int requestedCalibrationReference = BoxConn::requestedCalibrationReference - lowPassValue + (int)round(avgHistValue / 3.0);
+
+    uint16_t result = SensorScd041::forceCalibration(requestedCalibrationReference);
     SensorScd041::startPeriodicMeasurement();
 
     // reset calibration reference to avoid recursive calibration
@@ -351,7 +368,7 @@ void loop() {
     if (result == 0xffff) {
       displayFunc = [=]() -> void { BoxDisplay::renderMothInfo("failure"); };
     } else {
-      displayFunc = [=]() -> void { BoxDisplay::renderMothInfo("success (" + String(result - 0x8000) + ")"); };
+      displayFunc = [=]() -> void { BoxDisplay::renderMothInfo("success (" + String(requestedCalibrationReference) + ", " + String(result - 0x8000) + ")"); };
     }
 
   } else if (loopAction == LOOP_REASON_______HIBERNATION) {

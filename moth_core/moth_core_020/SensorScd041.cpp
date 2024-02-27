@@ -15,6 +15,7 @@
 SensirionI2CScd4x SensorScd041::baseSensor;
 ValuesCo2 SensorScd041::values;
 float SensorScd041::temperatureOffset = 1.2; // default offset, can be overridden in /config/disp.json -> "deg/off"
+int SensorScd041::co2Reference = 425;
 bool SensorScd041::hasBegun = false;
 
 void SensorScd041::begin() {
@@ -43,6 +44,14 @@ void SensorScd041::setTemperatureOffset(float temperatureOffset) {
   if (SensorScd041::hasBegun && isApplOffsetRequired) {
     SensorScd041::applyTemperatureOffset();
   }
+}
+
+int SensorScd041::getCo2Reference() {
+  return SensorScd041::co2Reference;
+}
+
+void SensorScd041::setCo2Reference(int co2Reference) {
+  SensorScd041::co2Reference = co2Reference;
 }
 
 bool SensorScd041::tryRead() {
@@ -80,18 +89,19 @@ void SensorScd041::startPeriodicMeasurement() {
 
 void SensorScd041::stopPeriodicMeasurement() {
   // SensorScd041::baseSensor.stopPeriodicMeasurement();
+  // delay(500);
 }
 
 uint16_t SensorScd041::forceCalibration(int reference) {
   uint16_t frcV = 0;
   uint16_t& frcR = frcV;
   SensorScd041::baseSensor.performForcedRecalibration(reference, frcR);
+  delay(400);
   return frcV;
 }
 
 void SensorScd041::factoryReset() {
   SensorScd041::stopPeriodicMeasurement();
-  delay(500);
   SensorScd041::baseSensor.performFactoryReset();
   delay(400);
   SensorScd041::startPeriodicMeasurement();    
@@ -99,7 +109,6 @@ void SensorScd041::factoryReset() {
 
 void SensorScd041::applyTemperatureOffset() {
   SensorScd041::stopPeriodicMeasurement();
-  delay(500);
   SensorScd041::baseSensor.setTemperatureOffset(SensorScd041::temperatureOffset);
   delay(400);
   SensorScd041::startPeriodicMeasurement();    
