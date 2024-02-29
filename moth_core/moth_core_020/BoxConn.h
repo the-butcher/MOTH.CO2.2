@@ -11,6 +11,8 @@ class BoxConn {
 
 private:
   static void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
+  static void handleUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
+  static int updateCode;
 
 public:
   static String VNUM;

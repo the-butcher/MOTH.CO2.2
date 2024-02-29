@@ -1,6 +1,5 @@
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import WysiwygIcon from '@mui/icons-material/Wysiwyg';
 import ConstructionIcon from '@mui/icons-material/Construction';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
 import { createTheme, CssBaseline, Fab, IconButton, ThemeProvider, Tooltip } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -10,14 +9,15 @@ import './App.css';
 import ApiCalibrate from './components/ApiCalibrate';
 import ApiData from './components/ApiData';
 import ApiDelete from './components/ApiDelete';
+import ApiDisplay from './components/ApiDisplay';
 import ApiEncrypt from './components/ApiEncrypt';
 import ApiFile from './components/ApiFile';
 import ApiFolder from './components/ApiFolder';
 import ApiSimple from './components/ApiSimple';
+import ApiUpdate from './components/ApiUpdate';
 import ApiUpload from './components/ApiUpload';
 import { IApiCall } from './components/IApiCall';
 import { EStatus, IApiProperties } from './components/IApiProperties';
-import ApiDisplay from './components/ApiDisplay';
 
 const darkTheme = createTheme({
   typography: {
@@ -177,11 +177,6 @@ const ServerApp = () => {
     <ThemeProvider theme={darkTheme}>
 
       <CssBaseline />
-      <Tooltip title="moth-latest">
-        <Fab href='client.html' variant="circular" size='small' sx={{ position: 'fixed', right: 60, top: 10 }} >
-          <WysiwygIcon />
-        </Fab>
-      </Tooltip>
       <Tooltip title="moth-chart">
         <Fab href='chart.html' variant="circular" size='small' sx={{ position: 'fixed', right: 10, top: 10 }} >
           <ShowChartIcon />
@@ -276,25 +271,10 @@ const ServerApp = () => {
               content: 'this call will reset the decive, data not written to permanent storage may be lost.'
             }
           }} />
+          <ApiUpdate  {...apiProps} />
         </CardContent>
         <div style={{ height: '12px' }}></div>
       </Card>
-
-
-      {/* <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={3}>
-        <BottomNavigation
-          showLabels
-
-        // value={value}
-        // onChange={(event, newValue) => {
-        //   setValue(newValue);
-        // }}
-        >
-          <BottomNavigationAction label="client" icon={<WysiwygIcon />} />
-          <BottomNavigationAction label="chart" icon={<ShowChartIcon />} />
-        </BottomNavigation>
-      </Paper> */}
-
     </ThemeProvider>
   );
 

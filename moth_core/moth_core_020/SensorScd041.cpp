@@ -83,6 +83,13 @@ void SensorScd041::setPressure(float pressure) {
   SensorScd041::baseSensor.setAmbientPressure(pressure);
 }
 
+bool SensorScd041::isAutomaticSelfCalibration() {
+  uint16_t ascV = 0;
+  uint16_t& ascR = ascV;
+  SensorScd041::baseSensor.getAutomaticSelfCalibration(ascR);
+  return ascV;
+}
+
 void SensorScd041::startPeriodicMeasurement() {
   // SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
 }

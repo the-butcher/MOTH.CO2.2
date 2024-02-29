@@ -8,10 +8,6 @@
 #define SECONDS______PER_HOUR UINT32_C(60 * 60) // 1 HOUR
 #define MILLISECONDS_PER_HOUR UINT32_C(SECONDS______PER_HOUR * 1000) // 1 HOUR
 
-// response->addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT");
-// char days[7][3] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-// char months[12][3] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-
 /**
  * ################################################
  * ## mutable variables

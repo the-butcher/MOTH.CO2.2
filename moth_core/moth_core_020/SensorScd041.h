@@ -19,6 +19,7 @@ class SensorScd041 {
     static float getTemperatureOffset();
     static void setTemperatureOffset(float temperatureOffset);
     static int getCo2Reference();
+    static bool isAutomaticSelfCalibration();
     static void setCo2Reference(int co2Reference);
     static void begin();
     static void startPeriodicMeasurement();

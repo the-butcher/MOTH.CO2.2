@@ -150,7 +150,6 @@ module.exports = function (webpackEnv) {
     bail: isEnvProduction,
     devtool: 'source-map',
     entry: {
-      client: paths.appClientJs,
       server: paths.appServerJs,
       chart: paths.appChartJs,
     },
@@ -418,16 +417,6 @@ module.exports = function (webpackEnv) {
     plugins: [
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin({
-        title: "moth-client",
-        template: paths.appClientHtml,
-        filename: "./client.html",
-        chunksSortMode: "none",
-        chunks: [
-          "client"
-        ],
-        inlineSource: ".(css)$"
-      }),
-      new HtmlWebpackPlugin({
         title: "moth-server",
         template: paths.appServerHtml,
         filename: "./server.html",
@@ -447,56 +436,6 @@ module.exports = function (webpackEnv) {
         ],
         inlineSource: ".(css)$"
       }),
-      // new HtmlWebpackPlugin(
-      //   Object.assign(
-      //     {},
-      //     {
-      //       inject: true,
-      //       template: paths.appClientHtml,
-      //       filename: "client.html",
-      //       chunks: ["client"]
-      //     },
-      //     {
-      //       minify: {
-      //         removeComments: true,
-      //         collapseWhitespace: true,
-      //         removeRedundantAttributes: true,
-      //         useShortDoctype: true,
-      //         removeEmptyAttributes: true,
-      //         removeStyleLinkTypeAttributes: true,
-      //         keepClosingSlash: true,
-      //         minifyJS: true,
-      //         minifyCSS: true,
-      //         minifyURLs: true,
-      //       },
-      //     }
-      //   )
-      // ),
-      // new HtmlWebpackPlugin(
-      //   Object.assign(
-      //     {},
-      //     {
-      //       inject: true,
-      //       template: paths.appServerHtml,
-      //       filename: "server.html",
-      //       chunks: ["server"]
-      //     },
-      //     {
-      //       minify: {
-      //         removeComments: true,
-      //         collapseWhitespace: true,
-      //         removeRedundantAttributes: true,
-      //         useShortDoctype: true,
-      //         removeEmptyAttributes: true,
-      //         removeStyleLinkTypeAttributes: true,
-      //         keepClosingSlash: true,
-      //         minifyJS: true,
-      //         minifyCSS: true,
-      //         minifyURLs: true,
-      //       },
-      //     }
-      //   )
-      // ),
       new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime-.+[.]js/]),
       new InterpolateHtmlPlugin(HtmlWebpackPlugin, env.raw),
       new ModuleNotFoundPlugin(paths.appPath),

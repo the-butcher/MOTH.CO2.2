@@ -54,8 +54,6 @@ module.exports = {
   appPath: resolveApp('.'),
   appBuild: resolveApp(buildPath),
   appPublic: resolveApp('public'),
-  appClientHtml: resolveApp('public/client.html'),
-  appClientJs: resolveModule(resolveApp, 'src/client'),
   appServerHtml: resolveApp('public/server.html'),
   appServerJs: resolveModule(resolveApp, 'src/server'),
   appChartHtml: resolveApp('public/chart.html'),

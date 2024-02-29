@@ -6,13 +6,13 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 - The device uses the [Sensirion SCD-41](https://www.adafruit.com/product/5190) Sensor, a small and high performance photoacoustic CO₂ sensor.
 
-- The sensor measures CO₂, temperature, humidity and pressure. Measurements are rendered to the device display, and can also be shown in a simple <ins>chart</ins> to perceive recent measurement history. The display can be switched to an inverted <ins>dark mode</ins>. Thresholds are configurable, just like temperature display unit and timezone. An internal <ins>buzzer</ins> can be turned on to give acoustic feedback when CO₂ thresholds are exceeded.
+- The sensor measures CO₂, temperature, humidity and pressure. Measurements are rendered to the device display, and can also be shown in a simple <ins>chart</ins> to perceive recent measurement history. The display can be switched to an inverted <ins>dark mode</ins>. Thresholds are configurable, just like temperature display unit and timezone. A simple altimeter has been integrated.
 
 - Measurements are stored on an internal SD-Card, thus effectively providing <ins>unlimited measurement history</ins>.
 
 - WiFi connectivity can be used to access current and historic measurements and to change device configuration or to calibrate. Measurements can also be be auto published over the [MQTT](https://de.wikipedia.org/wiki/MQTT) protocol.
 
-- When operated in low power mode (no WiFi, 3 minute display update), the device lasts around <ins>1 week</ins> on a single battery charge.
+- When operated in low power mode (no WiFi, 3 minute display update), the device lasts approximately <ins>3 weeks</ins> on a single battery charge.
 
 - The housing can be wall mounted, with or without theft protection.
 
@@ -56,28 +56,23 @@ TODO :: image here
 
   The device hosts a small react-web-application.
 
-  - client.html
-
-    This page resembles the device's tabular view of the latest measurement.
-
-    ![web-app client](/images/client_800.png?raw=true)
-
   - chart.html
 
-    This page gives access to the full history of measurements. Given the size of the SD-Card, there will be no limit regarding storage, effectively the device will keep an indefinite list of measurements.
+    This page gives access to the full history of measurements. Given the size of the SD-Card, there will be no limit regarding storage, effectively the device will keep an infinite list of measurements.
 
     ![web-app client](/images/chart_800.png?raw=true)
 
   - server.html
 
-    This page gives access to the device's api. View status, configuration, data, upload file, calibrate, reset, ...
+    This page gives access to the device's api. View status, configuration, data, upload file, calibrate, reset, update firmware, ...
 
     ![web-app client](/images/server_800.png?raw=true)
 
 
 - ### MQTT
 
-  TODO :: describe
+  It is possible to configure a mqtt connection and upload a certificate. The device will make connections in configurable intervals und publish it's measurements.
+  Even though no POC has been made so far, it should be straightforward to integrate the sensor into i.e. Home Assistant.
 
 - ### TODO :: here or somewhere (!) have a set of basic introductions
 

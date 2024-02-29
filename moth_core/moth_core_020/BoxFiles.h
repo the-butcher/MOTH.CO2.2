@@ -9,7 +9,6 @@ class BoxFiles {
     static SdFat32 sd32;
    
   public:
-  
     static void begin();
     static bool buildFolders(String folder);
     static bool removeFolder(String folder);

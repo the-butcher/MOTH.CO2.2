@@ -102,8 +102,8 @@
     "webpack-dev-server": "^4.15.0"
   },
   "scripts": {
-    "build:js": "node scripts/build.js",
-    "start:js": "node scripts/start.js",
+    "build:js": "node --openssl-legacy-provider scripts/build.js",
+    "start:js": "node --openssl-legacy-provider scripts/start.js",
     "build": "npm-run-all build:js",
     "prettier": "prettier --write \"**/*.ts\" \"**/*.json\" \"**/*.tsx\" \"**/*.js\" \"**/*.css\" \"**/*.scss\"",
     "sonar": "node scripts/test.js --coverage --watchAll false --testResultsProcessor jest-sonar-reporter",

@@ -1,6 +1,10 @@
+#include "Update.h"
 #include "esp_wifi_types.h"
 #include "WiFiType.h"
 #include "esp32-hal.h"
+#include <ArduinoJson.h>
+#include "AESLib.h"
+#include <SdFat.h>
 
 #include "BoxConn.h"
 #include "BoxClock.h"
@@ -15,12 +19,9 @@
 #include "SensorBme280.h"
 #include "SensorPmsa003i.h"
 #include "BoxFiles.h"
-#include <ArduinoJson.h>
 #include "File32Response.h"
 #include "DataResponse.h"
-#include "AESLib.h"
 #include "StringPrint.h"
-#include <SdFat.h>
 #include "ValuesCo2.h"
 
 /**
@@ -66,8 +67,9 @@ int BoxConn::requestedCalibrationReference = -1;
 bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
 bool BoxConn::isRenderStateRequired = false;
+int BoxConn::updateCode = -1;
 
-String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.011.pms" : "1.0.011";
+String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.012.pms" : "1.0.012";
 
 void BoxConn::updateConfiguration() {
 
@@ -168,8 +170,14 @@ void BoxConn::begin() {
     root["heap"] = ESP.getFreeHeap();
     root["sram"] = ESP.getPsramSize();
     root["freq"] = ESP.getCpuFreqMHz();
-    root["co2r"] = SensorScd041::getCo2Reference();
-    root["boff"] = SensorBme280::getTemperatureOffset();
+
+    JsonObject &scd041Jo = root.createNestedObject("scd041");
+    scd041Jo["co2r"] = SensorScd041::getCo2Reference();
+    scd041Jo["toff"] = SensorScd041::getTemperatureOffset();
+    scd041Jo["iasc"] = SensorScd041::isAutomaticSelfCalibration();
+
+    JsonObject &bme280Jo = root.createNestedObject("bme280");
+    bme280Jo["toff"] = SensorBme280::getTemperatureOffset();
 
     JsonObject &encrJo = root.createNestedObject("encr");
     encrJo["config"] = BoxConn::formatConfigStatus(BoxEncr::configStatus);    
@@ -378,10 +386,25 @@ void BoxConn::begin() {
   });  
   server.on("/api/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
 
-      wifiExpiryMillis = millis() + wifiTimeoutMillis;
-      request->send(200);
+    wifiExpiryMillis = millis() + wifiTimeoutMillis;
+    request->send(200);
    
-  }, BoxConn::handleUpload);
+  }, BoxConn::handleUpload); // , BoxConn::handleUpload
+  server.on("/api/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+    wifiExpiryMillis = millis() + wifiTimeoutMillis;
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+
+    root[CODE] = BoxConn::updateCode;
+    BoxConn::updateCode = -1; // reset for next usage
+
+    root.printTo(*response);
+    request->send(response);
+
+  }, BoxConn::handleUpdate);  
   server.on("/api/delete", HTTP_GET, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
@@ -641,6 +664,29 @@ void BoxConn::begin() {
   apNetworkConn = String(networkConnBuf);
 
   WiFi.onEvent(BoxConn::handleStationConnected, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
+
+}
+
+void BoxConn::handleUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+
+  // delete file if exists
+  if (index == 0) {
+    Update.begin();
+  }
+
+  Update.write(data, len);
+    
+  if (final) {
+    if (Update.end(true)) { //true to set the size to the current progress
+      if (Update.isFinished()) {
+        BoxConn::updateCode = 200; // success
+      } else {
+        BoxConn::updateCode = 206; // partial content
+      }
+    } else {
+      BoxConn::updateCode = 205; // reset content
+    }  
+  }
 
 }
 

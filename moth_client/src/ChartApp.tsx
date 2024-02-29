@@ -62,6 +62,23 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       riskHi: 1000
     }
   },
+  'co2_raw': {
+    label: 'CO₂ ppm (raw)',
+    toDomain: (data: any[]) => {
+      let max = Math.max(...data.map(data => data.co2));
+      max = Math.ceil(max / 250) * 250;
+      return [
+        0,
+        max
+      ];
+    },
+    thresholds: {
+      riskLo: 0,
+      warnLo: 0,
+      warnHi: 800,
+      riskHi: 1000
+    }
+  },
   'temperature': {
     label: 'Temperature °C',
     toDomain: (data: any[]) => {
@@ -582,11 +599,6 @@ const ChartApp = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <TooltipR title="moth-latest">
-        <Fab href='client.html' variant="circular" size='small' sx={{ position: 'fixed', right: 60, top: 10 }} >
-          <WysiwygIcon />
-        </Fab>
-      </TooltipR>
       <TooltipR title="moth-api">
         <Fab href='server.html' variant="circular" size='small' sx={{ position: 'fixed', right: 10, top: 10 }} >
           <ConstructionIcon />

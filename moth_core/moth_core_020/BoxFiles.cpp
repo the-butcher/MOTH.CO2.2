@@ -12,12 +12,15 @@ void BoxFiles::begin() {
 bool BoxFiles::buildFolders(String folder) {
   return BoxFiles::sd32.mkdir(folder);
 }
+
 bool BoxFiles::removeFolder(String folder) {
   return BoxFiles::sd32.rmdir(folder);
 }
+
 bool BoxFiles::existsPath(String path) {
   return BoxFiles::sd32.exists(path);
 }
+
 bool BoxFiles::removeFile32(String file) {
   return BoxFiles::sd32.remove(file);
 }

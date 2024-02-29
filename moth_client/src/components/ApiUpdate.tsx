@@ -18,20 +18,19 @@ import ApiResponse from './ApiResponse';
 import { IApiProperties } from './IApiProperties';
 import { IResponseProps } from './IResponseProps';
 
-const ApiUpload = (props: IApiProperties) => {
+const ApiUpdate = (props: IApiProperties) => {
 
-  const apiName = 'upload';
-  const apiDesc = 'upload files to the device';
+  const apiName = 'update';
+  const apiDesc = 'firmware update';
   const apiType = 'json';
 
   const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
-  const [file, setFile] = useState<string>();
   const [data, setData] = useState<string>();
   const apiHref = `${boxUrl}/${apiName}`;
 
   const [responseProps, setResponseProps] = useState<IResponseProps>();
   const issueApiCall = () => {
-    (document.getElementById('uploadform') as HTMLFormElement).submit();
+    (document.getElementById('updateform') as HTMLFormElement).submit();
   }
 
   useEffect(() => {
@@ -50,10 +49,7 @@ const ApiUpload = (props: IApiProperties) => {
 
   }, [status, props[apiName]]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFile(event.target.value);
-  };
-  const handleUploadFilePicked = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpdateFilePicked = (event: React.ChangeEvent<HTMLInputElement>) => {
     setData(event.target.value);
   };
 
@@ -78,20 +74,10 @@ const ApiUpload = (props: IApiProperties) => {
         </div>
       </AccordionSummary>
       <AccordionDetails>
-        <iframe title="callframe" name="uploadframe" style={{ height: '30px', border: 'none' }} />
-        <form id="uploadform" action={apiHref} method="POST" encType="multipart/form-data" target="uploadframe">
+        <iframe title="callframe" name="updateframe" style={{ height: '30px', border: 'none' }} />
+        <form id="updateform" action={apiHref} method="POST" encType="multipart/form-data" target="updateframe">
           <Card>
             <Stack>
-              <TextField
-                required
-                label="file name"
-                name="file"
-                id="outlined-start-adornment"
-                size='small'
-                onChange={handleFileChange}
-                disabled={status === 'disconnected'}
-                value={file}
-              />
               <TextField
                 type="text"
                 id="outlined-start-adornment"
@@ -105,7 +91,7 @@ const ApiUpload = (props: IApiProperties) => {
                       <input
                         type="file"
                         hidden
-                        onChange={handleUploadFilePicked}
+                        onChange={handleUpdateFilePicked}
                         name="content"
                       />
                     </IconButton>
@@ -122,11 +108,11 @@ const ApiUpload = (props: IApiProperties) => {
                 aria-describedby="alert-dialog-description"
               >
                 <DialogTitle id="alert-dialog-title">
-                  do you really want to upload?
+                  do you really want to update?
                 </DialogTitle>
                 <DialogContent>
                   <DialogContentText id="alert-dialog-description">
-                    this call can be used to alter the iframe.html and login.html documents, continue at your own risk.
+                    this call updates the device firmware, continue at your own risk.
                   </DialogContentText>
                 </DialogContent>
                 <DialogActions>
@@ -145,4 +131,4 @@ const ApiUpload = (props: IApiProperties) => {
   );
 }
 
-export default ApiUpload;
+export default ApiUpdate;
