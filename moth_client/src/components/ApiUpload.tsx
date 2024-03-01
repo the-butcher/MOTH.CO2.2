@@ -78,67 +78,69 @@ const ApiUpload = (props: IApiProperties) => {
         </div>
       </AccordionSummary>
       <AccordionDetails>
-        <iframe title="callframe" name="uploadframe" style={{ height: '30px', border: 'none' }} />
         <form id="uploadform" action={apiHref} method="POST" encType="multipart/form-data" target="uploadframe">
-          <Card>
-            <Stack>
-              <TextField
-                required
-                label="file name"
-                name="file"
-                id="outlined-start-adornment"
-                size='small'
-                onChange={handleFileChange}
-                disabled={status === 'disconnected'}
-                value={file}
-              />
-              <TextField
-                type="text"
-                id="outlined-start-adornment"
-                size='small'
-                label={data && data !== "" ? data : "file"}
-                disabled={status === 'disconnected'}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton component="label">
-                      <FileUploadOutlined />
-                      <input
-                        type="file"
-                        hidden
-                        onChange={handleUploadFilePicked}
-                        name="content"
-                      />
-                    </IconButton>
-                  ),
-                }}
-              />
-              <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
-                click to execute
-              </Button>
-              <Dialog
-                open={open}
-                onClose={handleCancel}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-              >
-                <DialogTitle id="alert-dialog-title">
-                  do you really want to upload?
-                </DialogTitle>
-                <DialogContent>
-                  <DialogContentText id="alert-dialog-description">
-                    this call can be used to alter the iframe.html and login.html documents, continue at your own risk.
-                  </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={handleCancel} autoFocus>cancel</Button>
-                  <Button onClick={handleProceed}>{apiName}</Button>
-                </DialogActions>
-              </Dialog>
-              {
-                (responseProps) ? <ApiResponse {...responseProps} /> : null
-              }
-            </Stack>
-          </Card>
+          <Stack>
+            <iframe title="callframe" name="uploadframe" style={{ height: '60px', width: '100%', border: '1px solid gray' }} />
+            <Card>
+              <Stack>
+                <TextField
+                  required
+                  label="file name"
+                  name="file"
+                  id="outlined-start-adornment"
+                  size='small'
+                  onChange={handleFileChange}
+                  disabled={status === 'disconnected'}
+                  value={file}
+                />
+                <TextField
+                  type="text"
+                  id="outlined-start-adornment"
+                  size='small'
+                  label={data && data !== "" ? data : "file"}
+                  disabled={status === 'disconnected'}
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton component="label">
+                        <FileUploadOutlined />
+                        <input
+                          type="file"
+                          hidden
+                          onChange={handleUploadFilePicked}
+                          name="content"
+                        />
+                      </IconButton>
+                    ),
+                  }}
+                />
+                <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+                  click to execute
+                </Button>
+                <Dialog
+                  open={open}
+                  onClose={handleCancel}
+                  aria-labelledby="alert-dialog-title"
+                  aria-describedby="alert-dialog-description"
+                >
+                  <DialogTitle id="alert-dialog-title">
+                    do you really want to upload?
+                  </DialogTitle>
+                  <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                      this call can be used to alter the iframe.html and login.html documents, continue at your own risk.
+                    </DialogContentText>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={handleCancel} autoFocus>cancel</Button>
+                    <Button onClick={handleProceed}>{apiName}</Button>
+                  </DialogActions>
+                </Dialog>
+                {
+                  (responseProps) ? <ApiResponse {...responseProps} /> : null
+                }
+              </Stack>
+            </Card>
+          </Stack>
         </form>
       </AccordionDetails>
     </Accordion>

@@ -1,6 +1,5 @@
-// #define USE_NEOPIXEL = 1;
-
 #include "BoxClock.h"
+#include "BoxBeep.h"
 #include "BoxConn.h"
 #include "BoxMqtt.h"
 #include "BoxEncr.h"
@@ -18,27 +17,12 @@
 #include "SensorScd041.h" // wrapper for scd41 sensor
 #include "SensorPmsa003i.h"
 
-#ifdef USE_NEOPIXEL
-#include <Adafruit_NeoPixel.h>
-const uint32_t COLOR___WHITE = 0x666666;
-const uint32_t COLOR_____RED = 0xFF0000;
-const uint32_t COLOR__YELLOW = 0x666600;
-const uint32_t COLOR____BLUE = 0x0000FF;
-const uint32_t COLOR____CYAN = 0x006666;
-const uint32_t COLOR_MAGENTA = 0x660066;
-#endif
-
 #include "driver/rtc_io.h"
 
 typedef enum {
     SENSORS_TRYREAD, // sensors need to read before measurement can be taken
     SENSORS_GETVALS // sensors can provide values from measurements previously taken
 } sensors_mode_t;
-
-const int BUZZER____FREQ_LO = 1000; // 3755
-const int BUZZER____CHANNEL = 0;
-const int BUZZER_RESOLUTION = 8; // 0 - 255
-const int BUZZER_______GPIO = SensorPmsa003i::ACTIVE ? GPIO_NUM_8 : GPIO_NUM_17;
 
 loop_reason_t loopReason = LOOP_REASON___________UNKNOWN;
 loop_reason_t loopAction;
@@ -77,30 +61,16 @@ std::function<void(void)> displayFunc = nullptr; // [=]()->void{};
  *    ✓ mqtt gets published hourly when offline
  */
 
-#ifdef USE_NEOPIXEL
-  Adafruit_NeoPixel pixels(1, GPIO_NUM_33, NEO_GRB + NEO_KHZ800); 
-#endif
-
 void setup() {
-
-#ifdef USE_NEOPIXEL
-  pixels.begin();
-#else
-  // de-power the neopixel
-  pinMode(NEOPIXEL_POWER, OUTPUT);
-  digitalWrite(NEOPIXEL_POWER, LOW);
-#endif
 
   Serial.begin(115200);
   Wire.begin();
   delay(2000);
 
+  BoxBeep::begin();
   BoxFiles::begin();
   BoxClock::begin();
   BoxDisplay::begin(); // needs BoxFiles to be ready because it will read config
-
-  ledcSetup(BUZZER____CHANNEL, BUZZER____FREQ_LO, BUZZER_RESOLUTION);
-  ledcAttachPin(BUZZER_______GPIO, BUZZER____CHANNEL);
 
   BoxPack::begin();
   BoxEncr::begin(); // needs BoxFiles to be ready because it will read config
@@ -110,6 +80,7 @@ void setup() {
 
   BoxPack::tryRead(); // need to read, or no battery values will be present in the starting info
   BoxDisplay::renderMothInfo(BoxConn::VNUM);
+  BoxDisplay::hibernate(false);
 
   ButtonHandlers::begin();
 
@@ -194,44 +165,37 @@ void handleButtonChangeC() {
   }
 }
 
-void beep(int frequency) {
-  ledcWrite(BUZZER____CHANNEL, 180);
-  ledcWriteTone(BUZZER____CHANNEL, frequency);
-  delay(50);
-  ledcWrite(BUZZER____CHANNEL, 0);
+bool isRenderStateRequired() {
+  return getDisplayWaitSeconds() <= 0 || BoxDisplay::hasSignificantChange();
 }
 
 /**
  * render either a current chart or current numeric values
  */
-void renderState(bool force) {
+void renderState() { // bool force
 
-  if (force || getDisplayWaitSeconds() <= 0 || BoxDisplay::hasSignificantChange()) {
+  // store the last memBufferIndex to know when to redraw the next time
+  lastMemBufferIndex = Measurements::memBufferIndx;
 
-    // store the last memBufferIndex to know when to redraw the next time
-    lastMemBufferIndex = Measurements::memBufferIndx;
-
-    bool publishable = BoxMqtt::isPublishable();
-    bool autoConnect = BoxConn::getMode() == WIFI_OFF && (publishable || BoxClock::isUpdateable());
-    if (autoConnect) {
-      BoxConn::on(); // turn wifi on, the station_connected event will take care of adjusting time if BoxClock::isUpdateable() is true
-    }
-    else {
-      BoxClock::optNtpUpdate(); // will only update if BoxClock::isUpdateable() is true, needs to be called explicitly due to no station_connected event
-    }
-
-    // it was either on in the first place or just forced to be on
-    if (BoxConn::getMode() == WIFI_STA && publishable) {
-      BoxMqtt::publish(); // simply publish
-    }
-
-    if (autoConnect) {
-      BoxConn::off(); // if it was forced to be on, turn off directly afterwards
-    }
-
-    BoxDisplay::renderState();
-    
+  bool publishable = BoxMqtt::isPublishable();
+  bool autoConnect = BoxConn::getMode() == WIFI_OFF && (publishable || BoxClock::isUpdateable());
+  if (autoConnect) {
+    BoxConn::on(); // turn wifi on, the station_connected event will take care of adjusting time if BoxClock::isUpdateable() is true
   }
+  else {
+    BoxClock::optNtpUpdate(); // will only update if BoxClock::isUpdateable() is true, needs to be called explicitly due to no station_connected event
+  }
+
+  // it was either on in the first place or just forced to be on
+  if (BoxConn::getMode() == WIFI_STA && publishable) {
+    BoxMqtt::publish(); // simply publish
+  }
+
+  if (autoConnect) {
+    BoxConn::off(); // if it was forced to be on, turn off directly afterwards
+  }
+
+  BoxDisplay::renderState();
 
 }
 
@@ -239,12 +203,14 @@ bool isAnyButtonPressed() {
   return ButtonHandlers::A.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || ButtonHandlers::B.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || ButtonHandlers::C.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL;
 }
 
+bool isAwakeRequired() {
+  bool _isAwakeRequired = false; // MUST be false in deployment, or battery life will be much shorter
+  return _isAwakeRequired || BoxConn::getMode() != WIFI_OFF || isAnyButtonPressed();
+}
+
 void loop() {
 
-#ifdef USE_NEOPIXEL
-  pixels.setPixelColor(0, COLOR__YELLOW);
-  pixels.show();
-#endif
+  BoxBeep::setPixelColor(COLOR__YELLOW);
 
   loopAction = loopReason;
   loopReason = LOOP_REASON___________UNKNOWN; // start new with "unknown"
@@ -267,20 +233,14 @@ void loop() {
   int64_t tryReadWaitSecondsA = getTryReadWaitSeconds();
   if (tryReadWaitSecondsA <= 1) {
 
-#ifdef USE_NEOPIXEL
-    pixels.setPixelColor(0, COLOR_____RED); // red for measuring
-    pixels.show();
-#endif
+    BoxBeep::setPixelColor(COLOR_____RED);
 
     SensorBme280::tryRead();
     SensorScd041::tryRead(); // delays 5000 ms (no button press possible during that time)
 
     sensorsMode = SENSORS_GETVALS;
-
-#ifdef USE_NEOPIXEL
-    pixels.setPixelColor(0, COLOR__YELLOW);
-    pixels.show();
-#endif    
+  
+    BoxBeep::setPixelColor(COLOR__YELLOW);
 
   }
 
@@ -290,10 +250,7 @@ void loop() {
   int64_t measureWaitSecondsA = getMeasureWaitSeconds();
   if (measureWaitSecondsA <= 1) {
 
-#ifdef USE_NEOPIXEL
-    pixels.setPixelColor(0, COLOR_MAGENTA); // magenta
-    pixels.show();
-#endif    
+    BoxBeep::setPixelColor(COLOR_MAGENTA);
 
     // a final, short delay to hit the same second at all times, as far as possible
     if (measureWaitSecondsA == 1) {
@@ -326,19 +283,17 @@ void loop() {
       SensorPmsa003i::setMode(PMS_PAUSE_D);
     }
 
-    displayFunc = [=]() -> void { renderState(false); };
+    if (isRenderStateRequired()) {
+      displayFunc = [=]() -> void { renderState(); };
+    }
 
-
-#ifdef USE_NEOPIXEL
-    pixels.setPixelColor(0, COLOR__YELLOW); // back to green
-    pixels.show();
-#endif        
+    BoxBeep::setPixelColor(COLOR__YELLOW);   
 
   }
 
   if (loopAction == LOOP_REASON______CALIBRRATION) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     SensorScd041::stopPeriodicMeasurement(); // no effect
 
     /**
@@ -373,7 +328,7 @@ void loop() {
 
   } else if (loopAction == LOOP_REASON_______HIBERNATION) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxConn::isHibernationRequired = false; // does not make a difference, but anyways
 
     BoxConn::off();
@@ -392,37 +347,37 @@ void loop() {
 
   } else if (loopAction == LOOP_REASON_RESET_CALIBRATION) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxConn::isCo2CalibrationReset = false;
     SensorScd041::factoryReset();
 
   } else if (loopAction == LOOP_REASON______WIFI______ON) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxConn::on(); // turn on, dont expire immediately
     displayFunc = [=]() -> void { BoxDisplay::renderQRCode(); };
 
   } else if (loopAction == LOOP_REASON______WIFI_____OFF) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxConn::off();
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE_STATE) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxDisplay::toggleState();
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE_THEME) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxDisplay::toggleTheme();
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON______TOGGLE___PMS) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     if (SensorPmsa003i::getMode() == PMS____ON_M || SensorPmsa003i::getMode() == PMS_PAUSE_M) { // if in measurement interval mode switch to display interval mode
       SensorPmsa003i::setMode(PMS_PAUSE_D);
     } else if (SensorPmsa003i::getMode() == PMS____ON_D || SensorPmsa003i::getMode() == PMS_PAUSE_D) { // if in display interval mode, switch off
@@ -431,61 +386,61 @@ void loop() {
     } else {
       SensorPmsa003i::setMode(PMS_PAUSE_M);
     }
-    displayFunc = [=]() -> void { renderState(true); }; // this is only to render the PMS active indicator
+    displayFunc = [=]() -> void { renderState(); }; // this is only to render the PMS active indicator
 
   } else if (loopAction == LOOP_REASON___TOGGLE_VALUE_FW) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxDisplay::toggleValueFw();
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON___TOGGLE_VALUE_BW) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxDisplay::toggleValueBw();
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON___TOGGLE_HOURS_FW) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxDisplay::toggleChartMeasurementHoursFw();
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON___TOGGLE_HOURS_BW) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxDisplay::toggleChartMeasurementHoursBw();
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON___ADD_10_ALTITUDE) { 
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     SensorBme280::updateAltitude(10);
-    displayFunc = [=]() -> void { renderState(true); };    
+    displayFunc = [=]() -> void { renderState(); };    
 
   } else if (loopAction == LOOP_REASON___ADD_50_ALTITUDE) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     SensorBme280::updateAltitude(50);
-    displayFunc = [=]() -> void { renderState(true); };    
+    displayFunc = [=]() -> void { renderState(); };    
 
   } else if (loopAction == LOOP_REASON___DEL_10_ALTITUDE) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     SensorBme280::updateAltitude(-10);
-    displayFunc = [=]() -> void { renderState(true); };    
+    displayFunc = [=]() -> void { renderState(); };    
 
   } else if (loopAction == LOOP_REASON___DEL_50_ALTITUDE) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     SensorBme280::updateAltitude(-50);
-    displayFunc = [=]() -> void { renderState(true); };    
+    displayFunc = [=]() -> void { renderState(); };    
 
   } else if (loopAction == LOOP_REASON______RENDER_STATE) {
 
-    beep(BUZZER____FREQ_LO);
+    BoxBeep::beep();
     BoxConn::isRenderStateRequired = false;
-    displayFunc = [=]() -> void { renderState(true); };
+    displayFunc = [=]() -> void { renderState(); };
 
   }
 
@@ -505,18 +460,14 @@ void loop() {
 
   if (displayFunc) {
 
-#ifdef USE_NEOPIXEL
-  pixels.setPixelColor(0, COLOR___WHITE); // white/gray for drawing the display
-  pixels.show();
-#endif
+    BoxBeep::setPixelColor(COLOR___WHITE);
 
     displayFunc();
-    displayFunc = nullptr; // [=]()->void{};
+    BoxDisplay::hibernate(isAwakeRequired());
+    
+    displayFunc = nullptr;
 
-#ifdef USE_NEOPIXEL
-  pixels.setPixelColor(0, COLOR__YELLOW); // back to yellow
-  pixels.show();
-#endif
+    BoxBeep::setPixelColor(COLOR__YELLOW);
 
   }
 
@@ -527,14 +478,10 @@ void loop() {
     // seems like wifi is not off yet
   }
 
-#ifdef USE_NEOPIXEL
-  pixels.setPixelColor(0, COLOR____CYAN); // cyan, will either stay cyan when i.e. wifi is on, or turn to blue in a millisecond when sleeping
-  pixels.show();
-#endif
+  BoxBeep::setPixelColor(COLOR____CYAN);
 
   // whatever happens here, happens at least once / minute, maybe more often depending on user interaction, wifi expiriy, ...
-  bool forceAwake = false; // MUST be false in deployment, or battery life will be much shorter
-  while (forceAwake || BoxConn::getMode() != WIFI_OFF || isAnyButtonPressed()) { //  || SensorPmsa003i::getMode() == PMS_____ON no sleep while wifi is active or pms is active
+  while (isAwakeRequired()) {
 
     if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
       BoxMqtt::loop(); // maintain mqtt connection
@@ -596,11 +543,9 @@ void loop() {
 
   if (waitSecondsC > 1) { // longer than one second --> sleep
 
-#ifdef USE_NEOPIXEL
-  pixels.setPixelColor(0, COLOR____BLUE);
-  pixels.show();
-#endif  
+    BoxBeep::setPixelColor(COLOR____BLUE);
 
+    // gpio_wakeup_disable(GPIO_NUM_14); // TODO :: this should reference a static variable on BoxDisplay
     gpio_wakeup_disable(ButtonHandlers::A.gpin);
     gpio_wakeup_disable(ButtonHandlers::B.gpin);
     gpio_wakeup_disable(ButtonHandlers::C.gpin);

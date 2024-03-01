@@ -1,5 +1,6 @@
 #include "BoxDisplay.h"
 #include "BoxPack.h"
+#include "BoxBeep.h"
 #include "BoxClock.h"
 #include "BoxFiles.h"
 #include "BoxMqtt.h"
@@ -143,8 +144,45 @@ void BoxDisplay::begin() {
 }
 
 void BoxDisplay::flushBuffer() {
-  baseDisplay.display(true);
+  // baseDisplay.display(true);
+  baseDisplay.writeFrameBuffers();
+  // baseDisplay.hibernate();
+}
+
+void BoxDisplay::hibernate(bool isAwakeRequired) {
+  
+  if (!isAwakeRequired) {
+
+    color_t prevColor = BoxBeep::getPixelColor();
+    BoxBeep::setPixelColor(COLOR____BLUE);
+
+    // let the cpu sleep while the display updates to save some power
+
+    // gpio_wakeup_disable(GPIO_NUM_14); // TODO :: this should reference a static variable on BoxDisplay
+    gpio_wakeup_disable(ButtonHandlers::A.gpin);
+    gpio_wakeup_disable(ButtonHandlers::B.gpin);
+    gpio_wakeup_disable(ButtonHandlers::C.gpin);
+
+    // for unknown reasons the next line causes a crash
+    // gpio_wakeup_enable(GPIO_NUM_14, GPIO_INTR_HIGH_LEVEL); 
+    // esp_sleep_enable_gpio_wakeup();
+
+    esp_sleep_enable_timer_wakeup(2000000); // 2 seconds (busy has been measured to be approximately that long)
+
+    esp_light_sleep_start();
+
+    BoxBeep::setPixelColor(prevColor);
+
+  }
+
+  // with or without sleep, be sure that BUSY is high
+  while (!digitalRead(EPD_BUSY)) {
+    delay(10); 
+  }
+
+  // put the display into deep-sleep
   baseDisplay.hibernate();
+
 }
 
 void BoxDisplay::clearBuffer() {

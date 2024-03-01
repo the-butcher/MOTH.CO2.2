@@ -68,6 +68,7 @@ bool BoxConn::isHibernationRequired = false;
 bool BoxConn::isCo2CalibrationReset = false;
 bool BoxConn::isRenderStateRequired = false;
 int BoxConn::updateCode = -1;
+int BoxConn::uploadCode = -1;
 
 String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.012.pms" : "1.0.012";
 
@@ -387,10 +388,19 @@ void BoxConn::begin() {
   server.on("/api/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
-    request->send(200);
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+
+    root[CODE] = BoxConn::uploadCode;
+    BoxConn::uploadCode = -1; // reset for next usage
+
+    root.printTo(*response);
+    request->send(response);
    
   }, BoxConn::handleUpload); // , BoxConn::handleUpload
-  server.on("/api/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/api/update", HTTP_POST, [](AsyncWebServerRequest *request) {
 
     wifiExpiryMillis = millis() + wifiTimeoutMillis;
 
@@ -729,6 +739,12 @@ void BoxConn::handleUpload(AsyncWebServerRequest *request, String filename, size
       BoxMqtt::updateConfiguration();
     }
 
+    if (final) {
+      BoxConn::updateCode = 200;
+    }    
+
+  } else {
+    BoxConn::uploadCode = 400;
   }
 
 }

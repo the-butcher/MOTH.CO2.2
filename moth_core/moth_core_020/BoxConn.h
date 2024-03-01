@@ -13,6 +13,7 @@ private:
   static void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
   static void handleUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
   static int updateCode;
+  static int uploadCode;
 
 public:
   static String VNUM;

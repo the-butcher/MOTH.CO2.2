@@ -74,58 +74,62 @@ const ApiUpdate = (props: IApiProperties) => {
         </div>
       </AccordionSummary>
       <AccordionDetails>
-        <iframe title="callframe" name="updateframe" style={{ height: '30px', border: 'none' }} />
         <form id="updateform" action={apiHref} method="POST" encType="multipart/form-data" target="updateframe">
-          <Card>
-            <Stack>
-              <TextField
-                type="text"
-                id="outlined-start-adornment"
-                size='small'
-                label={data && data !== "" ? data : "file"}
-                disabled={status === 'disconnected'}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton component="label">
-                      <FileUploadOutlined />
-                      <input
-                        type="file"
-                        hidden
-                        onChange={handleUpdateFilePicked}
-                        name="content"
-                      />
-                    </IconButton>
-                  ),
-                }}
-              />
-              <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
-                click to execute
-              </Button>
-              <Dialog
-                open={open}
-                onClose={handleCancel}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-              >
-                <DialogTitle id="alert-dialog-title">
-                  do you really want to update?
-                </DialogTitle>
-                <DialogContent>
-                  <DialogContentText id="alert-dialog-description">
-                    this call updates the device firmware, continue at your own risk.
-                  </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={handleCancel} autoFocus>cancel</Button>
-                  <Button onClick={handleProceed}>{apiName}</Button>
-                </DialogActions>
-              </Dialog>
-              {
-                (responseProps) ? <ApiResponse {...responseProps} /> : null
-              }
-            </Stack>
-          </Card>
+          <Stack>
+            <iframe title="callframe" name="updateframe" style={{ height: '60px', width: '100%', border: '1px solid gray' }} />
+            <Card>
+              <Stack>
+                <TextField
+                  type="text"
+                  id="outlined-start-adornment"
+                  size='small'
+                  label={data && data !== "" ? data : "file"}
+                  disabled={status === 'disconnected'}
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton component="label">
+                        <FileUploadOutlined />
+                        <input
+                          type="file"
+                          hidden
+                          onChange={handleUpdateFilePicked}
+                          name="content"
+                          accept='.bin'
+                        />
+                      </IconButton>
+                    ),
+                  }}
+                />
+                <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+                  click to execute
+                </Button>
+                <Dialog
+                  open={open}
+                  onClose={handleCancel}
+                  aria-labelledby="alert-dialog-title"
+                  aria-describedby="alert-dialog-description"
+                >
+                  <DialogTitle id="alert-dialog-title">
+                    do you really want to update?
+                  </DialogTitle>
+                  <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                      this call updates the device firmware, continue at your own risk.
+                    </DialogContentText>
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={handleCancel} autoFocus>cancel</Button>
+                    <Button onClick={handleProceed}>{apiName}</Button>
+                  </DialogActions>
+                </Dialog>
+                {
+                  (responseProps) ? <ApiResponse {...responseProps} /> : null
+                }
+              </Stack>
+            </Card>
+          </Stack>
         </form>
+
       </AccordionDetails>
     </Accordion>
   );

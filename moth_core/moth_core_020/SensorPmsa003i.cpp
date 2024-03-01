@@ -14,7 +14,7 @@
 Adafruit_PM25AQI SensorPmsa003i::baseSensor = Adafruit_PM25AQI();
 pms_mode_t SensorPmsa003i::mode = PMS_____OFF;
 int SensorPmsa003i::WARMUP_SECONDS = 30;
-bool SensorPmsa003i::ACTIVE = false;
+bool SensorPmsa003i::ACTIVE = true;
 ValuesPms SensorPmsa003i::values;
 gpio_num_t SensorPmsa003i::PMS_ENABLE___GPIO = GPIO_NUM_17;
 

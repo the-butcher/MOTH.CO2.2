@@ -37,22 +37,6 @@ gpio_int_type_t ButtonHandler::getWakeupLevel() {
   return digitalRead(gpin) == HIGH ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL;
 }
 
-// /**
-//  * check for a short or long button press
-//  */
-// void ButtonHandler::handleButtonChange() {
-//   fallrise_t fallrise = this->getFallRise();
-//   if (fallrise == FALL_RISE_FAST) {
-//     if (this->fallriseFastFunc) {
-//       this->fallriseFastFunc();
-//     }
-//   } else if (fallrise == FALL_RISE_SLOW) {
-//     if (this->fallriseSlowFunc) {
-//       this->fallriseSlowFunc();
-//     }    
-//   }
-// }
-
 fallrise_t ButtonHandler::getFallRise() {
 
   curLevel = digitalRead(gpin);

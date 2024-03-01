@@ -40,6 +40,7 @@ static const uint8_t ti_290t5_monofull_init_code[] {
 };
 
 static const uint8_t ti_290t5_monopart_lut_code[] = {
+
   // const unsigned char lut_vcom1[]
   0x20, 44,
   0x00, 0x01, 0x0E, 0x00, 0x00, 0x01,	
@@ -88,6 +89,7 @@ static const uint8_t ti_290t5_monopart_lut_code[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   0xFE // EOM
+
 };
 
 const uint8_t ti_290t5_gray4_lut_code[] = {
@@ -142,6 +144,7 @@ const uint8_t ti_290t5_gray4_lut_code[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   0xFE // EOM
+
 };
 
 // clang-format on
@@ -166,6 +169,7 @@ public:
     inkmode = mode; // Preserve ink mode for ImageReader or others
 
     if (mode == THINKINK_GRAYSCALE4) {
+
       _epd_init_code = ti_290t5_gray4_init_code;
       _epd_lut_code = ti_290t5_gray4_lut_code;
 
@@ -175,7 +179,9 @@ public:
       layer_colors[EPD_GRAY] = 0b10;
       layer_colors[EPD_LIGHT] = 0b01;
       layer_colors[EPD_DARK] = 0b10;
+
     } else if (mode == THINKINK_MONO) {
+
       _epd_init_code = ti_290t5_monofull_init_code;
       _epd_partial_init_code = ti_290t5_monopart_init_code;
       _epd_partial_lut_code = ti_290t5_monopart_lut_code;
@@ -186,21 +192,49 @@ public:
       layer_colors[EPD_GRAY] = 0b01;
       layer_colors[EPD_LIGHT] = 0b10;
       layer_colors[EPD_DARK] = 0b01;
+
     }
 
     default_refresh_delay = 800;
 
     powerDown();
+
+  }
+
+  void writeFrameBuffers() {
+
+    // Adafruit_EPD::display(bool sleep)
+    powerUp();
+    setRAMAddress(0, 0);
+    writeRAMFramebufferToEPD(buffer1, buffer1_size, 0);
+    delay(2);
+    setRAMAddress(0, 0);
+    writeRAMFramebufferToEPD(buffer2, buffer2_size, 1);
+
+    // Adafruit_IL0373::update()
+    EPD_command(IL0373_DISPLAY_REFRESH);
+    delay(100);
+
+    // busy_wait(); // code that calls writeFrameBuffers() needs to take care of waiting for the correct busy state
+    
+    partialsSinceLastFullUpdate = 0;
+
+    // powerDown(); // will be powered down anyways
+
   }
 
   void hibernate() {
+
     powerDown();
+
     busy_wait();
+
     uint8_t buf[4];
     if (_reset_pin >= 0) {
       buf[0] = 0xA5; // deep sleep
       EPD_command(0x07, buf, 1);
     }	
+
   }
 
 };

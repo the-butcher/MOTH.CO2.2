@@ -121,6 +121,7 @@ class BoxDisplay {
     static void toggleChartMeasurementHoursFw();
     static void toggleChartMeasurementHoursBw();
     static int getChartMeasurementHours();
+    static void hibernate(bool isAwakeRequired);
 
 };
 
