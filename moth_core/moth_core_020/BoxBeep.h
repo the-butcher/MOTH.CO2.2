@@ -25,7 +25,6 @@ class BoxBeep {
   public:
     static void begin();
     static void beep();
-    static void beep(int freq);
     static color_t getPixelColor();
     static void setPixelColor(color_t pixelColor);
     static sound_t getSound();

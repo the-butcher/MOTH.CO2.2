@@ -37,12 +37,8 @@ void BoxBeep::begin() {
 }
 
 void BoxBeep::beep() {
-  beep(BUZZER____FREQ_LO);
-}
-
-void BoxBeep::beep(int freq) {
   ledcWrite(BUZZER____CHANNEL, 180);
-  ledcWriteTone(BUZZER____CHANNEL, freq);
+  ledcWriteTone(BUZZER____CHANNEL, BUZZER____FREQ_LO);
   delay(50);
   ledcWrite(BUZZER____CHANNEL, 0);
 }

@@ -281,7 +281,7 @@ void loop() {
       int co2 = Measurements::getOffsetMeasurement(0).valuesCo2.co2;
       int co2Risk = BoxDisplay::getCo2RiskHi();
       if (co2 > co2Risk) {
-        BoxBeep::beep(co2);
+        BoxBeep::beep();
       }
     }
 
