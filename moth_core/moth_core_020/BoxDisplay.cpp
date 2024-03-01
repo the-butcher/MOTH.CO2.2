@@ -133,6 +133,9 @@ String BoxDisplay::SYMBOL__WIFI = "¥";
 String BoxDisplay::SYMBOL_THEME = "¤";
 String BoxDisplay::SYMBOL_TABLE = "£";
 String BoxDisplay::SYMBOL_CHART = "¢";
+String BoxDisplay::SYMBOL__BEEP = "©";
+String BoxDisplay::SYMBOL_NBEEP = "ª";
+
 
 String BoxDisplay::CONFIG_PATH = "/config/disp.json";
 config_status_t BoxDisplay::configStatus = CONFIG_STATUS_PENDING;
@@ -1029,7 +1032,8 @@ void BoxDisplay::renderFooter() {
 
   bool isPmsM = SensorPmsa003i::getMode() == PMS____ON_M || SensorPmsa003i::getMode() == PMS_PAUSE_M;
   bool isPmsD = SensorPmsa003i::getMode() == PMS____ON_D || SensorPmsa003i::getMode() == PMS_PAUSE_D;
-  bool isCon = BoxConn::getMode() != WIFI_OFF;
+  bool isConn = BoxConn::getMode() != WIFI_OFF;
+  bool isBeep = BoxBeep::getSound() == SOUND__ON;
 
   int charPosFooter = 7;
   if (isPmsM || isPmsD) {
@@ -1037,7 +1041,12 @@ void BoxDisplay::renderFooter() {
     charPosFooter += 13;
   } 
 
-  if (isCon) {
+  if (isBeep) {
+    BoxDisplay::drawAntialiasedText08(BoxDisplay::SYMBOL__BEEP, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
+    charPosFooter += 13;
+  }
+
+  if (isConn) {
     String address = BoxConn::getAddress();
     BoxDisplay::drawAntialiasedText06(BoxConn::getAddress(), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
     String timeFormatted = BoxClock::getDateTimeDisplayString(BoxClock::getDate());
@@ -1180,4 +1189,8 @@ String BoxDisplay::formatString(String value, char const *format) {
   char padBuffer[16];
   sprintf(padBuffer, format, value);
   return padBuffer;
+}
+
+int BoxDisplay::getCo2RiskHi() {
+  return thresholdsCo2.riskHi;
 }

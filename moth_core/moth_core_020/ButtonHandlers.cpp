@@ -4,6 +4,7 @@
 #include "BoxDisplay.h"
 #include "SensorPmsa003i.h"
 #include "BoxConn.h"
+#include "BoxBeep.h"
 
 ButtonHandler ButtonHandlers::A = ButtonHandler(GPIO_NUM_11);
 ButtonHandler ButtonHandlers::B = ButtonHandler(GPIO_NUM_12);
@@ -32,8 +33,8 @@ void ButtonHandlers::begin() {
 
 void ButtonHandlers::assignWifiAndPms() {
   ButtonHandlers::A.buttonActionFast = {
-    SensorPmsa003i::ACTIVE ? LOOP_REASON______TOGGLE___PMS : LOOP_REASON___________UNKNOWN,
-    SensorPmsa003i::ACTIVE ? BoxDisplay::SYMBOL__PM_M : ""
+    SensorPmsa003i::ACTIVE ? LOOP_REASON______TOGGLE___PMS : LOOP_REASON______TOGGLE_SOUND,
+    SensorPmsa003i::ACTIVE ? BoxDisplay::SYMBOL__PM_M : (BoxBeep::getSound() == SOUND__ON ? BoxDisplay::SYMBOL_NBEEP : BoxDisplay::SYMBOL__BEEP)
   };
   ButtonHandlers::A.buttonActionSlow = {
     BoxConn::getMode() == WIFI_OFF ? LOOP_REASON______WIFI______ON : LOOP_REASON______WIFI_____OFF,

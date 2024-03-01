@@ -80,7 +80,7 @@ void setup() {
 
   BoxPack::tryRead(); // need to read, or no battery values will be present in the starting info
   BoxDisplay::renderMothInfo(BoxConn::VNUM);
-  BoxDisplay::hibernate(false);
+  BoxDisplay::hibernate(true); // must be true here (isAwakeRequired), because Serial would get lost otherwise
 
   ButtonHandlers::begin();
 
@@ -276,6 +276,15 @@ void loop() {
 
     sensorsMode = SENSORS_TRYREAD; // only after reading a measurement, another read can be tried
 
+    // beep when on an thresholds exceeded, measuremnt needs to be re-fetched, because co2 gets altered by low-pass filter
+    if (BoxBeep::getSound() == SOUND__ON) {
+      int co2 = Measurements::getOffsetMeasurement(0).valuesCo2.co2;
+      int co2Risk = BoxDisplay::getCo2RiskHi();
+      if (co2 > co2Risk) {
+        BoxBeep::beep(co2);
+      }
+    }
+
     // when the PM sensor is on, pause it after measurement
     if (SensorPmsa003i::getMode() == PMS____ON_M) {
       SensorPmsa003i::setMode(PMS_PAUSE_M);
@@ -410,6 +419,12 @@ void loop() {
 
     BoxBeep::beep();
     BoxDisplay::toggleChartMeasurementHoursBw();
+    displayFunc = [=]() -> void { renderState(); };
+
+  } else if (loopAction == LOOP_REASON______TOGGLE_SOUND) {
+
+    BoxBeep::beep();
+    BoxBeep::toggleSound();
     displayFunc = [=]() -> void { renderState(); };
 
   } else if (loopAction == LOOP_REASON___ADD_10_ALTITUDE) { 

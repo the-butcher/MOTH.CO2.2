@@ -18,6 +18,7 @@ const int BUZZER_RESOLUTION = 8; // 0 - 255
 const int BUZZER_______GPIO = SensorPmsa003i::ACTIVE ? GPIO_NUM_8 : GPIO_NUM_17;
 
 color_t BoxBeep::pixelColor = COLOR___BLACK;
+sound_t BoxBeep::sound = SOUND_OFF;
 
 #ifdef USE_NEOPIXEL
   Adafruit_NeoPixel pixels(1, GPIO_NUM_33, NEO_GRB + NEO_KHZ800); 
@@ -36,8 +37,12 @@ void BoxBeep::begin() {
 }
 
 void BoxBeep::beep() {
+  beep(BUZZER____FREQ_LO);
+}
+
+void BoxBeep::beep(int freq) {
   ledcWrite(BUZZER____CHANNEL, 180);
-  ledcWriteTone(BUZZER____CHANNEL, BUZZER____FREQ_LO);
+  ledcWriteTone(BUZZER____CHANNEL, freq);
   delay(50);
   ledcWrite(BUZZER____CHANNEL, 0);
 }
@@ -52,4 +57,16 @@ void BoxBeep::setPixelColor(color_t pixelColor) {
   pixels.setPixelColor(0, BoxBeep::pixelColor); // red for measuring
   pixels.show();
 #endif    
+}
+
+sound_t BoxBeep::getSound() {
+  return BoxBeep::sound;
+}
+
+void BoxBeep::toggleSound() {
+  if (BoxBeep::sound == SOUND__ON) {
+    BoxBeep::sound = SOUND_OFF;
+  } else {
+    BoxBeep::sound = SOUND__ON;
+  }
 }

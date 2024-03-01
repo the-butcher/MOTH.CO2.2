@@ -8,6 +8,9 @@ typedef enum {
   LOOP_REASON______WIFI_____OFF,
   LOOP_REASON______TOGGLE___PMS,
 
+  // button A, non PMS, when table+!altitude
+  LOOP_REASON______TOGGLE_SOUND,
+
   // button B, when not table+altitude
   LOOP_REASON______TOGGLE_STATE, // table, chart
   LOOP_REASON______TOGGLE_THEME, // light, dark
@@ -25,7 +28,7 @@ typedef enum {
   LOOP_REASON___DEL_10_ALTITUDE,
 
   // button C
-  LOOP_REASON___TOGGLE_VALUE_FW, // within state, the acual value being shown (co2, pm1.0, pm2.5, pm10.0), let a long press return to co2
+  LOOP_REASON___TOGGLE_VALUE_FW, // within state, the actual value being shown (co2, pm1.0, pm2.5, pm10.0), let a long press return to co2
   LOOP_REASON___TOGGLE_VALUE_BW,
 
   LOOP_REASON______RENDER_STATE, // a simple re-render

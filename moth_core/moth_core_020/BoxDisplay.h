@@ -96,6 +96,8 @@ class BoxDisplay {
     static String SYMBOL_THEME;
     static String SYMBOL_TABLE;
     static String SYMBOL_CHART;
+    static String SYMBOL__BEEP;
+    static String SYMBOL_NBEEP;
     static String CONFIG_PATH;
     static config_status_t configStatus;
     static int64_t renderStateSeconds;
@@ -122,6 +124,7 @@ class BoxDisplay {
     static void toggleChartMeasurementHoursBw();
     static int getChartMeasurementHours();
     static void hibernate(bool isAwakeRequired);
+    static int getCo2RiskHi();
 
 };
 
