@@ -13,21 +13,28 @@ Arduino Sketch
 Required packages are:
 
 - RTClib at version 2.1.1
-- Adafruit BusIO at version 1.14.1
+- Adafruit BusIO at version 1.15.0
+- Wire at version 2.0.0
 - ESP Async WebServer at version 1.2.3
+- FS at version 2.0.0
+- WiFi at version 2.0.0
 - AsyncTCP at version 1.1.1
 - PubSubClient at version 2.8
 - ArduinoJson at version 5.13.5
 - Adafruit LC709203F at version 1.3.2
 - SdFat - Adafruit Fork at version 2.2.1
+- SPI at version 2.0.0
 - Adafruit EPD at version 4.5.1
-- Adafruit GFX Library at version 1.11.5
+- Adafruit GFX Library at version 1.11.7
 - QRCode at version 0.0.1
-- Adafruit Unified Sensor at version 1.1.9
+- Adafruit Unified Sensor at version 1.1.14
 - Adafruit BME280 Library at version 2.2.2
 - Sensirion I2C SCD4x at version 0.4.0
 - Sensirion Core at version 0.6.0
+- Adafruit PM25 AQI Sensor at version 1.0.6
+- Update at version 2.0.0
 - AESLib at version 2.3.6
+- WiFiClientSecure at version 2.0.0
 
 ---
 
