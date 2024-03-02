@@ -12,6 +12,8 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 - Chart with 1h, 3h, 6h, 12h or 24h data history.
 
+![CO₂-Sensor fully assembled](/images/sensor03_800.jpg?raw=true)
+
 - Dark mode (inverted) available.
 
 - Configurable Thresholds for CO₂, temperature und humidity.
@@ -21,6 +23,8 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 - Unlimited measurement history through internal SD-Card storage.
 
 - WiFi for access to current and historic measurements and to change device configuration, calibration, update firmware.
+
+![CO₂-Sensor fully assembled](/images/sensor04_800.jpg?raw=true)
 
 - MQTT can be configured to auto publish Measurements ([MQTT](https://de.wikipedia.org/wiki/MQTT)).
 
