@@ -855,9 +855,9 @@ void BoxConn::off() {
 
 String BoxConn::getRootUrl() {
   if (mode == WIFI_AP) {
-    return "http://" + WiFi.softAPIP().toString() + "/server/client.html";
+    return "http://" + WiFi.softAPIP().toString() + "/server/server.html";
   } else if (mode == WIFI_STA) {
-    return "http://" + WiFi.localIP().toString() + "/server/client.html";
+    return "http://" + WiFi.localIP().toString() + "/server/server.html";
   } else {
     return "";
   }
