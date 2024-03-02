@@ -252,13 +252,9 @@ example (the password decrypts to "your-wifi-pass"):
 
 The device contains a small webserver. The files in this folder server for convenient access to the device api.
 
-- ### [SD/server/client.html](SD/server/chart.html)
-
-Provides a simple UI showing the latest measurements.
-
 - ### [SD/server/chart.html](SD/server/chart.html)
 
-Provides a simple UI to access historic data stored in the device.
+Provides a simple graphic UI to access historic data stored in the device.
 
 - ### [SD/server/server.html](SD/server/server.html)
 
