@@ -92,6 +92,6 @@ TODO :: image here
 
 Please be aware that all software in this project is licensed under the [MIT license](license.txt), while the drawings and 3d-printed parts are licensed under the [Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
 
+https://github.com/the-butcher/MOTH.CO2.2/assets/84620977/23303f60-04a6-4f3b-a14d-cb0d6dc5e2be
 
-https://github.com/the-butcher/MOTH.CO2.2/assets/84620977/6b267401-aefe-4eec-aebe-592d79e80dc9
 
