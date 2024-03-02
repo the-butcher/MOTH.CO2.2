@@ -4,15 +4,25 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 ![CO₂-Sensor fully assembled](/images/sensor01_800.jpg?raw=true)
 
-- The device uses the [Sensirion SCD-41](https://www.adafruit.com/product/5190) Sensor, a small and high performance photoacoustic CO₂ sensor.
+- CO₂, temperature, humidity, pressure, altitude.
 
-- The sensor measures CO₂, temperature, humidity and pressure. Measurements are rendered to the device display, and can also be shown in a simple <ins>chart</ins> to perceive recent measurement history. The display can be switched to an inverted <ins>dark mode</ins>. Thresholds are configurable, just like temperature display unit and timezone. A simple altimeter has been integrated.
+- 3 weeks on one battery charge, when operated in low power mode (no WiFi, 3 minute display update).
 
-- Measurements are stored on an internal SD-Card, thus effectively providing <ins>unlimited measurement history</ins>.
+- [Sensirion SCD-41](https://www.adafruit.com/product/5190) Sensor used, a small and high performance photoacoustic CO₂ sensor.
 
-- WiFi connectivity can be used to access current and historic measurements and to change device configuration or to calibrate. Measurements can also be be auto published over the [MQTT](https://de.wikipedia.org/wiki/MQTT) protocol.
+- Chart with 1h, 3h, 6h, 12h or 24h data history.
 
-- When operated in low power mode (no WiFi, 3 minute display update), the device lasts approximately <ins>3 weeks</ins> on a single battery charge.
+- Dark mode (inverted) available.
+
+- Configurable Thresholds for CO₂, temperature und humidity.
+
+- Configurable temperature unit °C and °F and timezone.
+
+- Unlimited measurement history through internal SD-Card storage.
+
+- WiFi for access to current and historic measurements and to change device configuration, calibration, update firmware.
+
+- MQTT can be configured to auto publish Measurements ([MQTT](https://de.wikipedia.org/wiki/MQTT)).
 
 - The housing can be wall mounted, with or without theft protection.
 
