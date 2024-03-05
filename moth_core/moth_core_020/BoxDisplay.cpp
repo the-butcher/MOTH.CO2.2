@@ -118,7 +118,7 @@ uint16_t tbw, tbh;
 
 const int16_t EPD_DC = 10;
 const int16_t EPD_CS = 9;
-const int16_t EPD_BUSY = 14; // A4 -> has been solder-connected to the busy pad
+int16_t BoxDisplay::EPD_BUSY = 14; // A4 -> has been solder-connected to the busy pad
 const int16_t SRAM_CS = -1;
 const int16_t EPD_RESET = SensorPmsa003i::ACTIVE ? 18 : 8; // A0 -> has been bridged to the reset pin
 
@@ -140,7 +140,7 @@ String BoxDisplay::SYMBOL_NBEEP = "ª";
 String BoxDisplay::CONFIG_PATH = "/config/disp.json";
 config_status_t BoxDisplay::configStatus = CONFIG_STATUS_PENDING;
 int64_t BoxDisplay::renderStateSeconds = 180; // default :: 3 minutes, will be overridden by config
-ThinkInk_290_Grayscale4_T5_Clone BoxDisplay::baseDisplay(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
+ThinkInk_290_Grayscale4_T5_Clone BoxDisplay::baseDisplay(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, BoxDisplay::EPD_BUSY);
 
 void BoxDisplay::begin() {
   BoxDisplay::updateConfiguration();
@@ -160,26 +160,19 @@ void BoxDisplay::hibernate(bool isAwakeRequired) {
     BoxBeep::setPixelColor(COLOR____BLUE);
 
     // let the cpu sleep while the display updates to save some power
-
-    // gpio_wakeup_disable(GPIO_NUM_14); // TODO :: this should reference a static variable on BoxDisplay
-    gpio_wakeup_disable(ButtonHandlers::A.gpin);
-    gpio_wakeup_disable(ButtonHandlers::B.gpin);
-    gpio_wakeup_disable(ButtonHandlers::C.gpin);
-
-    // for unknown reasons the next line causes a crash
-    // gpio_wakeup_enable(GPIO_NUM_14, GPIO_INTR_HIGH_LEVEL); 
-    // esp_sleep_enable_gpio_wakeup();
+    BoxClock::disableGpioWakeupSources();
+    // BoxClock::enableGpioWakeupSources();
 
     esp_sleep_enable_timer_wakeup(2000000); // 2 seconds (busy has been measured to be approximately that long)
-
     esp_light_sleep_start();
+    // esp_sleep_get_wakeup_cause(); // maybe this affects some state
 
     BoxBeep::setPixelColor(prevColor);
 
   }
 
   // with or without sleep, be sure that BUSY is high
-  while (!digitalRead(EPD_BUSY)) {
+  while (!digitalRead(BoxDisplay::EPD_BUSY)) {
     delay(10); 
   }
 

@@ -109,8 +109,17 @@ String BoxClock::getDateTimeDisplayString(DateTime date) {
   return timeBuffer;
 }
 
-// String BoxClock::getTimeDisplayString(DateTime date) {
-//   char timeBuffer[16];
-//   sprintf(timeBuffer, "%02d:%02d", date.hour(), date.minute());
-//   return timeBuffer;
-// }
+void BoxClock::disableGpioWakeupSources() {
+  // gpio_wakeup_disable((gpio_num_t)BoxDisplay::EPD_BUSY);
+  gpio_wakeup_disable(ButtonHandlers::A.gpin);
+  gpio_wakeup_disable(ButtonHandlers::B.gpin);
+  gpio_wakeup_disable(ButtonHandlers::C.gpin);
+}
+
+void BoxClock::enableGpioWakeupSources() {
+  // gpio_wakeup_enable((gpio_num_t)BoxDisplay::EPD_BUSY, GPIO_INTR_HIGH_LEVEL); // crashes the esp32-s2 <<>> adafruit grayscale unit for unknown reasons
+  gpio_wakeup_enable(ButtonHandlers::A.gpin, ButtonHandlers::A.getWakeupLevel());
+  gpio_wakeup_enable(ButtonHandlers::B.gpin, ButtonHandlers::B.getWakeupLevel());
+  gpio_wakeup_enable(ButtonHandlers::C.gpin, ButtonHandlers::C.getWakeupLevel());
+  esp_sleep_enable_gpio_wakeup();
+}

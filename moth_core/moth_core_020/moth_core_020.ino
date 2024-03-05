@@ -560,18 +560,10 @@ void loop() {
 
     BoxBeep::setPixelColor(COLOR____BLUE);
 
-    // gpio_wakeup_disable(GPIO_NUM_14); // TODO :: this should reference a static variable on BoxDisplay
-    gpio_wakeup_disable(ButtonHandlers::A.gpin);
-    gpio_wakeup_disable(ButtonHandlers::B.gpin);
-    gpio_wakeup_disable(ButtonHandlers::C.gpin);
+    BoxClock::disableGpioWakeupSources();
+    BoxClock::enableGpioWakeupSources(); // will probably wake 
 
-    gpio_wakeup_enable(ButtonHandlers::A.gpin, ButtonHandlers::A.getWakeupLevel());
-    gpio_wakeup_enable(ButtonHandlers::B.gpin, ButtonHandlers::B.getWakeupLevel());
-    gpio_wakeup_enable(ButtonHandlers::C.gpin, ButtonHandlers::C.getWakeupLevel());
-
-    esp_sleep_enable_gpio_wakeup();
     esp_sleep_enable_timer_wakeup(waitSecondsC * MICROSECONDS_PER_SECOND);
-
     esp_light_sleep_start();
 
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();

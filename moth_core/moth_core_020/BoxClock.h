@@ -3,6 +3,8 @@
 
 #include "RTClib.h"
 #include "DataFileDef.h"
+#include "BoxDisplay.h"
+#include "ButtonHandlers.h"
 
 class BoxClock {
   
@@ -20,9 +22,10 @@ class BoxClock {
     static bool isUpdateable();
     static void optNtpUpdate();
     static String getDateTimeDisplayString(DateTime date);
-    // static String getTimeDisplayString(DateTime date);
     static String getDateTimeString(DateTime date);
     static DataFileDef getDataFileDef(DateTime date);
+    static void disableGpioWakeupSources();
+    static void enableGpioWakeupSources();
 
 };
 

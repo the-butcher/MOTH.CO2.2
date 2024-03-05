@@ -70,7 +70,7 @@ bool BoxConn::isRenderStateRequired = false;
 int BoxConn::updateCode = -1;
 int BoxConn::uploadCode = -1;
 
-String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.012.pms" : "1.0.012";
+String BoxConn::VNUM = SensorPmsa003i::ACTIVE ? "1.0.013.pms" : "1.0.013";
 
 void BoxConn::updateConfiguration() {
 

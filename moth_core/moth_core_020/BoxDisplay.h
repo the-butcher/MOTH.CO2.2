@@ -25,6 +25,7 @@
 #include "Measurement.h"
 #include "Rectangle.h"
 #include "BoxStatus.h"
+#include "BoxClock.h"
 
 typedef enum {
   DISPLAY_STATE_TABLE,
@@ -99,6 +100,7 @@ class BoxDisplay {
     static String SYMBOL__BEEP;
     static String SYMBOL_NBEEP;
     static String CONFIG_PATH;
+    static int16_t EPD_BUSY;
     static config_status_t configStatus;
     static int64_t renderStateSeconds;
     static void begin();

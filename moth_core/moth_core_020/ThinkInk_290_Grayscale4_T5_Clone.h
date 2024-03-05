@@ -212,7 +212,7 @@ public:
     writeRAMFramebufferToEPD(buffer2, buffer2_size, 1);
 
     // Adafruit_IL0373::update()
-    EPD_command(IL0373_DISPLAY_REFRESH);
+    EPD_command(IL0373_DISPLAY_REFRESH); // 0x12
     delay(100);
 
     // busy_wait(); // code that calls writeFrameBuffers() needs to take care of waiting for the correct busy state
