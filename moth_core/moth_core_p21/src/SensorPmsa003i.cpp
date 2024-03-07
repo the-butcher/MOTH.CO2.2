@@ -1,5 +1,16 @@
 #include "SensorPmsa003i.h"
 
+/**
+ * ################################################
+ * ## constants
+ * ################################################
+ */
+
+/**
+ * ################################################
+ * ## static class variabales
+ * ################################################
+ */
 Adafruit_PM25AQI SensorPmsa003i::baseSensor = Adafruit_PM25AQI();
 pms_mode_t SensorPmsa003i::mode = PMS_____OFF;
 int SensorPmsa003i::WARMUP_SECONDS = 30;
