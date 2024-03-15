@@ -25,16 +25,14 @@ typedef enum {
 loop_reason_t loopReason = LOOP_REASON___________UNKNOWN;
 loop_reason_t loopAction;
 
-sensors_mode_t sensorsMode =
-    SENSORS_TRYREAD;  // start with SENSORS_TRYREAD (measurement needs to be
-                      // taken)
+sensors_mode_t sensorsMode = SENSORS_TRYREAD;  // start with SENSORS_TRYREAD (measurement needs to be
+                                               // taken)
 
 const int64_t MICROSECONDS_PER_SECOND = 1000000;  // 1 second
 const int64_t MILLISECONDS_PER_SECOND = 1000;     // 1 second
 const int64_t MEASUREMENT_WAIT_SECONDS_MAX = 1;
-const int64_t WAIT_SECONDS_NEVER =
-    60 * 60 * 24;  // 24 hours, which will effectively never be waited for due
-                   // to other (shorter) timeouts
+const int64_t WAIT_SECONDS_NEVER = 60 * 60 * 24;  // 24 hours, which will effectively never be waited for due
+                                                  // to other (shorter) timeouts
 const int64_t TRYREAD_SECONDS = 6;
 
 int64_t offsetBeginSeconds = 0;
@@ -94,9 +92,7 @@ void setup() {
 }
 
 int64_t getMeasureNextSeconds() {
-    return (Measurements::memBufferIndx + 1) *
-               Measurements::measurementIntervalSeconds +
-           offsetBeginSeconds;
+    return (Measurements::memBufferIndx + 1) * Measurements::measurementIntervalSeconds + offsetBeginSeconds;
 }
 
 int64_t getMeasureWaitSeconds() {
@@ -104,9 +100,7 @@ int64_t getMeasureWaitSeconds() {
 }
 
 int64_t getDisplayNextSeconds() {
-    return (lastMemBufferIndex + BoxDisplay::renderStateSeconds / 60) *
-               Measurements::measurementIntervalSeconds +
-           offsetBeginSeconds;
+    return (lastMemBufferIndex + BoxDisplay::renderStateSeconds / 60) * Measurements::measurementIntervalSeconds + offsetBeginSeconds;
 }
 
 int64_t getDisplayWaitSeconds() {
@@ -115,9 +109,8 @@ int64_t getDisplayWaitSeconds() {
 
 int64_t getTryReadWaitSeconds() {
     if (sensorsMode == SENSORS_TRYREAD) {
-        return getMeasureWaitSeconds() -
-               TRYREAD_SECONDS;  // 5 seconds is the command duration of a
-                                 // single shot measurement
+        return getMeasureWaitSeconds() - TRYREAD_SECONDS;  // 5 seconds is the command duration of a
+                                                           // single shot measurement
     } else {
         return WAIT_SECONDS_NEVER;
     }
@@ -136,13 +129,11 @@ int64_t getWarmupWaitSeconds() {
 void handleButtonChangeA() {
     fallrise_t fallrise11 = ButtonHandlers::A.getFallRise();
     if (fallrise11 == FALL_RISE_FAST) {
-        if (ButtonHandlers::A.buttonActionFast.loopReason !=
-            LOOP_REASON___________UNKNOWN) {
+        if (ButtonHandlers::A.buttonActionFast.loopReason != LOOP_REASON___________UNKNOWN) {
             loopReason = ButtonHandlers::A.buttonActionFast.loopReason;
         }
     } else if (fallrise11 == FALL_RISE_SLOW) {
-        if (ButtonHandlers::A.buttonActionSlow.loopReason !=
-            LOOP_REASON___________UNKNOWN) {
+        if (ButtonHandlers::A.buttonActionSlow.loopReason != LOOP_REASON___________UNKNOWN) {
             loopReason = ButtonHandlers::A.buttonActionSlow.loopReason;
         }
     }
@@ -150,13 +141,11 @@ void handleButtonChangeA() {
 void handleButtonChangeB() {
     fallrise_t fallrise12 = ButtonHandlers::B.getFallRise();
     if (fallrise12 == FALL_RISE_FAST) {
-        if (ButtonHandlers::B.buttonActionFast.loopReason !=
-            LOOP_REASON___________UNKNOWN) {
+        if (ButtonHandlers::B.buttonActionFast.loopReason != LOOP_REASON___________UNKNOWN) {
             loopReason = ButtonHandlers::B.buttonActionFast.loopReason;
         }
     } else if (fallrise12 == FALL_RISE_SLOW) {
-        if (ButtonHandlers::B.buttonActionSlow.loopReason !=
-            LOOP_REASON___________UNKNOWN) {
+        if (ButtonHandlers::B.buttonActionSlow.loopReason != LOOP_REASON___________UNKNOWN) {
             loopReason = ButtonHandlers::B.buttonActionSlow.loopReason;
         }
     }
@@ -164,13 +153,11 @@ void handleButtonChangeB() {
 void handleButtonChangeC() {
     fallrise_t fallrise13 = ButtonHandlers::C.getFallRise();
     if (fallrise13 == FALL_RISE_FAST) {
-        if (ButtonHandlers::C.buttonActionFast.loopReason !=
-            LOOP_REASON___________UNKNOWN) {
+        if (ButtonHandlers::C.buttonActionFast.loopReason != LOOP_REASON___________UNKNOWN) {
             loopReason = ButtonHandlers::C.buttonActionFast.loopReason;
         }
     } else if (fallrise13 == FALL_RISE_SLOW) {
-        if (ButtonHandlers::C.buttonActionSlow.loopReason !=
-            LOOP_REASON___________UNKNOWN) {
+        if (ButtonHandlers::C.buttonActionSlow.loopReason != LOOP_REASON___________UNKNOWN) {
             loopReason = ButtonHandlers::C.buttonActionSlow.loopReason;
         }
     }
@@ -189,8 +176,7 @@ void renderState() {  // bool force
     lastMemBufferIndex = Measurements::memBufferIndx;
 
     bool publishable = BoxMqtt::isPublishable();
-    bool autoConnect = BoxConn::getMode() == WIFI_OFF &&
-                       (publishable || BoxClock::isUpdateable());
+    bool autoConnect = BoxConn::getMode() == WIFI_OFF && (publishable || BoxClock::isUpdateable());
     if (autoConnect) {
         BoxConn::on();  // turn wifi on, the station_connected event will take
                         // care of adjusting time if BoxClock::isUpdateable() is
@@ -216,16 +202,13 @@ void renderState() {  // bool force
 }
 
 bool isAnyButtonPressed() {
-    return ButtonHandlers::A.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL ||
-           ButtonHandlers::B.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL ||
-           ButtonHandlers::C.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL;
+    return ButtonHandlers::A.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || ButtonHandlers::B.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL || ButtonHandlers::C.getWakeupLevel() == GPIO_INTR_HIGH_LEVEL;
 }
 
 bool isAwakeRequired() {
     bool _isAwakeRequired = false;  // MUST be false in deployment, or battery
                                     // life will be much shorter
-    return _isAwakeRequired || BoxConn::getMode() != WIFI_OFF ||
-           isAnyButtonPressed();
+    return _isAwakeRequired || BoxConn::getMode() != WIFI_OFF || isAnyButtonPressed();
 }
 
 void loop() {
@@ -336,61 +319,45 @@ void loop() {
         for (int offset = 0; offset < 3; offset++) {
             measurement = Measurements::getOffsetMeasurement(offset);
             if (offset == 0) {
-                lowPassValue =
-                    measurement.valuesCo2
-                        .co2;  // subtract the low-pass filtered value
+                lowPassValue = measurement.valuesCo2.co2;  // subtract the low-pass filtered value
             }
-            avgHistValue +=
-                measurement.valuesCo2
-                    .co2Raw;  // add the average of the last three measurements
+            avgHistValue += measurement.valuesCo2.co2Raw;  // add the average of the last three measurements
         }
 
-        int requestedCalibrationReference =
-            BoxConn::requestedCalibrationReference - lowPassValue +
-            (int)round(avgHistValue / 3.0);
+        int requestedCalibrationReference = BoxConn::requestedCalibrationReference - lowPassValue + (int)round(avgHistValue / 3.0);
 
-        uint16_t result =
-            SensorScd041::forceCalibration(requestedCalibrationReference);
+        uint16_t result = SensorScd041::forceCalibration(requestedCalibrationReference);
         SensorScd041::startPeriodicMeasurement();
 
         // reset calibration reference to avoid recursive calibration
         BoxConn::requestedCalibrationReference = -1;
 
         if (result == 0xffff) {
-            displayFunc = [=]() -> void {
-                BoxDisplay::renderMothInfo("failure");
-            };
+            displayFunc = [=]() -> void { BoxDisplay::renderMothInfo("failure"); };
         } else {
-            displayFunc = [=]() -> void {
-                BoxDisplay::renderMothInfo(
-                    "success (" + String(requestedCalibrationReference) + ", " +
-                    String(result - 0x8000) + ")");
-            };
+            displayFunc = [=]() -> void { BoxDisplay::renderMothInfo("success (" + String(requestedCalibrationReference) + ", " + String(result - 0x8000) + ")"); };
         }
 
     } else if (loopAction == LOOP_REASON_______HIBERNATION) {
         BoxBeep::beep();
-        BoxConn::isHibernationRequired =
-            false;  // does not make a difference, but anyways
+        BoxConn::isHibernationRequired = false;  // does not make a difference, but anyways
 
         BoxConn::off();
         // TODO :: write any unsaved measurements to file
         BoxDisplay::renderMothInfo("hibernated");  // not within display func!
         pinMode(I2C_POWER, OUTPUT);
         digitalWrite(I2C_POWER,
-                     LOW);  // turn off power to stemma QT Port
-                            // (https://learn.adafruit.com/assets/110811)
-        esp_sleep_disable_wakeup_source(
-            ESP_SLEEP_WAKEUP_ALL);  // go to sleep, no wakeup source but reset
-                                    // button (maybe a combination of all three
-                                    // buttons is an option)
+                     LOW);                                      // turn off power to stemma QT Port
+                                                                // (https://learn.adafruit.com/assets/110811)
+        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);  // go to sleep, no wakeup source but reset
+                                                                // button (maybe a combination of all three
+                                                                // buttons is an option)
 
         // https://stackoverflow.com/questions/53324715/esp32-external-pin-wakeup-with-internal-pullup-resistor
         const uint64_t ext_wakeup_pin_11_mask = 1ULL << GPIO_NUM_11;
         rtc_gpio_pullup_en(GPIO_NUM_11);
         rtc_gpio_pulldown_dis(GPIO_NUM_11);
-        esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_11_mask,
-                                     ESP_EXT1_WAKEUP_ANY_LOW);
+        esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_11_mask, ESP_EXT1_WAKEUP_ANY_LOW);
         esp_deep_sleep_start();
 
     } else if (loopAction == LOOP_REASON_RESET_CALIBRATION) {
@@ -420,23 +387,17 @@ void loop() {
 
     } else if (loopAction == LOOP_REASON______TOGGLE___PMS) {
         BoxBeep::beep();
-        if (SensorPmsa003i::getMode() == PMS____ON_M ||
-            SensorPmsa003i::getMode() ==
-                PMS_PAUSE_M) {  // if in measurement interval mode switch to
-                                // display interval mode
+        if (SensorPmsa003i::getMode() == PMS____ON_M || SensorPmsa003i::getMode() == PMS_PAUSE_M) {  // if in measurement interval mode switch to
+                                                                                                     // display interval mode
             SensorPmsa003i::setMode(PMS_PAUSE_D);
-        } else if (SensorPmsa003i::getMode() == PMS____ON_D ||
-                   SensorPmsa003i::getMode() ==
-                       PMS_PAUSE_D) {  // if in display interval mode, switch
-                                       // off
+        } else if (SensorPmsa003i::getMode() == PMS____ON_D || SensorPmsa003i::getMode() == PMS_PAUSE_D) {  // if in display interval mode, switch
+                                                                                                            // off
             SensorPmsa003i::setMode(PMS_____OFF);
             // TODO ::
         } else {
             SensorPmsa003i::setMode(PMS_PAUSE_M);
         }
-        displayFunc = [=]() -> void {
-            renderState();
-        };  // this is only to render the PMS active indicator
+        displayFunc = [=]() -> void { renderState(); };  // this is only to render the PMS active indicator
 
     } else if (loopAction == LOOP_REASON___TOGGLE_VALUE_FW) {
         BoxBeep::beep();
@@ -516,8 +477,7 @@ void loop() {
 
     // there could have been an mqtt wifi-on request, lets check for it
     if (BoxMqtt::isWifiConnectionRequested) {
-        BoxMqtt::isWifiConnectionRequested =
-            false;  // wifi conn requested over mqtt
+        BoxMqtt::isWifiConnectionRequested = false;  // wifi conn requested over mqtt
         loopReason = LOOP_REASON______WIFI______ON;
         // seems like wifi is not off yet
     }
@@ -527,8 +487,7 @@ void loop() {
     // whatever happens here, happens at least once / minute, maybe more often
     // depending on user interaction, wifi expiriy, ...
     while (isAwakeRequired()) {
-        if (BoxMqtt::isConfiguredToBeActive() &&
-            BoxConn::getMode() == WIFI_STA) {
+        if (BoxMqtt::isConfiguredToBeActive() && BoxConn::getMode() == WIFI_STA) {
             BoxMqtt::loop();  // maintain mqtt connection
         }
 
@@ -537,12 +496,10 @@ void loop() {
             loopReason = LOOP_REASON______WIFI_____OFF;  // wifi has expired
             break;
         } else if (BoxConn::requestedCalibrationReference >= 400) {
-            loopReason =
-                LOOP_REASON______CALIBRRATION;  // user requested calibration
+            loopReason = LOOP_REASON______CALIBRRATION;  // user requested calibration
             break;
         } else if (BoxConn::isHibernationRequired) {
-            loopReason =
-                LOOP_REASON_______HIBERNATION;  // user requested hibernation
+            loopReason = LOOP_REASON_______HIBERNATION;  // user requested hibernation
             break;
         } else if (BoxConn::isCo2CalibrationReset) {
             loopReason = LOOP_REASON_RESET_CALIBRATION;  // user requested
@@ -553,11 +510,8 @@ void loop() {
             break;
         }
 
-        int64_t waitSecondsB =
-            min(MEASUREMENT_WAIT_SECONDS_MAX,
-                min(getMeasureWaitSeconds(),
-                    min(getTryReadWaitSeconds(),
-                        getWarmupWaitSeconds())));  // not more than 1 second
+        int64_t waitSecondsB = min(MEASUREMENT_WAIT_SECONDS_MAX, min(getMeasureWaitSeconds(), min(getTryReadWaitSeconds(),
+                                                                                                  getWarmupWaitSeconds())));  // not more than 1 second
         if (waitSecondsB <= 0) {
             loopReason = LOOP_REASON_______MEASUREMENT;  // time to measure
             break;
@@ -583,17 +537,14 @@ void loop() {
     detachInterrupt(ButtonHandlers::B.ipin);
     detachInterrupt(ButtonHandlers::C.ipin);
 
-    if (loopReason !=
-        LOOP_REASON___________UNKNOWN) {  // doublecheck for loop reason and
-                                          // dont let code proceed to sleep
-                                          // phase
+    if (loopReason != LOOP_REASON___________UNKNOWN) {  // doublecheck for loop reason and
+                                                        // dont let code proceed to sleep
+                                                        // phase
         return;
     }
 
     // can go to sleep, but doublecheck that there is no negative sleep
-    int64_t waitSecondsC =
-        min(getMeasureWaitSeconds(),
-            min(getTryReadWaitSeconds(), getWarmupWaitSeconds()));
+    int64_t waitSecondsC = min(getMeasureWaitSeconds(), min(getTryReadWaitSeconds(), getWarmupWaitSeconds()));
 
     if (waitSecondsC > 1) {  // longer than one second --> sleep
 

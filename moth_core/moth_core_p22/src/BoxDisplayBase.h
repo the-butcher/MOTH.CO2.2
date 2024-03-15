@@ -1,5 +1,5 @@
-#ifndef _THINKINK_290_GRAYSCALE4_T5_CLONE_H
-#define _THINKINK_290_GRAYSCALE4_T5_CLONE_H
+#ifndef BoxDisplayBase_h
+#define BoxDisplayBase_h
 
 // This file is #included by Adafruit_ThinkInk.h and does not need to
 // #include anything else to pick up the EPD header or ink mode enum.
@@ -147,13 +147,21 @@ const uint8_t ti_290t5_gray4_lut_code[] = {
 
 };
 
+const int16_t PIN_EPD_DC = 10;
+const int16_t PIN_EPD_RESET = 8;  // A0 -> has been bridged to the reset pin
+const int16_t PIN_EPD_CS = 9;
+const int16_t PIN_SRAM_CS = -1;
+const int16_t PIN_EPD_BUSY = 14;  // A4 -> has been solder-connected to the busy pad
+
 // clang-format on
 
-class ThinkInk_290_Grayscale4_T5_Clone : public Adafruit_IL0373 {
+class BoxDisplayBase : public Adafruit_IL0373 {
    public:
-    ThinkInk_290_Grayscale4_T5_Clone(int16_t SID, int16_t SCLK, int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t MISO, int16_t BUSY = -1) : Adafruit_IL0373(296, 128, SID, SCLK, DC, RST, CS, SRCS, MISO, BUSY){};
+    BoxDisplayBase() : Adafruit_IL0373(296, 128, PIN_EPD_DC, PIN_EPD_RESET, PIN_EPD_CS, PIN_SRAM_CS, PIN_EPD_BUSY){};
 
-    ThinkInk_290_Grayscale4_T5_Clone(int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t BUSY = -1, SPIClass *spi = &SPI) : Adafruit_IL0373(296, 128, DC, RST, CS, SRCS, BUSY, spi){};
+    BoxDisplayBase(int16_t SID, int16_t SCLK, int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t MISO, int16_t BUSY = -1) : Adafruit_IL0373(296, 128, SID, SCLK, DC, RST, CS, SRCS, MISO, BUSY){};
+
+    BoxDisplayBase(int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t BUSY = -1, SPIClass *spi = &SPI) : Adafruit_IL0373(296, 128, DC, RST, CS, SRCS, BUSY, spi){};
 
     void begin(thinkinkmode_t mode, bool isLightMode) {
         Adafruit_IL0373::begin(true);
@@ -194,35 +202,28 @@ class ThinkInk_290_Grayscale4_T5_Clone : public Adafruit_IL0373 {
     void writeFrameBuffers() {
         // Adafruit_EPD::display(bool sleep)
         powerUp();
-        long millisA = millis();
         setRAMAddress(0, 0);
         writeRAMFramebufferToEPD(buffer1, buffer1_size, 0);
-        long millisB = millis();
         delay(2);
         setRAMAddress(0, 0);
         writeRAMFramebufferToEPD(buffer2, buffer2_size, 1);
-        long millisC = millis();
-        Serial.print("buffer1: ");
-        Serial.println(String(millisB - millisA));
-        Serial.print("buffer2: ");
-        Serial.println(String(millisC - millisB));
 
         // Adafruit_IL0373::update()
         EPD_command(IL0373_DISPLAY_REFRESH);  // 0x12
         delay(100);
 
-        // busy_wait(); // code that calls writeFrameBuffers() needs to take care of waiting for the correct busy state
+        // busy_wait();
 
-        partialsSinceLastFullUpdate = 0;
-
-        // powerDown(); // will be powered down anyways
+        // // Adafruit_EPD::display(bool sleep)
+        // partialsSinceLastFullUpdate = 0;
+        // powerDown();  // will be powered down anyways
     }
 
     void hibernate() {
+        busy_wait();  // doublecheck for busy
+        partialsSinceLastFullUpdate = 0;
         powerDown();
-
-        busy_wait();
-
+        busy_wait();  // short busy wait for power down
         uint8_t buf[4];
         if (_reset_pin >= 0) {
             buf[0] = 0xA5;  // deep sleep
