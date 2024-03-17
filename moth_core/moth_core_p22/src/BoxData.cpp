@@ -44,7 +44,10 @@ void BoxData::persistValues(values_all_t* values, int count) {
 String BoxData::toCsvLine(values_all_t value) {
     char csvBuffer[128];
     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + value.secondstime);
-    sprintf(csvBuffer, BoxData::CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), String(value.valuesCo2.co2), String(value.valuesCo2.co2Raw), String(value.valuesCo2.deg, 1), String(value.valuesCo2.hum, 1), String(value.valuesBme.pressure), String(value.valuesNrg.percent, 1));
+    float deg = SensorScd041::toFloatDeg(value.valuesCo2.deg);
+    float hum = SensorScd041::toFloatHum(value.valuesCo2.hum);
+    float percent = SensorEnergy::toFloatPercent(value.valuesNrg.percent);
+    sprintf(csvBuffer, BoxData::CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), String(value.valuesCo2.co2), String(value.valuesCo2.co2Raw), String(deg, 1), String(hum, 1), String(value.valuesBme.pressure, 2), String(percent, 2));
     for (int i = 0; i < 128; i++) {
         if (csvBuffer[i] == '.') {
             csvBuffer[i] = ',';

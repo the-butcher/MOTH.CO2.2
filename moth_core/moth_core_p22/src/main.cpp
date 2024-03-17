@@ -31,7 +31,7 @@ RTC_DATA_ATTR uint32_t actionIndexMax;
 RTC_DATA_ATTR config_t config;
 
 // recent measurements
-const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
+const uint8_t MEASUREMENT_BUFFER_SIZE = 5;
 RTC_DATA_ATTR values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 RTC_DATA_ATTR uint32_t nextMeasureIndex;
 RTC_DATA_ATTR uint32_t nextDisplayIndex;
@@ -60,6 +60,8 @@ ButtonHandlers buttonHandlers;
  * -- starting with the oldest, open file, if not already open
  * -- iterate through file until a good enough match is found (less than 30 seconds off)
  *
+ * -- poc has been implemented in esp32_csvtest (not on github yet)
+ *    -- ket there be a "value-provider" that will find 60 measurements from file, or in the special case if 1h from the RTC memory values (likely for the sake of power usage)
  */
 
 uint32_t getMeasureNextSeconds() {
@@ -193,8 +195,8 @@ void setup() {
                 actionIndexCur = ACTION_DISPLAY;                                                                                                     // ACTION_DISPLAY
                 actions[ACTION_DISPLAY].secondsNext = boxTime.getDate().secondstime();                                                               // assign current time as due time
             } else {
-                // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering
-                // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of rendering
+                // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
+                // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
             }
 
         } else {
@@ -236,6 +238,7 @@ void handleActionReadval() {
     sensorScd041.powerDown();
     sensorEnergy.powerDown();
     if (nextMeasureIndex % MEASUREMENT_BUFFER_SIZE == 0) {  // when the next measurement index is dividable by MEASUREMENT_BUFFER_SIZE, measurements need to be written to sd
+        boxData.begin();
         boxData.persistValues(measurements, MEASUREMENT_BUFFER_SIZE);
     }
 }

@@ -4,7 +4,7 @@ uint32_t BoxTime::MICROSECONDS_PER______SECOND = 1000000;
 uint32_t BoxTime::MICROSECONDS_PER_MILLISECOND = 1000;
 uint32_t BoxTime::MILLISECONDS_PER______SECOND = 1000;
 uint32_t BoxTime::WAITTIME________________NONE = 0;
-uint32_t BoxTime::WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative
+uint32_t BoxTime::WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative estimation, 3 or maybe even 2 could also work
 
 void BoxTime::begin() {
     this->baseTime.begin();
