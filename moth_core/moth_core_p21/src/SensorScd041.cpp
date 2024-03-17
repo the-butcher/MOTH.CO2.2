@@ -2,17 +2,14 @@
 
 SensorScd041Base SensorScd041::baseSensor;
 ValuesCo2 SensorScd041::values;
-float SensorScd041::temperatureOffset =
-    0.8;  // default offset, can be overridden in /config/disp.json -> "deg/off"
-int SensorScd041::co2Reference =
-    425;  // default co2 reference, can be overridden in /config/disp.json ->
-          // "co2/ref"
+float SensorScd041::temperatureOffset = 0.8;  // default offset, can be overridden in /config/disp.json -> "deg/off"
+int SensorScd041::co2Reference = 425;         // default co2 reference, can be overridden in /config/disp.json ->
+                                              // "co2/ref"
 bool SensorScd041::hasBegun = false;
 
 void SensorScd041::begin() {
     SensorScd041::baseSensor.begin(Wire);
-    SensorScd041::baseSensor.setAutomaticSelfCalibration(
-        0);  // no automatic self calibration desired
+    SensorScd041::baseSensor.setAutomaticSelfCalibration(0);  // no automatic self calibration desired
 
     SensorScd041::values = {-1, -1, -1};
 
@@ -25,15 +22,16 @@ float SensorScd041::getTemperatureOffset() {
 }
 
 void SensorScd041::setTemperatureOffset(float temperatureOffset) {
-    bool isApplOffsetRequired =
-        temperatureOffset != SensorScd041::temperatureOffset;
+    bool isApplOffsetRequired = temperatureOffset != SensorScd041::temperatureOffset;
     SensorScd041::temperatureOffset = temperatureOffset;
     if (SensorScd041::hasBegun && isApplOffsetRequired) {
         SensorScd041::applyTemperatureOffset();
     }
 }
 
-int SensorScd041::getCo2Reference() { return SensorScd041::co2Reference; }
+int SensorScd041::getCo2Reference() {
+    return SensorScd041::co2Reference;
+}
 
 void SensorScd041::setCo2Reference(int co2Reference) {
     SensorScd041::co2Reference = co2Reference;
@@ -43,10 +41,9 @@ bool SensorScd041::tryRead() {
     // when measuring periodically, there is nothing to be done here
     // TODO :: power usage once the nordic device is here, if single shot is
     // much better, a solution needs to be found for co2 value noise
-    return SensorScd041::baseSensor
-        .measureSingleShotNoDelay();  // delay must be taken care of in this
-                                      // sketch's code
-                                      // return true;
+    return SensorScd041::baseSensor.measureSingleShotNoDelay();  // delay must be taken care of in this
+                                                                 // sketch's code
+                                                                 // return true;
 }
 
 ValuesCo2 SensorScd041::getValues() {
@@ -99,8 +96,7 @@ void SensorScd041::factoryReset() {
 
 void SensorScd041::applyTemperatureOffset() {
     SensorScd041::stopPeriodicMeasurement();
-    SensorScd041::baseSensor.setTemperatureOffset(
-        SensorScd041::temperatureOffset);
+    SensorScd041::baseSensor.setTemperatureOffset(SensorScd041::temperatureOffset);
     delay(400);
     SensorScd041::startPeriodicMeasurement();
 }

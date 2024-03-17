@@ -19,7 +19,7 @@ bool SensorBme280::measure() {
     return baseSensor.takeForcedMeasurementNoDelay();
 }
 
-measurement_bme_t SensorBme280::readval() {
+values_bme_t SensorBme280::readval() {
     return SensorBme280::values = {baseSensor.readPressure() / 100.0f};
 }
 

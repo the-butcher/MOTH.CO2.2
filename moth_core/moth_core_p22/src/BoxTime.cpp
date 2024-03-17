@@ -14,6 +14,15 @@ DateTime BoxTime::getDate() {
     return baseTime.now();
 }
 
+file32_def_t BoxTime::getFile32Def(uint32_t secondstime) {
+    DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime);
+    char pathBuffer[10];
+    sprintf(pathBuffer, "/%04d/%02d", date.year(), date.month());
+    char nameBuffer[22];
+    sprintf(nameBuffer, "/%04d/%02d/%04d%02d%02d.csv", date.year(), date.month(), date.year(), date.month(), date.day());
+    return {String(pathBuffer), String(nameBuffer)};
+}
+
 String BoxTime::getDateTimeDisplayString(uint32_t secondstime) {
     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime);
     char timeBuffer[32];

@@ -55,7 +55,7 @@ void BoxDisplay::renderTest(String value1, String value2, String value3) {
     flushBuffer();
 }
 
-void BoxDisplay::renderMeasurement(measurement_t measurement, config_t config) {
+void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
     clearBuffer();
     drawOuterBorders(EPD_LIGHT);
     drawInnerBorders(EPD_LIGHT);
@@ -217,7 +217,7 @@ void BoxDisplay::renderHeader() {
     // BoxDisplay::drawAntialiasedText08(ButtonHandlers::C.buttonActionFast.label, RECT_TOP, 264 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
 }
 
-void BoxDisplay::renderFooter(measurement_t measurement) {
+void BoxDisplay::renderFooter(values_all_t measurement) {
     float percent = SensorEnergy::toFloatPercent(measurement.valuesNrg.percent);
 
     String cellPercentFormatted = formatString(String(percent, 0), FORMAT_CELL_PERCENT);

@@ -13,25 +13,28 @@
 #include "sensors/SensorScd041.h"
 #include "types/Action.h"
 #include "types/Config.h"
-#include "types/Measurement.h"
+#include "types/Values.h"
 
 typedef enum {
     SETUP_BOOT,
     SETUP_MAIN
 } setup_mode_t;
 
+// device state
 RTC_DATA_ATTR setup_mode_t setupMode = SETUP_BOOT;
 RTC_DATA_ATTR uint32_t secondsSetupBase;  // secondstime at boot time plus some buffer
 RTC_DATA_ATTR action_t actions[4];
-RTC_DATA_ATTR config_t config;
 RTC_DATA_ATTR uint32_t actionIndexCur;
 RTC_DATA_ATTR uint32_t actionIndexMax;
 
-RTC_DATA_ATTR measurement_t measurements[60];
+// device config
+RTC_DATA_ATTR config_t config;
+
+// recent measurements
+const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
+RTC_DATA_ATTR values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 RTC_DATA_ATTR uint32_t nextMeasureIndex;
 RTC_DATA_ATTR uint32_t nextDisplayIndex;
-
-// std::function<void(void)> displayFunc = nullptr;
 
 BoxBeep boxBeep;
 BoxTime boxTime;
@@ -41,6 +44,23 @@ SensorBme280 sensorBme280;
 SensorEnergy sensorEnergy;
 BoxDisplay boxDisplay;
 ButtonHandlers buttonHandlers;
+
+/**
+ * thoughs on file handling (with the speciality of measurement history display in chart)
+ * 60 measurements
+ * -  1h ->  1min resolution
+ * -  3h ->  3min resolution
+ * ...
+ * - 24h -> 24min resolution
+ *
+ * therefore it will be necessary to open stored csv files and find the appropiate measrements
+ * it can be assumed that finding data will will always involve 1 or two files
+ *
+ * -- 60 slots of measurements searched for could filled
+ * -- starting with the oldest, open file, if not already open
+ * -- iterate through file until a good enough match is found (less than 30 seconds off)
+ *
+ */
 
 uint32_t getMeasureNextSeconds() {
     return secondsSetupBase + nextMeasureIndex * 60;  // add one to index to be one measurement ahead
@@ -67,7 +87,8 @@ void populateConfig() {
         },
         DISPLAY_VAL_T___CO2,  // value shown when rendering a measurement
         false,                // c2f celsius to fahrenheit
-        false                 // beep
+        false,                // beep
+        1.5                   // temperature offset
     };
 }
 
@@ -127,6 +148,10 @@ void setup() {
     // Serial.begin(115200);
     // delay(2000);
 
+    sensorScd041.begin();
+    sensorBme280.begin();
+    sensorEnergy.begin();
+
     if (setupMode == SETUP_BOOT) {
         delay(1000);  // boxTime appears to take some time to initialize, especially on boot
         // secondsCycleBase = boxTime.getDate().secondstime();
@@ -136,9 +161,12 @@ void setup() {
 
         boxData.begin();
 
-        // TODO :: load configuration like display interval, temperature offset, ...
-
         populateConfig();
+        if (sensorScd041.configure(config)) {
+            boxBeep.setPixelColor(COLOR______RED);
+            delay(2000);
+        }
+
         populateActions();
         actions[ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
         actionIndexCur = 0;  // start with high index to trigger primary wait
@@ -147,10 +175,6 @@ void setup() {
         nextMeasureIndex = 0;
         nextDisplayIndex = 0;
     }
-
-    sensorScd041.begin();
-    sensorBme280.begin();
-    sensorEnergy.begin();
 
     // did it wake up from a button press?
     esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
@@ -183,23 +207,26 @@ void handleActionMeasure() {
     // co2
     sensorScd041.powerUp();
     sensorScd041.measure();
+    // pressure
+    sensorBme280.measure();
+    // battery
     if (nextMeasureIndex % 3 == 0) {  // only measure pressure and battery every three minutes
-        // pressure
-        sensorBme280.measure();
-        // battery
         sensorEnergy.powerUp();
         sensorEnergy.measure();
     }
     nextMeasureIndex++;
 }
 
+/**
+ * reads values from sensors
+ */
 void handleActionReadval() {
     // measure and store
-    measurement_co2_t measurementCo2 = sensorScd041.readval();
-    measurement_bme_t measurementBme = sensorBme280.readval();
-    measurement_nrg_t measurementNrg = sensorEnergy.readval();
+    values_co2_t measurementCo2 = sensorScd041.readval();
+    values_bme_t measurementBme = sensorBme280.readval();
+    values_nrg_t measurementNrg = sensorEnergy.readval();
     int currMeasureIndex = nextMeasureIndex - 1;
-    measurements[currMeasureIndex % 60] = {
+    measurements[currMeasureIndex % MEASUREMENT_BUFFER_SIZE] = {
         boxTime.getDate().secondstime(),  // secondstime as of RTC
         measurementCo2,                   // sensorScd041 values
         measurementBme,                   // sensorBme280 values
@@ -208,16 +235,19 @@ void handleActionReadval() {
     };
     sensorScd041.powerDown();
     sensorEnergy.powerDown();
+    if (nextMeasureIndex % MEASUREMENT_BUFFER_SIZE == 0) {  // when the next measurement index is dividable by MEASUREMENT_BUFFER_SIZE, measurements need to be written to sd
+        boxData.persistValues(measurements, MEASUREMENT_BUFFER_SIZE);
+    }
 }
 
 void handleActionDisplay() {
     int currMeasureIndex = nextMeasureIndex - 1;
-    measurement_t measurement = measurements[(currMeasureIndex + 60) % 60];
+    values_all_t measurement = measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
     boxDisplay.renderMeasurement(measurement, config);
 
-    // String value1 = currMeasureIndex >= 2 ? String(measurements[(currMeasureIndex + 58) % 60].valuesCo2.co2) : "NA";
-    // String value2 = currMeasureIndex >= 1 ? String(measurements[(currMeasureIndex + 59) % 60].valuesCo2.co2) : "NA";
-    // String value3 = currMeasureIndex >= 0 ? String(measurements[(currMeasureIndex + 60) % 60].valuesCo2.co2) : "NA";
+    // String value1 = currMeasureIndex >= 2 ? String(measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE - 2) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2) : "NA";
+    // String value2 = currMeasureIndex >= 1 ? String(measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2) : "NA";
+    // String value3 = currMeasureIndex >= 0 ? String(measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2) : "NA";
     // boxDisplay.renderTest(value1, value2, value3);
     nextDisplayIndex = nextMeasureIndex + 2;
 }

@@ -5,6 +5,24 @@ void SensorScd041::begin() {
     values = {0, 0, 0};
 }
 
+bool SensorScd041::configure(config_t config) {
+    // check current setting first
+    float temperatureOffsetV = 0;
+    float& temperatureOffsetR = temperatureOffsetV;
+    baseSensor.getTemperatureOffset(temperatureOffsetR);
+    // whats about to be set
+    float temperatureOffsetC = config.temperatureOffset;
+    // apply, only if there is a real change
+    if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
+        baseSensor.setTemperatureOffset(temperatureOffsetC);
+        baseSensor.setAutomaticSelfCalibration(0);
+        baseSensor.persistSettings();
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool SensorScd041::measure() {
     return baseSensor.measureSingleShotNoDelay();
 }
@@ -17,7 +35,7 @@ bool SensorScd041::powerDown() {
     return baseSensor.powerDown();
 }
 
-measurement_co2_t SensorScd041::readval() {
+values_co2_t SensorScd041::readval() {
     bool isDataReady = false;
     baseSensor.getDataReadyFlag(isDataReady);
     if (isDataReady) {

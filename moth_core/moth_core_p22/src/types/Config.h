@@ -28,6 +28,7 @@ typedef struct {
     display_val_t_e displayValTable;
     bool isFahrenheit;
     bool isBeep;
+    float temperatureOffset;
 } config_t;
 
 #endif

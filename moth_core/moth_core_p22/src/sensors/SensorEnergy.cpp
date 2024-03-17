@@ -19,7 +19,7 @@ bool SensorEnergy::measure() {
     return true;
 }
 
-measurement_nrg_t SensorEnergy::readval() {
+values_nrg_t SensorEnergy::readval() {
     return values;
 }
 

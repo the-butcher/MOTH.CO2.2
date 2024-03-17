@@ -25,10 +25,9 @@ const int CALIBRATION_INTERVAL_BME280 = 20;
  * ################################################
  */
 int Measurements::regBufferSize = 5;
-int Measurements::csvBufferSize = 60;  // 60;
-int Measurements::memBufferSize =
-    10080;  // 10080; // 60 * 24 * 7, every minute over the last 7 days
-            // (space-wise it could also handle 14 days)
+int Measurements::csvBufferSize = 60;     // 60;
+int Measurements::memBufferSize = 10080;  // 10080; // 60 * 24 * 7, every minute over the last 7 days
+                                          // (space-wise it could also handle 14 days)
 int Measurements::memBufferIndx = 0;
 
 int Measurements::lowBufferSize = 12;  // size of the low-pass filter data
@@ -42,21 +41,17 @@ Measurement* Measurements::measurements;
 String Measurements::CSV_HEAD =
     "time; co2; co2_raw; temperature; humidity; temperature_bme; humidity_bme; "
     "pressure; percent\r\n";
-char* Measurements::CSV_FRMT =
-    "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s\r\n";
+char* Measurements::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d; %s; %s; %s; %s; %s; %s; %s; %s\r\n";
 String Measurements::dataFileNameCurr = "";
 
 void Measurements::begin() {
     // https://www.esp32.com/viewtopic.php?t=27771
-    Measurements::measurements = (Measurement*)ps_malloc(
-        Measurements::memBufferSize * sizeof(Measurement));
-    memset(Measurements::measurements, 0,
-           Measurements::memBufferSize * sizeof(Measurement));
+    Measurements::measurements = (Measurement*)ps_malloc(Measurements::memBufferSize * sizeof(Measurement));
+    memset(Measurements::measurements, 0, Measurements::memBufferSize * sizeof(Measurement));
 
     // https://github.com/LinnesLab/KickFilters/blob/master/KickFilters.h
     float tau = 1.0 / (2.0 * PI);
-    Measurements::lowBufferMult = 1.0 / Measurements::lowBufferSize /
-                                  (tau + 1.0 / Measurements::lowBufferSize);
+    Measurements::lowBufferMult = 1.0 / Measurements::lowBufferSize / (tau + 1.0 / Measurements::lowBufferSize);
 
     if (SensorPmsa003i::ACTIVE) {
         Measurements::CSV_HEAD =
@@ -70,8 +65,7 @@ void Measurements::begin() {
 }
 
 float Measurements::toMagnus(float temperatureDeg) {
-    return exp((MAGNUS_B * temperatureDeg) / (temperatureDeg + MAGNUS_C)) *
-           MAGIC_NO / (KELVIN_Z + temperatureDeg);
+    return exp((MAGNUS_B * temperatureDeg) / (temperatureDeg + MAGNUS_C)) * MAGIC_NO / (KELVIN_Z + temperatureDeg);
 }
 
 void Measurements::checkCalibrationOffsetBme280() {
@@ -83,30 +77,24 @@ void Measurements::checkCalibrationOffsetBme280() {
     double temperatureOffsetAvg = 0.0;
     double temperatureOffsetVar = 0.0;  // variance
 
-    for (int offsetIndex = CALIBRATION_INTERVAL_BME280 - 1; offsetIndex >= 0;
-         offsetIndex--) {
+    for (int offsetIndex = CALIBRATION_INTERVAL_BME280 - 1; offsetIndex >= 0; offsetIndex--) {
         measurement = Measurements::getOffsetMeasurement(offsetIndex);
-        temperatureOffsetVal = measurement.valuesBme.temperature -
-                               measurement.valuesCo2.temperature;
+        temperatureOffsetVal = measurement.valuesBme.temperature - measurement.valuesCo2.temperature;
         temperatureOffsetAvg += temperatureOffsetVal;
     }
 
     temperatureOffsetAvg = temperatureOffsetAvg / CALIBRATION_INTERVAL_BME280;
 
-    for (int offsetIndex = CALIBRATION_INTERVAL_BME280 - 1; offsetIndex >= 0;
-         offsetIndex--) {
+    for (int offsetIndex = CALIBRATION_INTERVAL_BME280 - 1; offsetIndex >= 0; offsetIndex--) {
         measurement = Measurements::getOffsetMeasurement(offsetIndex);
-        temperatureOffsetVal = measurement.valuesBme.temperature -
-                               measurement.valuesCo2.temperature;
-        temperatureOffsetVar +=
-            pow(temperatureOffsetVal - temperatureOffsetAvg, 2);
+        temperatureOffsetVal = measurement.valuesBme.temperature - measurement.valuesCo2.temperature;
+        temperatureOffsetVar += pow(temperatureOffsetVal - temperatureOffsetAvg, 2);
     }
 
     temperatureOffsetVar = sqrt(temperatureOffsetVar);
 
     if (temperatureOffsetVar < calibrationThreshold) {
-        SensorBme280::setTemperatureOffset(
-            SensorBme280::getTemperatureOffset() + temperatureOffsetAvg);
+        SensorBme280::setTemperatureOffset(SensorBme280::getTemperatureOffset() + temperatureOffsetAvg);
     }
 }
 
@@ -118,21 +106,18 @@ void Measurements::saveToFile() {
     File32 csvFile;
 
     Measurement measurement;
-    for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0;
-         offsetIndex--) {
+    for (int offsetIndex = Measurements::csvBufferSize - 1; offsetIndex >= 0; offsetIndex--) {
         measurement = Measurements::getOffsetMeasurement(offsetIndex);
         date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
-        dataFileDef = BoxClock::getDataFileDef(
-            date);  // the file name that shall be written to
+        dataFileDef = BoxClock::getDataFileDef(date);  // the file name that shall be written to
         if (dataFileDef.name != dataFileNameLast) {
             if (csvFile) {       // file already open -> file change at midnight
                 csvFile.sync();  // write anything pending
                 csvFile.close();
             }
-            if (dataFileDef.path !=
-                dataFilePathLast) {  // if not only the file name changed, but
-                                     // also the path (a change in month or
-                                     // year, the folders need to be ready)
+            if (dataFileDef.path != dataFilePathLast) {  // if not only the file name changed, but
+                                                         // also the path (a change in month or
+                                                         // year, the folders need to be ready)
                 BoxFiles::buildFolders(dataFileDef.path);
                 dataFilePathLast = dataFileDef.path;
             }
@@ -157,14 +142,11 @@ int Measurements::getCsvBufferIndex() {
 }
 
 Measurement Measurements::getOffsetMeasurement(int offset) {
-    return Measurements::measurements[(max(0, Measurements::memBufferIndx -
-                                                  offset - 1)) %
-                                      Measurements::memBufferSize];
+    return Measurements::measurements[(max(0, Measurements::memBufferIndx - offset - 1)) % Measurements::memBufferSize];
 }
 
 Measurement Measurements::getLatestMeasurement() {
-    return Measurements::measurements[(Measurements::memBufferIndx - 1) %
-                                      Measurements::memBufferSize];
+    return Measurements::measurements[(Measurements::memBufferIndx - 1) % Measurements::memBufferSize];
 }
 
 void Measurements::putMeasurement(Measurement measurement) {
@@ -175,17 +157,14 @@ void Measurements::putMeasurement(Measurement measurement) {
         }
     }
 
-    Measurements::measurements[Measurements::memBufferIndx %
-                               Measurements::memBufferSize] = measurement;
+    Measurements::measurements[Measurements::memBufferIndx % Measurements::memBufferSize] = measurement;
     Measurements::memBufferIndx++;
 
-    if (Measurements::memBufferIndx % CALIBRATION_INTERVAL_BME280 ==
-        0) {  // csv buffer turnaround
+    if (Measurements::memBufferIndx % CALIBRATION_INTERVAL_BME280 == 0) {  // csv buffer turnaround
         Measurements::checkCalibrationOffsetBme280();
     }
 
-    if (Measurements::memBufferIndx % Measurements::csvBufferSize ==
-        0) {  // csv buffer turnaround
+    if (Measurements::memBufferIndx % Measurements::csvBufferSize == 0) {  // csv buffer turnaround
         Measurements::saveToFile();
     }
 
@@ -194,23 +173,18 @@ void Measurements::putMeasurement(Measurement measurement) {
     int indexO = Measurements::lowBufferSize;  // 12
     int indexY = indexO - 1;                   // 11
     int co2Y = Measurements::getOffsetMeasurement(indexY).valuesCo2.co2Raw;
-    Measurements::lowBufferVals[indexY] =
-        co2Y *
-        Measurements::lowBufferMult;  // multiply oldest element with alpha
+    Measurements::lowBufferVals[indexY] = co2Y * Measurements::lowBufferMult;  // multiply oldest element with alpha
     while (indexO > 1) {
         indexO--;             // first iteration :: 11, last iteration :: 1
         indexY = indexO - 1;  // first iteration :: 10, last iteration : 0
 
         float lowPassO = Measurements::lowBufferVals[indexO];
         co2Y = Measurements::getOffsetMeasurement(indexY).valuesCo2.co2Raw;
-        Measurements::lowBufferVals[indexY] =
-            lowPassO + (co2Y - lowPassO) * Measurements::lowBufferMult;
+        Measurements::lowBufferVals[indexY] = lowPassO + (co2Y - lowPassO) * Measurements::lowBufferMult;
     }
 
     // apply corrected co2 value to latest measurement
-    Measurements::measurements[(Measurements::memBufferIndx - 1) %
-                               Measurements::memBufferSize]
-        .valuesCo2.co2 = (int)round(Measurements::lowBufferVals[0]);
+    Measurements::measurements[(Measurements::memBufferIndx - 1) % Measurements::memBufferSize].valuesCo2.co2 = (int)round(Measurements::lowBufferVals[0]);
 }
 
 /**
@@ -218,9 +192,7 @@ void Measurements::putMeasurement(Measurement measurement) {
  * altitude without an actual measurement having been made)
  */
 void Measurements::putValuesBme(ValuesBme valuesBme) {
-    Measurements::measurements[(Measurements::memBufferIndx - 1) %
-                               Measurements::memBufferSize]
-        .valuesBme = valuesBme;
+    Measurements::measurements[(Measurements::memBufferIndx - 1) % Measurements::memBufferSize].valuesBme = valuesBme;
 }
 
 Measurement Measurements::getMeasurement(int memIndex) {
@@ -230,8 +202,7 @@ Measurement Measurements::getMeasurement(int memIndex) {
 int Measurements::getFirstPublishableIndex() {
     // oldest first, this iterates the full array (if there is a single
     // measurement only)
-    for (int index = memBufferIndx;
-         index < Measurements::memBufferSize + memBufferIndx; index++) {
+    for (int index = memBufferIndx; index < Measurements::memBufferSize + memBufferIndx; index++) {
         if (Measurements::measurements[index % memBufferIndx].publishable) {
             return index % memBufferIndx;
         }
@@ -256,40 +227,13 @@ void Measurements::setPublished(int memIndex) {
 String Measurements::toCsv(Measurement measurement) {
     char csvBuffer[256];
 
-    DateTime date =
-        DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
+    DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + measurement.secondstime);
 
     if (SensorPmsa003i::ACTIVE) {
-        sprintf(csvBuffer, Measurements::CSV_FRMT, date.year(), date.month(),
-                date.day(), date.hour(), date.minute(), date.second(),
-                String(measurement.valuesCo2.co2),
-                String(measurement.valuesCo2.co2Raw),
-                String(measurement.valuesCo2.temperature, 1),
-                String(measurement.valuesCo2.humidity, 1),
-                String(measurement.valuesBme.temperature, 1),
-                String(measurement.valuesBme.humidity, 1),
-                String((int)round(measurement.valuesPms.pm010)),
-                String((int)round(measurement.valuesPms.pm025)),
-                String((int)round(measurement.valuesPms.pm100)),
-                String(measurement.valuesPms.pc003),
-                String(measurement.valuesPms.pc005),
-                String(measurement.valuesPms.pc010),
-                String(measurement.valuesPms.pc025),
-                String(measurement.valuesPms.pc050),
-                String(measurement.valuesPms.pc100),
-                String(measurement.valuesBme.pressure),
-                String(measurement.valuesBat.percent, 1));
+        sprintf(csvBuffer, Measurements::CSV_FRMT, date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), String(measurement.valuesCo2.co2), String(measurement.valuesCo2.co2Raw), String(measurement.valuesCo2.temperature, 1), String(measurement.valuesCo2.humidity, 1), String(measurement.valuesBme.temperature, 1), String(measurement.valuesBme.humidity, 1), String((int)round(measurement.valuesPms.pm010)), String((int)round(measurement.valuesPms.pm025)),
+                String((int)round(measurement.valuesPms.pm100)), String(measurement.valuesPms.pc003), String(measurement.valuesPms.pc005), String(measurement.valuesPms.pc010), String(measurement.valuesPms.pc025), String(measurement.valuesPms.pc050), String(measurement.valuesPms.pc100), String(measurement.valuesBme.pressure), String(measurement.valuesBat.percent, 1));
     } else {
-        sprintf(csvBuffer, Measurements::CSV_FRMT, date.year(), date.month(),
-                date.day(), date.hour(), date.minute(), date.second(),
-                String(measurement.valuesCo2.co2),
-                String(measurement.valuesCo2.co2Raw),
-                String(measurement.valuesCo2.temperature, 1),
-                String(measurement.valuesCo2.humidity, 1),
-                String(measurement.valuesBme.temperature, 1),
-                String(measurement.valuesBme.humidity, 1),
-                String(measurement.valuesBme.pressure),
-                String(measurement.valuesBat.percent, 1));
+        sprintf(csvBuffer, Measurements::CSV_FRMT, date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), String(measurement.valuesCo2.co2), String(measurement.valuesCo2.co2Raw), String(measurement.valuesCo2.temperature, 1), String(measurement.valuesCo2.humidity, 1), String(measurement.valuesBme.temperature, 1), String(measurement.valuesBme.humidity, 1), String(measurement.valuesBme.pressure), String(measurement.valuesBat.percent, 1));
     }
 
     // TODO :: make the number locale configurable
