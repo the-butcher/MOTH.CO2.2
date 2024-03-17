@@ -4,19 +4,23 @@
 #include <Arduino.h>
 
 #include "SensorScd041Base.h"
-#include "measurement/MeasurementCo2.h"
+#include "types/Measurement.h"
 
 class SensorScd041 {
    private:
     SensorScd041Base baseSensor;
-    MeasurementCo2 values;
+    measurement_co2_t values;
 
    public:
     void begin();
     bool measure();
-    MeasurementCo2 readval();
+    measurement_co2_t readval();
     bool powerUp();
     bool powerDown();
+    static uint16_t toShortDeg(float floatValue);
+    static float toFloatDeg(uint16_t shortValue);
+    static uint16_t toShortHum(float floatValue);
+    static float toFloatHum(uint16_t shortValue);
 };
 
 #endif

@@ -22,12 +22,15 @@ void BoxBeep::begin() {
     // de-power the neopixel
     pinMode(NEOPIXEL_POWER, OUTPUT);
     digitalWrite(NEOPIXEL_POWER, LOW);
+    rtc_gpio_deinit((gpio_num_t)NEOPIXEL_POWER);
 #endif
 }
 
 void BoxBeep::prepareSleep() {
 #ifdef USE_NEOPIXEL
     gpio_hold_en((gpio_num_t)NEOPIXEL_POWER);
+#else
+    gpio_hold_dis((gpio_num_t)NEOPIXEL_POWER);
 #endif
 }
 

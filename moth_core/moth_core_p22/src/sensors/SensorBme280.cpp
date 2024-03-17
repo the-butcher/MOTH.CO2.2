@@ -12,21 +12,21 @@ void SensorBme280::begin() {
     baseSensor.begin();
     // https://www.mouser.com/datasheet/2/783/BST-BME280-DS002-1509607.pdf for weather measurements
     baseSensor.setSampling(MODE_FORCED, SAMPLING_X1, SAMPLING_X1, SAMPLING_X1, FILTER_OFF, STANDBY_MS_1000);
-    values = {0};
+    values = {0.0f};
 }
 
 bool SensorBme280::measure() {
     return baseSensor.takeForcedMeasurementNoDelay();
 }
 
-MeasurementBme SensorBme280::readval() {
-    return SensorBme280::values = {toShortPressure(baseSensor.readPressure() / 100.0f)};
+measurement_bme_t SensorBme280::readval() {
+    return SensorBme280::values = {baseSensor.readPressure() / 100.0f};
 }
 
-uint16_t SensorBme280::toShortPressure(float floatValue) {
-    return round((min(1300.0f, max(300.0f, floatValue)) - 300.0f) * 64.0f);
-}
+// uint16_t SensorBme280::toShortPressure(float floatValue) {
+//     return round((min(1300.0f, max(300.0f, floatValue)) - 300.0f) * 64.0f);
+// }
 
-float SensorBme280::toFloatPressure(uint16_t shortValue) {
-    return shortValue / 64.0f + 300.0f;
-}
+// float SensorBme280::toFloatPressure(uint16_t shortValue) {
+//     return shortValue / 64.0f + 300.0f;
+// }

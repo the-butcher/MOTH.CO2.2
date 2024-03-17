@@ -14,13 +14,17 @@ bool SensorEnergy::powerDown() {
     return basePack.setPowerMode(LC709203F_POWER_SLEEP);
 }
 
-MeasurementNrg SensorEnergy::readval() {
+bool SensorEnergy::measure() {
     values = {toShortPercent(basePack.cellPercent())};
+    return true;
+}
+
+measurement_nrg_t SensorEnergy::readval() {
     return values;
 }
 
 uint16_t SensorEnergy::toShortPercent(float floatValue) {
-    return round(min(1300.0f, max(300.0f, floatValue)) * 640.0f);
+    return round(min(100.0f, max(0.0f, floatValue)) * 640.0f);
 }
 
 float SensorEnergy::toFloatPercent(uint16_t shortValue) {

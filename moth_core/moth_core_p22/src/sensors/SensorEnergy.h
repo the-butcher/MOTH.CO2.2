@@ -3,20 +3,21 @@
 
 #include <Adafruit_LC709203F.h>
 
-#include "measurement/MeasurementNrg.h"
+#include "types/Measurement.h"
 
 class SensorEnergy {
    private:
     Adafruit_LC709203F basePack;
-    MeasurementNrg values;
+    measurement_nrg_t values;
 
    public:
     void begin();
-    MeasurementNrg readval();
-    static uint16_t toShortPercent(float floatValue);
-    static float toFloatPercent(uint16_t shortValue);
+    bool measure();
+    measurement_nrg_t readval();
     bool powerUp();
     bool powerDown();
+    static uint16_t toShortPercent(float floatValue);
+    static float toFloatPercent(uint16_t shortValue);
 };
 
 #endif

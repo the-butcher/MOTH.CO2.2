@@ -10,8 +10,8 @@ ButtonHandler::ButtonHandler(gpio_num_t gpin) {
 }
 
 void ButtonHandler::begin() {
-    rtc_gpio_deinit(gpin);
     pinMode(gpin, INPUT_PULLUP);
+    rtc_gpio_deinit(gpin);
 }
 
 void ButtonHandler::prepareSleep(bool isExt1Wakeup) {
@@ -19,6 +19,8 @@ void ButtonHandler::prepareSleep(bool isExt1Wakeup) {
         gpio_hold_en(gpin);
         rtc_gpio_pullup_en(gpin);
         rtc_gpio_pulldown_dis(gpin);
+    } else {
+        gpio_hold_dis(gpin);
     }
 }
 

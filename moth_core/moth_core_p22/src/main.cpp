@@ -7,12 +7,13 @@
 #include "BoxData.h"
 #include "BoxDisplay.h"
 #include "BoxTime.h"
-#include "action/Action.h"
 #include "buttons/ButtonHandlers.h"
-#include "measurement/Measurement.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
+#include "types/Action.h"
+#include "types/Config.h"
+#include "types/Measurement.h"
 
 typedef enum {
     SETUP_BOOT,
@@ -21,11 +22,12 @@ typedef enum {
 
 RTC_DATA_ATTR setup_mode_t setupMode = SETUP_BOOT;
 RTC_DATA_ATTR uint32_t secondsSetupBase;  // secondstime at boot time plus some buffer
-RTC_DATA_ATTR action_s actions[4];
+RTC_DATA_ATTR action_t actions[4];
+RTC_DATA_ATTR config_t config;
 RTC_DATA_ATTR uint32_t actionIndexCur;
 RTC_DATA_ATTR uint32_t actionIndexMax;
 
-RTC_DATA_ATTR Measurement measurements[60];
+RTC_DATA_ATTR measurement_t measurements[60];
 RTC_DATA_ATTR uint32_t nextMeasureIndex;
 RTC_DATA_ATTR uint32_t nextDisplayIndex;
 
@@ -34,14 +36,39 @@ RTC_DATA_ATTR uint32_t nextDisplayIndex;
 BoxBeep boxBeep;
 BoxTime boxTime;
 BoxData boxData;
-SensorEnergy sensorEnergy;
 SensorScd041 sensorScd041;
 SensorBme280 sensorBme280;
+SensorEnergy sensorEnergy;
 BoxDisplay boxDisplay;
 ButtonHandlers buttonHandlers;
 
 uint32_t getMeasureNextSeconds() {
     return secondsSetupBase + nextMeasureIndex * 60;  // add one to index to be one measurement ahead
+}
+
+void populateConfig() {
+    config = {
+        {
+            800,   // co2 warnHi
+            1000,  // co2 riskHi
+            425    // co2 reference
+        },
+        {
+            14,  // deg riskLo
+            19,  // deg warnLo
+            25,  // deg warnHi
+            30   // deg riskHi
+        },
+        {
+            25,  // hum riskLo
+            30,  // hum warnLo
+            60,  // hum warnHi
+            65   // hum riskHi
+        },
+        DISPLAY_VAL_T___CO2,  // value shown when rendering a measurement
+        false,                // c2f celsius to fahrenheit
+        false                 // beep
+    };
 }
 
 void populateActions() {
@@ -80,20 +107,22 @@ void setup() {
     // a debug pin usable in the PKK2 tool
     pinMode(GPIO_NUM_16, OUTPUT);
     digitalWrite(GPIO_NUM_16, LOW);
+    rtc_gpio_deinit(GPIO_NUM_16);
 
     // turn on I2C power
     pinMode(I2C_POWER, OUTPUT);
     digitalWrite(I2C_POWER, HIGH);
+    rtc_gpio_deinit((gpio_num_t)I2C_POWER);
 
     Wire.begin();
     boxTime.begin();
     boxBeep.begin();
     buttonHandlers.begin();
     boxBeep.setPixelColor(COLOR_____GRAY);
-    delay(50);  // find out why this is needed and if there could be a more efficient way to wait only for as long as neededd
-    while (boxTime.getDate().secondstime() < 500000000) {
-        delay(5);
-    }
+    // delay(50);  // find out why this is needed and if there could be a more efficient way to wait only for as long as neededd
+    // while (boxTime.getDate().secondstime() < 500000000) {
+    //     delay(5);
+    // }
 
     // Serial.begin(115200);
     // delay(2000);
@@ -109,6 +138,7 @@ void setup() {
 
         // TODO :: load configuration like display interval, temperature offset, ...
 
+        populateConfig();
         populateActions();
         actions[ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
         actionIndexCur = 0;  // start with high index to trigger primary wait
@@ -153,18 +183,21 @@ void handleActionMeasure() {
     // co2
     sensorScd041.powerUp();
     sensorScd041.measure();
-    // pressure
-    sensorBme280.measure();
-    // battery
-    sensorEnergy.powerUp();
+    if (nextMeasureIndex % 3 == 0) {  // only measure pressure and battery every three minutes
+        // pressure
+        sensorBme280.measure();
+        // battery
+        sensorEnergy.powerUp();
+        sensorEnergy.measure();
+    }
     nextMeasureIndex++;
 }
 
 void handleActionReadval() {
     // measure and store
-    MeasurementCo2 measurementCo2 = sensorScd041.readval();
-    MeasurementBme measurementBme = sensorBme280.readval();
-    MeasurementNrg measurementNrg = sensorEnergy.readval();
+    measurement_co2_t measurementCo2 = sensorScd041.readval();
+    measurement_bme_t measurementBme = sensorBme280.readval();
+    measurement_nrg_t measurementNrg = sensorEnergy.readval();
     int currMeasureIndex = nextMeasureIndex - 1;
     measurements[currMeasureIndex % 60] = {
         boxTime.getDate().secondstime(),  // secondstime as of RTC
@@ -179,16 +212,19 @@ void handleActionReadval() {
 
 void handleActionDisplay() {
     int currMeasureIndex = nextMeasureIndex - 1;
-    String value1 = currMeasureIndex >= 2 ? String(measurements[(currMeasureIndex + 58) % 60].valuesCo2.co2) : "NA";
-    String value2 = currMeasureIndex >= 1 ? String(measurements[(currMeasureIndex + 59) % 60].valuesCo2.co2) : "NA";
-    String value3 = currMeasureIndex >= 0 ? String(measurements[(currMeasureIndex + 60) % 60].valuesCo2.co2) : "NA";
-    boxDisplay.renderTest(value1, value2, value3);
+    measurement_t measurement = measurements[(currMeasureIndex + 60) % 60];
+    boxDisplay.renderMeasurement(measurement, config);
+
+    // String value1 = currMeasureIndex >= 2 ? String(measurements[(currMeasureIndex + 58) % 60].valuesCo2.co2) : "NA";
+    // String value2 = currMeasureIndex >= 1 ? String(measurements[(currMeasureIndex + 59) % 60].valuesCo2.co2) : "NA";
+    // String value3 = currMeasureIndex >= 0 ? String(measurements[(currMeasureIndex + 60) % 60].valuesCo2.co2) : "NA";
+    // boxDisplay.renderTest(value1, value2, value3);
     nextDisplayIndex = nextMeasureIndex + 2;
 }
 
 void handleActionDepower() {
     boxDisplay.hibernate();
-    sensorEnergy.powerDown();  // redundant
+    sensorEnergy.powerDown();  // redundant power down on battery monitor, seems to help with power reduction after redisplay
 }
 
 /**
@@ -207,15 +243,17 @@ void secondsSleep(uint32_t seconds, bool requireI2C, bool isExt1Wakeup) {
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
+    // ESP_PD_DOMAIN_RTC_SLOW_MEM
+
     // this may hold the neopixel power, depending on color debug setting
-    boxBeep.prepareSleep();
+    boxBeep.prepareSleep();  // puts neopixel power low
     buttonHandlers.prepareSleep(isExt1Wakeup);
     esp_sleep_enable_timer_wakeup(sleepMicros);
 
     // Serial.flush();
     // Serial.end();
     if (requireI2C) {
-        gpio_hold_en((gpio_num_t)I2C_POWER);
+        gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
     } else {
         // disable I2C power, shutdown wire and disable pullup on SDA and ACL
         pinMode(I2C_POWER, OUTPUT);
@@ -223,9 +261,9 @@ void secondsSleep(uint32_t seconds, bool requireI2C, bool isExt1Wakeup) {
         gpio_hold_dis((gpio_num_t)I2C_POWER);
     }
 
-    Wire.end();           // https://github.com/espressif/arduino-esp32/issues/3363
-    pinMode(SDA, INPUT);  // needed because Wire.end() enables pullups, power Saving
-    pinMode(SCL, INPUT);
+    Wire.end();  // https://github.com/espressif/arduino-esp32/issues/3363
+    // pinMode(SDA, INPUT);  // needed because Wire.end() enables pullups, power Saving
+    // pinMode(SCL, INPUT);
 
     digitalWrite(GPIO_NUM_16, HIGH);  // put signal pin high for PPK2
     boxBeep.setPixelColor(COLOR_____BLUE);
@@ -247,7 +285,7 @@ void secondsDelay(uint32_t seconds) {
 }
 
 void loop() {
-    action_s action = actions[actionIndexCur];
+    action_t action = actions[actionIndexCur];
     if (getSecondsWait(action.secondsNext) == BoxTime::WAITTIME________________NONE) {  // action is due
         boxBeep.setPixelColor(action.color);
         switch (action.type) {
@@ -266,6 +304,7 @@ void loop() {
             default:
                 break;
         }
+        delay(1);  // TODO :: experimental, trying to find the cause for 10s@1mA after readval
         actionIndexCur++;
         if (actionIndexCur < actionIndexMax) {  // more executable actions
             actions[actionIndexCur].secondsNext = boxTime.getDate().secondstime() + action.secondsWait;

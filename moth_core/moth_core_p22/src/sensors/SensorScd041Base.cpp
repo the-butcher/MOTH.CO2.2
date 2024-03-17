@@ -26,5 +26,6 @@ uint16_t SensorScd041Base::measureSingleShotNoDelay() {
     }
 
     error = SensirionI2CCommunication::sendFrame(SCD4X_I2C_ADDRESS, txFrame, *_i2cBus);
+    delay(1);  // TODO :: experimental, trying to find the cause for 10s@1mA after readval
     return error;
 }

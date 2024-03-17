@@ -11,14 +11,14 @@ typedef enum {
     ACTION_READVAL,  // read values, i2c off
     ACTION_DISPLAY,  // display on, render values
     ACTION_DEPOWER   // display off
-} action_t;
+} action_e;
 
 typedef struct {
-    action_t type;         // type of action to be performed
+    action_e type;         // type of action to be performed
     color_t color;         // neopixel color associated with this action
     bool isExt1Wakeup;     // allow button wakeup while waiting for the next action
     uint32_t secondsWait;  // time expected for this action to complete
     uint32_t secondsNext;  // time for next execution of this action
-} action_s;
+} action_t;
 
 #endif

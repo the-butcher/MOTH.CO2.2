@@ -10,6 +10,7 @@ class BoxTime {
    public:
     void begin();
     DateTime getDate();
+    static String getDateTimeDisplayString(uint32_t secondstime);
     static uint32_t WAITTIME________________NONE;
     static uint32_t WAITTIME_DISPLAY_AND_DEPOWER;
     static uint32_t MILLISECONDS_PER______SECOND;

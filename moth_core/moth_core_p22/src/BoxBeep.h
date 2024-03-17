@@ -1,6 +1,8 @@
 #ifndef BoxBeep_h
 #define BoxBeep_h
 
+#include <driver/rtc_io.h>
+
 typedef enum {
     COLOR____WHITE = 0x333333,
     COLOR______RED = 0xFF0000,
