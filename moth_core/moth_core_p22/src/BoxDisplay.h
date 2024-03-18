@@ -19,6 +19,7 @@
 
 #include "BoxDisplayBase.h"
 #include "BoxTime.h"
+#include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
 #include "types/Config.h"
@@ -35,7 +36,7 @@ class BoxDisplay {
    private:
     BoxDisplayBase baseDisplay;
     void renderHeader();
-    void renderFooter(values_all_t measurement);
+    void renderFooter(values_all_t *measurement);
     void drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
     void drawAntialiasedText08(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
     void drawAntialiasedText18(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
@@ -56,8 +57,7 @@ class BoxDisplay {
 
    public:
     void begin();
-    void renderTest(String value1, String value2, String value3);
-    void renderMeasurement(values_all_t measurement, config_t config);
+    void renderMeasurement(values_all_t *measurement, config_t *config);
     void hibernate();
 };
 

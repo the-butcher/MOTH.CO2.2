@@ -47,22 +47,14 @@ void BoxDisplay::clearBuffer() {
     baseDisplay.clearBuffer();
 }
 
-void BoxDisplay::renderTest(String value1, String value2, String value3) {
-    clearBuffer();
-    drawAntialiasedText08(value1, RECT_TOP, 20, 20, EPD_BLACK);
-    drawAntialiasedText08(value2, RECT_TOP, 20, 60, EPD_BLACK);
-    drawAntialiasedText08(value3, RECT_TOP, 20, 100, EPD_BLACK);
-    flushBuffer();
-}
-
-void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
+void BoxDisplay::renderMeasurement(values_all_t *measurement, config_t *config) {
     clearBuffer();
     drawOuterBorders(EPD_LIGHT);
     drawInnerBorders(EPD_LIGHT);
 
     // values for temperature and humidity
-    float deg = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);  // TODO reconvert to float
-    float hum = SensorScd041::toFloatHum(measurement.valuesCo2.hum);  // TODO reconvert to float
+    float deg = SensorScd041::toFloatDeg(measurement->valuesCo2.deg);  // TODO reconvert to float
+    float hum = SensorScd041::toFloatHum(measurement->valuesCo2.hum);  // TODO reconvert to float
 
     // variables needed
     String title;
@@ -73,9 +65,9 @@ void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
     uint16_t charPosValueX = 193;
     uint16_t charPosFinalX;
 
-    if (config.displayValTable == DISPLAY_VAL_T___CO2) {
-        thresholds_co2_t thresholdsCo2 = config.thresholdsCo2;
-        uint16_t co2 = measurement.valuesCo2.co2;
+    if (config->displayValTable == DISPLAY_VAL_T___CO2) {
+        thresholds_co2_t thresholdsCo2 = config->thresholdsCo2;
+        uint16_t co2 = measurement->valuesCo2.co2;
         float stale = max(0.0, min(10.0, (co2 - thresholdsCo2.reference) / 380.0));  // don't allow negative stale values. max out at 10
         float staleWarn = max(0.0, min(10.0, (thresholdsCo2.warnHi - thresholdsCo2.reference) / 380.0));
         float staleRisk = max(0.0, min(10.0, (thresholdsCo2.riskHi - thresholdsCo2.reference) / 380.0));
@@ -106,8 +98,6 @@ void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
         int yDimRisk = round(staleRisk * staleDif);
         int yDimMax = round(staleMax * staleDif);
 
-        // draw 3px wide indicators for warn and risk
-        //  baseDisplay.drawFastHLine(RECT_CO2.xmin + 6, yMax, charDimX6 * 3, textColor);
         int xBarMin = 8;
         int xBarMax = 13;
         for (int i = xBarMin; i <= xBarMax; i++) {
@@ -126,8 +116,8 @@ void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
             baseDisplay.drawFastHLine(xBarMin, yMax, xBarMax - xBarMin + 1, vertColor);
         }
 
-        int yTxt = RECT_CO2.ymax - RECT_CO2.ymin - yDim - 10;  // (stale < staleMax / 2 ? 2 : 2);
-        int yPrc = yTxt;                                       // the percent sign
+        int yTxt = RECT_CO2.ymax - RECT_CO2.ymin - yDim - 10;
+        int yPrc = yTxt;
         int xPrc = xBarMax + 19;
         int xLin = 24;
 
@@ -153,8 +143,8 @@ void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
         }
         BoxDisplay::drawAntialiasedText06("%", RECT_CO2, xPrc, yPrc, textColor);
 
-    } else if (config.displayValTable == DISPLAY_VAL_T___HPA) {
-        int hpa = measurement.valuesBme.pressure;
+    } else if (config->displayValTable == DISPLAY_VAL_T___HPA) {
+        int hpa = measurement->valuesBme.pressure;
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
@@ -164,13 +154,25 @@ void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
         title = "pressure hPa";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
         BoxDisplay::drawAntialiasedText36(formatString(String(hpa), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+    } else if (config->displayValTable == DISPLAY_VAL_T___ALT) {
+        // TODO alt calculation here
+        int alt = 0;  // round(Measurements::getLatestMeasurement().valuesBme.altitude);
+        textColor = EPD_BLACK;
+        fillColor = EPD_WHITE;
+        vertColor = EPD_DARK;
+
+        BoxDisplay::fillRectangle(RECT_CO2, fillColor);
+
+        title = "altitude m";
+        charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
+        BoxDisplay::drawAntialiasedText36(formatString(String(alt), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     }
     BoxDisplay::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
 
-    thresholds_lh_t thresholdsDeg = config.thresholdsDeg;
+    thresholds_lh_t thresholdsDeg = config->thresholdsDeg;
     textColor = getTextColor(deg, thresholdsDeg.riskLo, thresholdsDeg.wanrLo, thresholdsDeg.warnHi, thresholdsDeg.riskHi);
     fillColor = getFillColor(deg, thresholdsDeg.riskLo, thresholdsDeg.wanrLo, thresholdsDeg.warnHi, thresholdsDeg.riskHi);
-    if (config.isFahrenheit) {
+    if (config->isFahrenheit) {
         deg = BoxDisplay::celsiusToFahrenheit(deg);
     }
     int temperature10 = round(deg * 10.0);
@@ -180,11 +182,11 @@ void BoxDisplay::renderMeasurement(values_all_t measurement, config_t config) {
         BoxDisplay::fillRectangle(RECT_DEG, fillColor);
     }
     BoxDisplay::drawAntialiasedText18(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 0, 35, textColor);
-    BoxDisplay::drawAntialiasedText06(config.isFahrenheit ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
+    BoxDisplay::drawAntialiasedText06(config->isFahrenheit ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
     BoxDisplay::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
     BoxDisplay::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
 
-    thresholds_lh_t thresholdsHum = config.thresholdsHum;
+    thresholds_lh_t thresholdsHum = config->thresholdsHum;
     textColor = getTextColor(hum, thresholdsHum.riskLo, thresholdsHum.wanrLo, thresholdsHum.warnHi, thresholdsHum.riskHi);
     fillColor = getFillColor(hum, thresholdsHum.riskLo, thresholdsHum.wanrLo, thresholdsHum.warnHi, thresholdsHum.riskHi);
     int humidity10 = round(hum * 10.0);
@@ -217,8 +219,8 @@ void BoxDisplay::renderHeader() {
     // BoxDisplay::drawAntialiasedText08(ButtonHandlers::C.buttonActionFast.label, RECT_TOP, 264 + charDimX6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
 }
 
-void BoxDisplay::renderFooter(values_all_t measurement) {
-    float percent = SensorEnergy::toFloatPercent(measurement.valuesNrg.percent);
+void BoxDisplay::renderFooter(values_all_t *measurement) {
+    float percent = SensorEnergy::toFloatPercent(measurement->valuesNrg.percent);
 
     String cellPercentFormatted = formatString(String(percent, 0), FORMAT_CELL_PERCENT);
     BoxDisplay::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, LIMIT_POS_X - 14 - CHAR_DIM_X6 * cellPercentFormatted.length(), TEXT_OFFSET_Y, EPD_BLACK);
@@ -250,7 +252,7 @@ void BoxDisplay::renderFooter(values_all_t measurement) {
         // BoxDisplay::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
         // BoxDisplay::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter + (address.length() + 1) * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
     } else {
-        String timeFormatted = BoxTime::getDateTimeDisplayString(measurement.secondstime);
+        String timeFormatted = BoxTime::getDateTimeDisplayString(measurement->secondstime);
         BoxDisplay::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
     }
 }

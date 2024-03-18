@@ -4,8 +4,8 @@
 #include <SdFat.h>
 
 #include "BoxTime.h"
-#include "sensors/SensorEnergy.h";
-#include "sensors/SensorScd041.h";
+#include "sensors/SensorEnergy.h"
+#include "sensors/SensorScd041.h"
 #include "types/Values.h"
 
 class BoxData {
@@ -21,7 +21,7 @@ class BoxData {
     bool existsPath(String path);
     bool removeFile32(String file);
     void persistValues(values_all_t* values, int count);
-    String toCsvLine(values_all_t value);
+    String toCsvLine(values_all_t* value);
 };
 
 #endif

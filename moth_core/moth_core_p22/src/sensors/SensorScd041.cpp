@@ -5,13 +5,13 @@ void SensorScd041::begin() {
     values = {0, 0, 0};
 }
 
-bool SensorScd041::configure(config_t config) {
+bool SensorScd041::configure(config_t* config) {
     // check current setting first
     float temperatureOffsetV = 0;
     float& temperatureOffsetR = temperatureOffsetV;
     baseSensor.getTemperatureOffset(temperatureOffsetR);
     // whats about to be set
-    float temperatureOffsetC = config.temperatureOffset;
+    float temperatureOffsetC = config->temperatureOffset;
     // apply, only if there is a real change
     if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
         baseSensor.setTemperatureOffset(temperatureOffsetC);

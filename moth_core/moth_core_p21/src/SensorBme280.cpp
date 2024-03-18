@@ -41,7 +41,9 @@ void SensorBme280::begin() {
     SensorBme280::hasBegun = true;
 }
 
-float SensorBme280::getTemperatureOffset() { return SensorBme280::temperatureOffset; }
+float SensorBme280::getTemperatureOffset() {
+    return SensorBme280::temperatureOffset;
+}
 
 void SensorBme280::setTemperatureOffset(float temperatureOffset) {
     bool isApplOffsetRequired = temperatureOffset != SensorBme280::temperatureOffset;
@@ -76,8 +78,14 @@ void SensorBme280::updateAltitude(float altitudeUpdate) {
     Measurements::putValuesBme(valuesBme);
 }
 
-void SensorBme280::applyTemperatureOffset() { SensorBme280::baseSensor.setTemperatureCompensation(-SensorBme280::temperatureOffset); }
+void SensorBme280::applyTemperatureOffset() {
+    SensorBme280::baseSensor.setTemperatureCompensation(-SensorBme280::temperatureOffset);
+}
 
-float SensorBme280::getAltitude(float pressure) { return (1 - pow(pressure * 0.01 / SensorBme280::pressureOffset, ALTITUDE__EXP)) * ALTITUDE_MULT; }
+float SensorBme280::getAltitude(float pressure) {
+    return (1 - pow(pressure * 0.01 / SensorBme280::pressureOffset, ALTITUDE__EXP)) * ALTITUDE_MULT;
+}
 
-void SensorBme280::applyAltitudeOffset(float pressure) { SensorBme280::pressureOffset = pressure * 0.01 / pow(1 - SensorBme280::altitudeOffset / ALTITUDE_MULT, 1 / ALTITUDE__EXP); }
+void SensorBme280::applyAltitudeOffset(float pressure) {
+    SensorBme280::pressureOffset = pressure * 0.01 / pow(1 - SensorBme280::altitudeOffset / ALTITUDE_MULT, 1 / ALTITUDE__EXP);
+}

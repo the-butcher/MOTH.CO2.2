@@ -27,11 +27,11 @@ RTC_DATA_ATTR action_t actions[4];
 RTC_DATA_ATTR uint32_t actionIndexCur;
 RTC_DATA_ATTR uint32_t actionIndexMax;
 
-// device config
+// device config and display state
 RTC_DATA_ATTR config_t config;
 
 // recent measurements
-const uint8_t MEASUREMENT_BUFFER_SIZE = 5;
+const uint8_t MEASUREMENT_BUFFER_SIZE = 30;
 RTC_DATA_ATTR values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 RTC_DATA_ATTR uint32_t nextMeasureIndex;
 RTC_DATA_ATTR uint32_t nextDisplayIndex;
@@ -61,7 +61,7 @@ ButtonHandlers buttonHandlers;
  * -- iterate through file until a good enough match is found (less than 30 seconds off)
  *
  * -- poc has been implemented in esp32_csvtest (not on github yet)
- *    -- ket there be a "value-provider" that will find 60 measurements from file, or in the special case if 1h from the RTC memory values (likely for the sake of power usage)
+ *    -- let there be a "value-provider" that will find 60 measurements from file, or in the special case if 1h from the RTC memory values (likely for the sake of power usage)
  */
 
 uint32_t getMeasureNextSeconds() {
@@ -87,10 +87,13 @@ void populateConfig() {
             60,  // hum warnHi
             65   // hum riskHi
         },
+        DISPLAY_VAL_M_TABLE,
         DISPLAY_VAL_T___CO2,  // value shown when rendering a measurement
         false,                // c2f celsius to fahrenheit
         false,                // beep
-        1.5                   // temperature offset
+        1.5,                  // temperature offset
+        0.0,                  // calculated sealevel pressure, 0.0 = needs recalculation
+        153                   // the altitude that the seonsor was configured to (or set by the user)
     };
 }
 
@@ -164,9 +167,8 @@ void setup() {
         boxData.begin();
 
         populateConfig();
-        if (sensorScd041.configure(config)) {
-            boxBeep.setPixelColor(COLOR______RED);
-            delay(2000);
+        if (sensorScd041.configure(&config)) {
+            boxBeep.setPixelColor(COLOR______RED);  // indicate that a configuration just took place (with a write to the scd41's eeprom)
         }
 
         populateActions();
@@ -188,6 +190,9 @@ void setup() {
         if (digitalRead(wakeupPin) == HIGH) {  // has already been released
 
             // alter state as of action
+            // TODO :: there also needs to be a way to execute actions like calibration
+            // -- would have to pause the action cycle until complete, and resume after completion
+            // -- if running long, there could be a pattern of inserting "void" measurements or incrementing the start seconds
 
             actionIndexMax = 4;  // allow actions display and depower by index
             // waiting for ACTION_MEASURE and enough time to render
@@ -201,6 +206,7 @@ void setup() {
 
         } else {
             // still pressed, TODO :: take care of long press
+            // could spawn a task that establishes an interrupt, then keeps checking for button state and assigns some fallrise_t state to the button handler
         }
     }
 }
@@ -223,10 +229,11 @@ void handleActionMeasure() {
  * reads values from sensors
  */
 void handleActionReadval() {
-    // measure and store
+    // read values from the sensors
     values_co2_t measurementCo2 = sensorScd041.readval();
     values_bme_t measurementBme = sensorBme280.readval();
     values_nrg_t measurementNrg = sensorEnergy.readval();
+    // store values
     int currMeasureIndex = nextMeasureIndex - 1;
     measurements[currMeasureIndex % MEASUREMENT_BUFFER_SIZE] = {
         boxTime.getDate().secondstime(),  // secondstime as of RTC
@@ -235,23 +242,24 @@ void handleActionReadval() {
         measurementNrg,                   // battery values
         true                              // publishable
     };
+    // power down sensors
     sensorScd041.powerDown();
     sensorEnergy.powerDown();
+    // upon rollover, write measurements to SD card
     if (nextMeasureIndex % MEASUREMENT_BUFFER_SIZE == 0) {  // when the next measurement index is dividable by MEASUREMENT_BUFFER_SIZE, measurements need to be written to sd
         boxData.begin();
         boxData.persistValues(measurements, MEASUREMENT_BUFFER_SIZE);
+    }
+    // when pressureZerolevel == 0.0 it means that pressure at sealevel needs to be recalculated
+    if (config.pressureZerolevel == 0.0) {
+        config.pressureZerolevel = sensorBme280.getPressureZerolevel(config.altitudeBaselevel, measurementBme.pressure);
     }
 }
 
 void handleActionDisplay() {
     int currMeasureIndex = nextMeasureIndex - 1;
     values_all_t measurement = measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
-    boxDisplay.renderMeasurement(measurement, config);
-
-    // String value1 = currMeasureIndex >= 2 ? String(measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE - 2) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2) : "NA";
-    // String value2 = currMeasureIndex >= 1 ? String(measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2) : "NA";
-    // String value3 = currMeasureIndex >= 0 ? String(measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2) : "NA";
-    // boxDisplay.renderTest(value1, value2, value3);
+    boxDisplay.renderMeasurement(&measurement, &config);
     nextDisplayIndex = nextMeasureIndex + 2;
 }
 

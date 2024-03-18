@@ -1,7 +1,7 @@
 #include "SensorBme280.h"
 
-const float ALTITUDE__EXP = 0.190284;
-const float ALTITUDE_MULT = 44307.69396;
+float SensorBme280::ALTITUDE__EXP = 0.190284;
+float SensorBme280::ALTITUDE_MULT = 44307.69396;
 
 const Adafruit_BME280::sensor_mode MODE_FORCED = (Adafruit_BME280::sensor_mode)0b01;
 const Adafruit_BME280::sensor_sampling SAMPLING_X1 = (Adafruit_BME280::sensor_sampling)0b001;
@@ -23,10 +23,10 @@ values_bme_t SensorBme280::readval() {
     return SensorBme280::values = {baseSensor.readPressure() / 100.0f};
 }
 
-// uint16_t SensorBme280::toShortPressure(float floatValue) {
-//     return round((min(1300.0f, max(300.0f, floatValue)) - 300.0f) * 64.0f);
-// }
+float SensorBme280::getPressureZerolevel(float altitudeBaselevel, float pressure) {
+    return pressure / pow(1 - altitudeBaselevel / SensorBme280::ALTITUDE_MULT, 1 / SensorBme280::ALTITUDE__EXP);
+}
 
-// float SensorBme280::toFloatPressure(uint16_t shortValue) {
-//     return shortValue / 64.0f + 300.0f;
-// }
+float SensorBme280::getAltitude(float pressureZerolevel, float pressure) {
+    return (1 - pow(pressure / pressureZerolevel, SensorBme280::ALTITUDE__EXP)) * SensorBme280::ALTITUDE_MULT;
+}
