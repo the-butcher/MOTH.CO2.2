@@ -14,7 +14,7 @@ class SensorScd041 {
 
    public:
     void begin();
-    bool configure(config_t* config);
+    bool configure(config_t* config);  // must have begun before configuration
     bool measure();
     values_co2_t readval();
     bool powerUp();

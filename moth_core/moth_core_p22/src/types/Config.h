@@ -24,18 +24,32 @@ typedef enum {
     DISPLAY_VAL_M_CHART
 } display_val_m_e;
 
+/**
+ * current display value in table modus
+ */
 typedef enum {
     DISPLAY_VAL_T___CO2,
     DISPLAY_VAL_T___HPA,
     DISPLAY_VAL_T___ALT
 } display_val_t_e;
 
+// current display value in chart modus
+typedef enum {
+    DISPLAY_VAL_C___CO2,
+    DISPLAY_VAL_C___DEG,
+    DISPLAY_VAL_C___HUM,
+    DISPLAY_VAL_C___HPA,
+    DISPLAY_VAL_C___ALT
+} display_val_c_e;
+
 typedef struct {
     thresholds_co2_t thresholdsCo2;
     thresholds_lh_t thresholdsDeg;
     thresholds_lh_t thresholdsHum;
-    display_val_m_e displayValModus;
+    uint8_t displayUpdateMinutes;
+    display_val_m_e displayValModus;  // chart | table
     display_val_t_e displayValTable;
+    display_val_c_e displayValChart;
     bool isFahrenheit;
     bool isBeep;
     float temperatureOffset;

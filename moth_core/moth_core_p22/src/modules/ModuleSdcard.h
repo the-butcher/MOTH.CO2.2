@@ -1,14 +1,14 @@
-#ifndef BoxData_h
-#define BoxData_h
+#ifndef ModuleSdcard_h
+#define ModuleSdcard_h
 
 #include <SdFat.h>
 
-#include "BoxTime.h"
+#include "modules/ModuleTicker.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
 #include "types/Values.h"
 
-class BoxData {
+class ModuleSdcard {
    private:
     SdFat32 sd32;
     static String CSV_FRMT;

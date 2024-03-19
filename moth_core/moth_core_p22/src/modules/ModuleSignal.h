@@ -1,5 +1,5 @@
-#ifndef BoxBeep_h
-#define BoxBeep_h
+#ifndef ModuleSignal_h
+#define ModuleSignal_h
 
 #include <driver/rtc_io.h>
 
@@ -14,12 +14,12 @@ typedef enum {
     COLOR_____GRAY = 0x060606
 } color_t;
 
-class BoxBeep {
+class ModuleSignal {
    private:
     color_t pixelColor;
 
    public:
-    BoxBeep();
+    ModuleSignal();
     void begin();
     void prepareSleep();
     color_t getPixelColor();

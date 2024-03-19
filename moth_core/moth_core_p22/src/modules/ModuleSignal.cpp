@@ -5,17 +5,17 @@
 #include <Adafruit_NeoPixel.h>
 #endif
 
-#include "BoxBeep.h"
+#include "modules/ModuleSignal.h"
 
 #ifdef USE_NEOPIXEL
 Adafruit_NeoPixel pixels(1, GPIO_NUM_33, NEO_GRB + NEO_KHZ800);
 #endif
 
-BoxBeep::BoxBeep() {
+ModuleSignal::ModuleSignal() {
     this->pixelColor = COLOR____BLACK;
 }
 
-void BoxBeep::begin() {
+void ModuleSignal::begin() {
 #ifdef USE_NEOPIXEL
     pixels.begin();
 #else
@@ -26,7 +26,7 @@ void BoxBeep::begin() {
 #endif
 }
 
-void BoxBeep::prepareSleep() {
+void ModuleSignal::prepareSleep() {
 #ifdef USE_NEOPIXEL
     gpio_hold_en((gpio_num_t)NEOPIXEL_POWER);
 #else
@@ -34,14 +34,14 @@ void BoxBeep::prepareSleep() {
 #endif
 }
 
-color_t BoxBeep::getPixelColor() {
-    return BoxBeep::pixelColor;
+color_t ModuleSignal::getPixelColor() {
+    return ModuleSignal::pixelColor;
 }
 
-void BoxBeep::setPixelColor(color_t pixelColor) {
-    BoxBeep::pixelColor = pixelColor;
+void ModuleSignal::setPixelColor(color_t pixelColor) {
+    ModuleSignal::pixelColor = pixelColor;
 #ifdef USE_NEOPIXEL
-    pixels.setPixelColor(0, BoxBeep::pixelColor);  // red for measuring
+    pixels.setPixelColor(0, ModuleSignal::pixelColor);  // red for measuring
     pixels.show();
     delay(100);
 #endif

@@ -1,11 +1,11 @@
-#ifndef BoxTime_h
-#define BoxTime_h
+#ifndef ModuleTicker_h
+#define ModuleTicker_h
 
 #include <RTClib.h>
 
 #include "types/Values.h"
 
-class BoxTime {
+class ModuleTicker {
    private:
     RTC_PCF8523 baseTime;
 

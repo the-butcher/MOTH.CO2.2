@@ -1,5 +1,5 @@
-#ifndef BoxDisplay_h
-#define BoxDisplay_h
+#ifndef ModuleScreen_h
+#define ModuleScreen_h
 
 #include <Adafruit_EPD.h>
 #include <Adafruit_GFX.h>
@@ -17,8 +17,8 @@
 #include <Fonts/smb36pt_d.h>
 #include <Fonts/smb36pt_l.h>
 
-#include "BoxDisplayBase.h"
-#include "BoxTime.h"
+#include "ModuleScreenBase.h"
+#include "ModuleTicker.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
@@ -32,9 +32,9 @@ typedef struct {
     uint8_t ymax;
 } rectangle_t;
 
-class BoxDisplay {
+class ModuleScreen {
    private:
-    BoxDisplayBase baseDisplay;
+    ModuleScreenBase baseDisplay;
     void renderHeader();
     void renderFooter(values_all_t *measurement);
     void drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);

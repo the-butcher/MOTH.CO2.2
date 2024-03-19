@@ -3,11 +3,11 @@
 #include <driver/rtc_io.h>
 #include <esp_wifi.h>
 
-#include "BoxBeep.h"
-#include "BoxData.h"
-#include "BoxDisplay.h"
-#include "BoxTime.h"
-#include "buttons/ButtonHandlers.h"
+#include "buttons/ButtonAction.h"
+#include "modules/ModuleScreen.h"
+#include "modules/ModuleSdcard.h"
+#include "modules/ModuleSignal.h"
+#include "modules/ModuleTicker.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
@@ -23,7 +23,7 @@ typedef enum {
 // device state
 RTC_DATA_ATTR setup_mode_t setupMode = SETUP_BOOT;
 RTC_DATA_ATTR uint32_t secondsSetupBase;  // secondstime at boot time plus some buffer
-RTC_DATA_ATTR action_t actions[4];
+RTC_DATA_ATTR device_action_t deviceActions[4];
 RTC_DATA_ATTR uint32_t actionIndexCur;
 RTC_DATA_ATTR uint32_t actionIndexMax;
 
@@ -39,16 +39,17 @@ RTC_DATA_ATTR uint32_t nextDisplayIndex;
 gpio_num_t actionPin = GPIO_NUM_0;
 uint16_t actionNum = 0;
 
-BoxBeep boxBeep;
-BoxTime boxTime;
-BoxData boxData;
+ModuleSignal moduleSignal;
+ModuleTicker moduleTicker;
+ModuleSdcard moduleSdcard;
 SensorScd041 sensorScd041;
 SensorBme280 sensorBme280;
 SensorEnergy sensorEnergy;
-BoxDisplay boxDisplay;
-ButtonHandlers buttonHandlers;
+ModuleScreen moduleScreen;
+ButtonAction buttonAction;
 
 /**
+ * ============================================================================================
  * thoughs on file handling (with the speciality of measurement history display in chart)
  * 60 measurements
  * -  1h ->  1min resolution
@@ -56,16 +57,31 @@ ButtonHandlers buttonHandlers;
  * ...
  * - 24h -> 24min resolution
  *
- * therefore it will be necessary to open stored csv files and find the appropiate measrements
- * it can be assumed that finding data will will always involve 1 or two files
- *
+ * therefore it will be necessary to open stored csv files and find and parse the appropiate measrements
+ * it can be assumed that finding data will will always involve 1-n files AND some measurements that may only live in memory at that time
  * -- 60 slots of measurements searched for could filled
  * -- starting with the oldest, open file, if not already open
  * -- iterate through file until a good enough match is found (less than 30 seconds off)
  *
  * -- poc has been implemented in esp32_csvtest (not on github yet)
  *    -- let there be a "value-provider" that will find 60 measurements from file, or in the special case if 1h from the RTC memory values (likely for the sake of power usage)
+ * ============================================================================================
+ * TODO :: think about how to add clock synchronization, MQTT
+ * could these by extra actions, i.e. after depower
  */
+
+// -- in TABLE state
+//    -- co2 and pressure
+//       A) wifi and beep > wifi = action, beep = state
+//       B) table|chart, light|dark -> state
+//    -- altitude
+//       A) +- 50 -> state
+//       B) +- 10 -> state
+
+//     // alter state as of action
+//     // TODO :: there also needs to be a way to execute actions like calibration
+//     // -- would have to pause the action cycle until complete, and resume after completion
+//     // -- if running long, there could be a pattern of inserting "void" measurements or incrementing the start seconds
 
 uint32_t getMeasureNextSeconds() {
     return secondsSetupBase + nextMeasureIndex * 60;  // add one to index to be one measurement ahead
@@ -90,8 +106,10 @@ void populateConfig() {
             60,  // hum warnHi
             65   // hum riskHi
         },
-        DISPLAY_VAL_M_TABLE,
-        DISPLAY_VAL_T___CO2,  // value shown when rendering a measurement
+        3,                    // display update minutes
+        DISPLAY_VAL_M_TABLE,  // chart | table
+        DISPLAY_VAL_T___CO2,  // value shown when rendering a measurement (table)
+        DISPLAY_VAL_C___CO2,  // value shown when rendering the chart
         false,                // c2f celsius to fahrenheit
         false,                // beep
         1.5,                  // temperature offset
@@ -101,53 +119,53 @@ void populateConfig() {
 }
 
 void populateActions() {
-    actions[ACTION_MEASURE] = {
-        ACTION_MEASURE,  // trigger measurements
-        COLOR__MAGENTA,  // magenta while measuring
-        true,            // allow wakeup while measurement is active
-        5                // 5 seconds delay to complete measurement
+    deviceActions[DEVICE_ACTION_MEASURE] = {
+        DEVICE_ACTION_MEASURE,  // trigger measurements
+        COLOR__MAGENTA,         // magenta while measuring
+        true,                   // allow wakeup while measurement is active
+        5                       // 5 seconds delay to complete measurement
     };
-    actions[ACTION_READVAL] = {
-        ACTION_READVAL,  // read any values that the sensors may have produced
-        COLOR__MAGENTA,  // magenta while reading values
-        true,            // allow wakeup while measurement is active (but wont ever happen due to 0 wait)
-        0                // no delay required after readval
+    deviceActions[DEVICE_ACTION_READVAL] = {
+        DEVICE_ACTION_READVAL,  // read any values that the sensors may have produced
+        COLOR__MAGENTA,         // magenta while reading values
+        true,                   // allow wakeup while measurement is active (but wont ever happen due to 0 wait)
+        0                       // no delay required after readval
     };
-    actions[ACTION_DISPLAY] = {
-        ACTION_DISPLAY,  // display refresh
-        COLOR______RED,  // red while refreshing display
-        false,           // do NOT allow wakeup while display is redrawing
-        2                // 2 seconds delay to complete redraw (TODO :: verify that the display actually gets hibernated)
+    deviceActions[DEVICE_ACTION_DISPLAY] = {
+        DEVICE_ACTION_DISPLAY,  // display refresh
+        COLOR______RED,         // red while refreshing display
+        false,                  // do NOT allow wakeup while display is redrawing
+        2                       // 2 seconds delay to complete redraw (TODO :: verify that the display actually gets hibernated)
     };
-    actions[ACTION_DEPOWER] = {
-        ACTION_DEPOWER,  // depower display
-        COLOR______RED,  // red while depowering
-        true,            // allow wakeup after depower, while waiting for a new measurement
-        0                // no delay required after this action
+    deviceActions[DEVICE_ACTION_DEPOWER] = {
+        DEVICE_ACTION_DEPOWER,  // depower display
+        COLOR______RED,         // red while depowering
+        true,                   // allow wakeup after depower, while waiting for a new measurement
+        0                       // no delay required after this action
     };
 }
 
 uint32_t getSecondsWait(uint32_t secondsNext) {
-    uint32_t secondsTime = boxTime.getDate().secondstime();
-    return secondsNext > secondsTime ? secondsNext - secondsTime : BoxTime::WAITTIME________________NONE;
+    uint32_t secondsTime = moduleTicker.getDate().secondstime();
+    return secondsNext > secondsTime ? secondsNext - secondsTime : ModuleTicker::WAITTIME________________NONE;
 }
 
 /**
  * handle the detected button action (pin and type)
  */
-void handleButtonAction(button_e buttonAction) {
-    if (actionPin == buttonHandlers.C.gpin && buttonAction == BUTTON_FAST) {
+void handleButtonAction(button_action_e buttonActionType) {
+    if (actionPin == buttonAction.C.gpin && buttonActionType == BUTTON_ACTION_FAST) {
         // toggle value forward
         config.displayValTable = (display_val_t_e)((config.displayValTable + 1) % (DISPLAY_VAL_T___ALT + 1));
 
         // schedule a display action
         actionIndexMax = 4;  // allow actions display and depower by index
-        // waiting for ACTION_MEASURE and enough time to render
-        uint32_t secondsNext = actions[ACTION_MEASURE].secondsNext;
+        // waiting for DEVICE_ACTION_MEASURE and enough time to render
+        uint32_t secondsNext = deviceActions[DEVICE_ACTION_MEASURE].secondsNext;
         uint32_t secondsWait = getSecondsWait(secondsNext);
-        if (actionIndexCur == ACTION_MEASURE && secondsWait >= BoxTime::WAITTIME_DISPLAY_AND_DEPOWER) {
-            actionIndexCur = ACTION_DISPLAY;
-            actions[ACTION_DISPLAY].secondsNext = boxTime.getDate().secondstime();  // assign current time as due time
+        if (actionIndexCur == DEVICE_ACTION_MEASURE && secondsWait >= ModuleTicker::WAITTIME_DISPLAY_AND_DEPOWER) {
+            actionIndexCur = DEVICE_ACTION_DISPLAY;
+            deviceActions[DEVICE_ACTION_DISPLAY].secondsNext = moduleTicker.getDate().secondstime();  // assign current time as due time
         } else {
             // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
             // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
@@ -164,13 +182,13 @@ void detectButtonAction(void* parameter) {
     uint64_t millisA = millis();
     while (millis() - millisA < 1000) {
         if (digitalRead(actionPin) == HIGH) {  // already released
-            handleButtonAction(BUTTON_FAST);
+            handleButtonAction(BUTTON_ACTION_FAST);
             vTaskDelete(NULL);
             return;
         }
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
-    handleButtonAction(BUTTON_SLOW);
+    handleButtonAction(BUTTON_ACTION_SLOW);
     vTaskDelete(NULL);
     return;
 }
@@ -197,64 +215,51 @@ void setup() {
     rtc_gpio_deinit((gpio_num_t)I2C_POWER);
 
     Wire.begin();
-    boxTime.begin();
-    boxBeep.begin();
-    buttonHandlers.begin();
+    moduleTicker.begin();
+    moduleSignal.begin();
+    buttonAction.begin();
     // delay(50);  // find out why this is needed and if there could be a more efficient way to wait only for as long as neededd
-    // while (boxTime.getDate().secondstime() < 500000000) {
+    // while (ModuleTicker.getDate().secondstime() < 500000000) {
     //     delay(5);
     // }
 
     // Serial.begin(115200);
     // delay(2000);
-    boxBeep.setPixelColor(COLOR___YELLOW);
+    moduleSignal.setPixelColor(COLOR___YELLOW);
 
     sensorScd041.begin();
     sensorBme280.begin();
     sensorEnergy.begin();
 
     if (setupMode == SETUP_BOOT) {
-        delay(1000);  // boxTime appears to take some time to initialize, especially on boot
-        // secondsCycleBase = boxTime.getDate().secondstime();
+        delay(1000);  // ModuleTicker appears to take some time to initialize, especially on boot
+        // secondsCycleBase = ModuleTicker.getDate().secondstime();
         // secondsCycleBase = secondsCycleBase + 60 + SECONDS_BOOT_BUFFER - (secondsCycleBase + SECONDS_BOOT_BUFFER) % 60;  // first full minute after boot in secondstime
-        secondsSetupBase = boxTime.getDate().secondstime() + 10;
-        setupMode = SETUP_MAIN;
+        secondsSetupBase = moduleTicker.getDate().secondstime() + 10;
 
-        boxData.begin();
+        moduleSdcard.begin();
 
         populateConfig();
         if (sensorScd041.configure(&config)) {
-            boxBeep.setPixelColor(COLOR______RED);  // indicate that a configuration just took place (with a write to the scd41's eeprom)
+            moduleSignal.setPixelColor(COLOR______RED);  // indicate that a configuration just took place (with a write to the scd41's eeprom)
         }
 
         populateActions();
-        actions[ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
+        deviceActions[DEVICE_ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
         actionIndexCur = 0;  // start with high index to trigger primary wait
         actionIndexMax = 4;
 
         nextMeasureIndex = 0;
         nextDisplayIndex = 0;
+
+        setupMode = SETUP_MAIN;
     }
 
     // did it wake up from a button press?
     esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
     if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
-        // get the pin that it woke up from
         uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
         createButtonAction((gpio_num_t)(log(wakeupStatus) / log(2)));
-
-        // -- in TABLE state
-        //    -- co2 and pressure
-        //       A) wifi and beep > wifi = action, beep = state
-        //       B) table|chart, light|dark -> state
-        //    -- altitude
-        //       A) +- 50 -> state
-        //       B) +- 10 -> state
-
-        //     // alter state as of action
-        //     // TODO :: there also needs to be a way to execute actions like calibration
-        //     // -- would have to pause the action cycle until complete, and resume after completion
-        //     // -- if running long, there could be a pattern of inserting "void" measurements or incrementing the start seconds
     }
 }
 
@@ -283,21 +288,21 @@ void handleActionReadval() {
     // store values
     int currMeasureIndex = nextMeasureIndex - 1;
     measurements[currMeasureIndex % MEASUREMENT_BUFFER_SIZE] = {
-        boxTime.getDate().secondstime(),  // secondstime as of RTC
-        measurementCo2,                   // sensorScd041 values
-        measurementBme,                   // sensorBme280 values
-        measurementNrg,                   // battery values
-        true                              // publishable
+        moduleTicker.getDate().secondstime(),  // secondstime as of RTC
+        measurementCo2,                        // sensorScd041 values
+        measurementBme,                        // sensorBme280 values
+        measurementNrg,                        // battery values
+        true                                   // publishable
     };
     // power down sensors
     sensorScd041.powerDown();
     sensorEnergy.powerDown();
     // upon rollover, write measurements to SD card
     if (nextMeasureIndex % MEASUREMENT_BUFFER_SIZE == 0) {  // when the next measurement index is dividable by MEASUREMENT_BUFFER_SIZE, measurements need to be written to sd
-        boxData.begin();
-        boxData.persistValues(measurements, MEASUREMENT_BUFFER_SIZE);
+        moduleSdcard.begin();
+        moduleSdcard.persistValues(measurements, MEASUREMENT_BUFFER_SIZE);
     }
-    // when pressureZerolevel == 0.0 it means that pressure at sealevel needs to be recalculated
+    // when pressureZerolevel == 0.0 pressure at sealevel needs to be recalculated
     if (config.pressureZerolevel == 0.0) {
         config.pressureZerolevel = sensorBme280.getPressureZerolevel(config.altitudeBaselevel, measurementBme.pressure);
     }
@@ -306,12 +311,12 @@ void handleActionReadval() {
 void handleActionDisplay() {
     int currMeasureIndex = nextMeasureIndex - 1;
     values_all_t measurement = measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
-    boxDisplay.renderMeasurement(&measurement, &config);
-    nextDisplayIndex = nextMeasureIndex + 2;
+    moduleScreen.renderMeasurement(&measurement, &config);
+    nextDisplayIndex = nextMeasureIndex - 1 + config.displayUpdateMinutes;  // nextMeasureIndex is already incremented here
 }
 
 void handleActionDepower() {
-    boxDisplay.hibernate();
+    moduleScreen.hibernate();
     sensorEnergy.powerDown();  // redundant power down on battery monitor, seems to help with power reduction after redisplay
 }
 
@@ -323,23 +328,23 @@ void handleActionDepower() {
  * - for debugging purposes
  */
 bool isDelayRequired() {
-    return actionPin > 0 || buttonHandlers.getActionPin() > 0;
+    return actionPin > 0 || buttonAction.getPressedPin() > 0;
 }
 
 void secondsSleep(uint32_t seconds) {
     // convert to microseconds
-    uint64_t sleepMicros = seconds * BoxTime::MICROSECONDS_PER______SECOND;
+    uint64_t sleepMicros = seconds * ModuleTicker::MICROSECONDS_PER______SECOND;
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
-    boxBeep.prepareSleep();                                             // this may hold the neopixel power, depending on color debug setting
-    buttonHandlers.prepareSleep(actions[actionIndexCur].isExt1Wakeup);  // if the pending action allows ext1 wakeup
+    moduleSignal.prepareSleep();                                            // this may hold the neopixel power, depending on color debug setting
+    buttonAction.prepareSleep(deviceActions[actionIndexCur].isExt1Wakeup);  // if the pending action allows ext1 wakeup
     esp_sleep_enable_timer_wakeup(sleepMicros);
 
     // Serial.flush();
     // Serial.end();
-    if (actionIndexCur != ACTION_MEASURE) {   // any action other than measure pending -> I2C on
-        gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
+    if (actionIndexCur != DEVICE_ACTION_MEASURE) {  // any action other than measure pending -> I2C on
+        gpio_hold_en((gpio_num_t)I2C_POWER);        // power needs to be help or sensors will not measure
     } else {
         // disable I2C power, shutdown wire and disable pullup on SDA and ACL
         pinMode(I2C_POWER, OUTPUT);
@@ -352,12 +357,12 @@ void secondsSleep(uint32_t seconds) {
     // pinMode(SCL, INPUT);
 
     digitalWrite(GPIO_NUM_16, HIGH);  // put signal pin high for PPK2
-    boxBeep.setPixelColor(COLOR_____BLUE);
+    moduleSignal.setPixelColor(COLOR_____BLUE);
     esp_deep_sleep_start();  // go to sleep
 }
 
 void handleButtonInterrupt() {
-    createButtonAction(buttonHandlers.getActionPin());
+    createButtonAction(buttonAction.getPressedPin());
 }
 
 /**
@@ -368,38 +373,38 @@ void handleButtonInterrupt() {
  */
 void secondsDelay(uint32_t seconds) {
     uint32_t millisEntry = millis();
-    uint32_t millisBreak = millisEntry + seconds * BoxTime::MILLISECONDS_PER______SECOND;
+    uint32_t millisBreak = millisEntry + seconds * ModuleTicker::MILLISECONDS_PER______SECOND;
     uint16_t actionNumEntry = actionNum;
 
-    attachInterrupt(buttonHandlers.A.ipin, handleButtonInterrupt, FALLING);
-    attachInterrupt(buttonHandlers.B.ipin, handleButtonInterrupt, FALLING);
-    attachInterrupt(buttonHandlers.C.ipin, handleButtonInterrupt, FALLING);
+    attachInterrupt(buttonAction.A.ipin, handleButtonInterrupt, FALLING);
+    attachInterrupt(buttonAction.B.ipin, handleButtonInterrupt, FALLING);
+    attachInterrupt(buttonAction.C.ipin, handleButtonInterrupt, FALLING);
 
-    boxBeep.setPixelColor(COLOR_____CYAN);
+    moduleSignal.setPixelColor(COLOR_____CYAN);
     while (isDelayRequired() && millis() < millisBreak && actionNumEntry == actionNum) {
         delay(50);
     }
 
-    detachInterrupt(buttonHandlers.A.ipin);
-    detachInterrupt(buttonHandlers.B.ipin);
-    detachInterrupt(buttonHandlers.C.ipin);
+    detachInterrupt(buttonAction.A.ipin);
+    detachInterrupt(buttonAction.B.ipin);
+    detachInterrupt(buttonAction.C.ipin);
 }
 
 void loop() {
-    action_t action = actions[actionIndexCur];
-    if (getSecondsWait(action.secondsNext) == BoxTime::WAITTIME________________NONE) {  // action is due
-        boxBeep.setPixelColor(action.color);
+    device_action_t action = deviceActions[actionIndexCur];
+    if (getSecondsWait(action.secondsNext) == ModuleTicker::WAITTIME________________NONE) {  // action is due
+        moduleSignal.setPixelColor(action.color);
         switch (action.type) {
-            case ACTION_MEASURE:
+            case DEVICE_ACTION_MEASURE:
                 handleActionMeasure();
                 break;
-            case ACTION_READVAL:
+            case DEVICE_ACTION_READVAL:
                 handleActionReadval();
                 break;
-            case ACTION_DISPLAY:
+            case DEVICE_ACTION_DISPLAY:
                 handleActionDisplay();
                 break;
-            case ACTION_DEPOWER:
+            case DEVICE_ACTION_DEPOWER:
                 handleActionDepower();
                 break;
             default:
@@ -408,15 +413,15 @@ void loop() {
         delay(1);  // TODO :: experimental, trying to find the cause for 10s@1mA after readval
         actionIndexCur++;
         if (actionIndexCur < actionIndexMax) {  // more executable actions
-            actions[actionIndexCur].secondsNext = boxTime.getDate().secondstime() + action.secondsWait;
+            deviceActions[actionIndexCur].secondsNext = moduleTicker.getDate().secondstime() + action.secondsWait;
         } else {  // no more executable actions, rollover to zero
             actionIndexCur = 0;
             actionIndexMax = nextMeasureIndex == nextDisplayIndex ? 4 : 2;
-            actions[ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
+            deviceActions[DEVICE_ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
         }
     }
-    uint32_t secondsWait = getSecondsWait(actions[actionIndexCur].secondsNext);
-    if (secondsWait > BoxTime::WAITTIME________________NONE) {
+    uint32_t secondsWait = getSecondsWait(deviceActions[actionIndexCur].secondsNext);
+    if (secondsWait > ModuleTicker::WAITTIME________________NONE) {
         if (isDelayRequired()) {
             secondsDelay(secondsWait);
         } else {
