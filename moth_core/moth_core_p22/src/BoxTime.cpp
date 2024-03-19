@@ -7,7 +7,7 @@ uint32_t BoxTime::WAITTIME________________NONE = 0;
 uint32_t BoxTime::WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative estimation, 3 or maybe even 2 could also work
 
 void BoxTime::begin() {
-    this->baseTime.begin();
+    baseTime.begin();
 }
 
 DateTime BoxTime::getDate() {

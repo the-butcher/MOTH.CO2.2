@@ -36,6 +36,9 @@ RTC_DATA_ATTR values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 RTC_DATA_ATTR uint32_t nextMeasureIndex;
 RTC_DATA_ATTR uint32_t nextDisplayIndex;
 
+gpio_num_t actionPin = GPIO_NUM_0;
+uint16_t actionNum = 0;
+
 BoxBeep boxBeep;
 BoxTime boxTime;
 BoxData boxData;
@@ -129,6 +132,59 @@ uint32_t getSecondsWait(uint32_t secondsNext) {
     return secondsNext > secondsTime ? secondsNext - secondsTime : BoxTime::WAITTIME________________NONE;
 }
 
+/**
+ * handle the detected button action (pin and type)
+ */
+void handleButtonAction(button_e buttonAction) {
+    if (actionPin == buttonHandlers.C.gpin && buttonAction == BUTTON_FAST) {
+        // toggle value forward
+        config.displayValTable = (display_val_t_e)((config.displayValTable + 1) % (DISPLAY_VAL_T___ALT + 1));
+
+        // schedule a display action
+        actionIndexMax = 4;  // allow actions display and depower by index
+        // waiting for ACTION_MEASURE and enough time to render
+        uint32_t secondsNext = actions[ACTION_MEASURE].secondsNext;
+        uint32_t secondsWait = getSecondsWait(secondsNext);
+        if (actionIndexCur == ACTION_MEASURE && secondsWait >= BoxTime::WAITTIME_DISPLAY_AND_DEPOWER) {
+            actionIndexCur = ACTION_DISPLAY;
+            actions[ACTION_DISPLAY].secondsNext = boxTime.getDate().secondstime();  // assign current time as due time
+        } else {
+            // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
+            // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
+        }
+    }
+    actionPin = GPIO_NUM_0;  // reset to zero to indicate
+    actionNum++;
+}
+
+/**
+ * wait for button release or button release timeout
+ */
+void detectButtonAction(void* parameter) {
+    uint64_t millisA = millis();
+    while (millis() - millisA < 1000) {
+        if (digitalRead(actionPin) == HIGH) {  // already released
+            handleButtonAction(BUTTON_FAST);
+            vTaskDelete(NULL);
+            return;
+        }
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
+    handleButtonAction(BUTTON_SLOW);
+    vTaskDelete(NULL);
+    return;
+}
+
+/**
+ * create a new "detect button action" task
+ */
+void createButtonAction(gpio_num_t _actionPin) {
+    if (actionPin == 0 && _actionPin > 0) {  // only if no other task is still pending
+        actionPin = _actionPin;
+        xTaskCreate(detectButtonAction, "detect button action", 5000, NULL, 2, NULL);
+    }
+}
+
 void setup() {
     // a debug pin usable in the PKK2 tool
     pinMode(GPIO_NUM_16, OUTPUT);
@@ -144,7 +200,6 @@ void setup() {
     boxTime.begin();
     boxBeep.begin();
     buttonHandlers.begin();
-    boxBeep.setPixelColor(COLOR_____GRAY);
     // delay(50);  // find out why this is needed and if there could be a more efficient way to wait only for as long as neededd
     // while (boxTime.getDate().secondstime() < 500000000) {
     //     delay(5);
@@ -152,6 +207,7 @@ void setup() {
 
     // Serial.begin(115200);
     // delay(2000);
+    boxBeep.setPixelColor(COLOR___YELLOW);
 
     sensorScd041.begin();
     sensorBme280.begin();
@@ -185,29 +241,20 @@ void setup() {
     if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
         // get the pin that it woke up from
         uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
-        gpio_num_t wakeupPin = (gpio_num_t)(log(wakeupStatus) / log(2));
+        createButtonAction((gpio_num_t)(log(wakeupStatus) / log(2)));
 
-        if (digitalRead(wakeupPin) == HIGH) {  // has already been released
+        // -- in TABLE state
+        //    -- co2 and pressure
+        //       A) wifi and beep > wifi = action, beep = state
+        //       B) table|chart, light|dark -> state
+        //    -- altitude
+        //       A) +- 50 -> state
+        //       B) +- 10 -> state
 
-            // alter state as of action
-            // TODO :: there also needs to be a way to execute actions like calibration
-            // -- would have to pause the action cycle until complete, and resume after completion
-            // -- if running long, there could be a pattern of inserting "void" measurements or incrementing the start seconds
-
-            actionIndexMax = 4;  // allow actions display and depower by index
-            // waiting for ACTION_MEASURE and enough time to render
-            if (actionIndexCur == ACTION_MEASURE && getSecondsWait(actions[ACTION_MEASURE].secondsNext) >= BoxTime::WAITTIME_DISPLAY_AND_DEPOWER) {  // action is due
-                actionIndexCur = ACTION_DISPLAY;                                                                                                     // ACTION_DISPLAY
-                actions[ACTION_DISPLAY].secondsNext = boxTime.getDate().secondstime();                                                               // assign current time as due time
-            } else {
-                // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
-                // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
-            }
-
-        } else {
-            // still pressed, TODO :: take care of long press
-            // could spawn a task that establishes an interrupt, then keeps checking for button state and assigns some fallrise_t state to the button handler
-        }
+        //     // alter state as of action
+        //     // TODO :: there also needs to be a way to execute actions like calibration
+        //     // -- would have to pause the action cycle until complete, and resume after completion
+        //     // -- if running long, there could be a pattern of inserting "void" measurements or incrementing the start seconds
     }
 }
 
@@ -270,30 +317,28 @@ void handleActionDepower() {
 
 /**
  * check if the device needs to stay awake
- * - while a button is pressed, to wait for final button action
+ * - while a button is pressed
+ * - while actionPin is set (action is still active)
  * - while the WiFi is on
  * - for debugging purposes
  */
 bool isDelayRequired() {
-    return buttonHandlers.isAnyPressed();
+    return actionPin > 0 || buttonHandlers.getActionPin() > 0;
 }
 
-void secondsSleep(uint32_t seconds, bool requireI2C, bool isExt1Wakeup) {
+void secondsSleep(uint32_t seconds) {
     // convert to microseconds
     uint64_t sleepMicros = seconds * BoxTime::MICROSECONDS_PER______SECOND;
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
-    // ESP_PD_DOMAIN_RTC_SLOW_MEM
-
-    // this may hold the neopixel power, depending on color debug setting
-    boxBeep.prepareSleep();  // puts neopixel power low
-    buttonHandlers.prepareSleep(isExt1Wakeup);
+    boxBeep.prepareSleep();                                             // this may hold the neopixel power, depending on color debug setting
+    buttonHandlers.prepareSleep(actions[actionIndexCur].isExt1Wakeup);  // if the pending action allows ext1 wakeup
     esp_sleep_enable_timer_wakeup(sleepMicros);
 
     // Serial.flush();
     // Serial.end();
-    if (requireI2C) {
+    if (actionIndexCur != ACTION_MEASURE) {   // any action other than measure pending -> I2C on
         gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
     } else {
         // disable I2C power, shutdown wire and disable pullup on SDA and ACL
@@ -311,18 +356,33 @@ void secondsSleep(uint32_t seconds, bool requireI2C, bool isExt1Wakeup) {
     esp_deep_sleep_start();  // go to sleep
 }
 
+void handleButtonInterrupt() {
+    createButtonAction(buttonHandlers.getActionPin());
+}
+
 /**
  * wait with short delays until any of the conditions below become true
  * - the specified seconds have elapsed
  * - isDelayRequired() becomes false
+ * - actionNumEntry has changed (some button action may have completed)
  */
 void secondsDelay(uint32_t seconds) {
-    uint32_t millisA = millis();
-    uint32_t millisE = millisA + seconds * BoxTime::MILLISECONDS_PER______SECOND;
+    uint32_t millisEntry = millis();
+    uint32_t millisBreak = millisEntry + seconds * BoxTime::MILLISECONDS_PER______SECOND;
+    uint16_t actionNumEntry = actionNum;
+
+    attachInterrupt(buttonHandlers.A.ipin, handleButtonInterrupt, FALLING);
+    attachInterrupt(buttonHandlers.B.ipin, handleButtonInterrupt, FALLING);
+    attachInterrupt(buttonHandlers.C.ipin, handleButtonInterrupt, FALLING);
+
     boxBeep.setPixelColor(COLOR_____CYAN);
-    while (isDelayRequired() && millis() < millisE) {
-        delay(250);
+    while (isDelayRequired() && millis() < millisBreak && actionNumEntry == actionNum) {
+        delay(50);
     }
+
+    detachInterrupt(buttonHandlers.A.ipin);
+    detachInterrupt(buttonHandlers.B.ipin);
+    detachInterrupt(buttonHandlers.C.ipin);
 }
 
 void loop() {
@@ -357,11 +417,10 @@ void loop() {
     }
     uint32_t secondsWait = getSecondsWait(actions[actionIndexCur].secondsNext);
     if (secondsWait > BoxTime::WAITTIME________________NONE) {
-        // stay awake if i.e. a pressed button or WiFi requires it, but no longer than required
         if (isDelayRequired()) {
             secondsDelay(secondsWait);
         } else {
-            secondsSleep(secondsWait, actionIndexCur > 0, actions[actionIndexCur].isExt1Wakeup);  // initiate sleep, I2C required when action other than zero
+            secondsSleep(secondsWait);
         }
     }
 }

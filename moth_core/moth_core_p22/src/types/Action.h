@@ -21,4 +21,15 @@ typedef struct {
     uint32_t secondsNext;  // time for next execution of this action
 } action_t;
 
+typedef enum {
+    BUTTON_FAST,
+    BUTTON_SLOW,
+    BUTTON_NONE
+} button_e;
+
+typedef struct {
+    gpio_num_t gPin;
+    button_e type;
+} button_t;
+
 #endif

@@ -144,28 +144,23 @@ void BoxDisplay::renderMeasurement(values_all_t *measurement, config_t *config) 
         BoxDisplay::drawAntialiasedText06("%", RECT_CO2, xPrc, yPrc, textColor);
 
     } else if (config->displayValTable == DISPLAY_VAL_T___HPA) {
-        int hpa = measurement->valuesBme.pressure;
+        float pressure = measurement->valuesBme.pressure;
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
-
         BoxDisplay::fillRectangle(RECT_CO2, fillColor);
-
         title = "pressure hPa";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
-        BoxDisplay::drawAntialiasedText36(formatString(String(hpa), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+        BoxDisplay::drawAntialiasedText36(formatString(String(pressure, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     } else if (config->displayValTable == DISPLAY_VAL_T___ALT) {
-        // TODO alt calculation here
-        int alt = 0;  // round(Measurements::getLatestMeasurement().valuesBme.altitude);
+        float altitude = SensorBme280::getAltitude(config->pressureZerolevel, measurement->valuesBme.pressure);
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
-
         BoxDisplay::fillRectangle(RECT_CO2, fillColor);
-
         title = "altitude m";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
-        BoxDisplay::drawAntialiasedText36(formatString(String(alt), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+        BoxDisplay::drawAntialiasedText36(formatString(String(altitude, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     }
     BoxDisplay::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
 

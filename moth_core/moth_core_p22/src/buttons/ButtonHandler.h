@@ -4,12 +4,6 @@
 #include <Arduino.h>
 #include <driver/rtc_io.h>
 
-typedef enum {
-    FALL_RISE_FAST,
-    FALL_RISE_SLOW,
-    FALL_RISE_NONE
-} fallrise_t;
-
 class ButtonHandler {
    private:
    public:

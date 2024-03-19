@@ -1,4 +1,4 @@
-// #define USE_NEOPIXEL = 1;
+#define USE_NEOPIXEL = 1;
 #include <Arduino.h>
 
 #ifdef USE_NEOPIXEL
