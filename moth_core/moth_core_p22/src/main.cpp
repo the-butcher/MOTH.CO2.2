@@ -36,19 +36,19 @@ RTC_DATA_ATTR values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 RTC_DATA_ATTR uint32_t nextMeasureIndex;
 RTC_DATA_ATTR uint32_t nextDisplayIndex;
 
-gpio_num_t actionPin = GPIO_NUM_0;
 uint16_t actionNum = 0;
 
 ModuleSignal moduleSignal;
 ModuleTicker moduleTicker;
+ModuleScreen moduleScreen;
 ModuleSdcard moduleSdcard;
 SensorScd041 sensorScd041;
 SensorBme280 sensorBme280;
 SensorEnergy sensorEnergy;
-ModuleScreen moduleScreen;
-ButtonAction buttonAction;
 
 /**
+ * upon button wakeup or interrupt -> give control to ButtonAction, but there needs to be a callback to main for when a button action was completed
+ * ButtonAction needs to get a pointer to config, so it can be passed on to the respective handlers and so it can be used to reconfigure ButtonAction
  * ============================================================================================
  * thoughs on file handling (with the speciality of measurement history display in chart)
  * 60 measurements
@@ -153,53 +153,25 @@ uint32_t getSecondsWait(uint32_t secondsNext) {
 /**
  * handle the detected button action (pin and type)
  */
-void handleButtonAction(button_action_e buttonActionType) {
-    if (actionPin == buttonAction.C.gpin && buttonActionType == BUTTON_ACTION_FAST) {
-        // toggle value forward
-        config.displayValTable = (display_val_t_e)((config.displayValTable + 1) % (DISPLAY_VAL_T___ALT + 1));
-
-        // schedule a display action
-        actionIndexMax = 4;  // allow actions display and depower by index
-        // waiting for DEVICE_ACTION_MEASURE and enough time to render
-        uint32_t secondsNext = deviceActions[DEVICE_ACTION_MEASURE].secondsNext;
-        uint32_t secondsWait = getSecondsWait(secondsNext);
-        if (actionIndexCur == DEVICE_ACTION_MEASURE && secondsWait >= ModuleTicker::WAITTIME_DISPLAY_AND_DEPOWER) {
-            actionIndexCur = DEVICE_ACTION_DISPLAY;
-            deviceActions[DEVICE_ACTION_DISPLAY].secondsNext = moduleTicker.getDate().secondstime();  // assign current time as due time
-        } else {
-            // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
-            // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
+void handleButtonActionComplete(std::function<bool(config_t* config)> actionFunction) {
+    if (actionFunction != nullptr) {
+        bool redisplay = actionFunction(&config);
+        ButtonAction::configure(&config);
+        if (redisplay) {
+            // schedule a display action
+            actionIndexMax = 4;  // allow actions display and depower by index
+            // waiting for DEVICE_ACTION_MEASURE and enough time to render
+            uint32_t secondsNext = deviceActions[DEVICE_ACTION_MEASURE].secondsNext;
+            uint32_t secondsWait = getSecondsWait(secondsNext);
+            if (actionIndexCur == DEVICE_ACTION_MEASURE && secondsWait >= ModuleTicker::WAITTIME_DISPLAY_AND_DEPOWER) {
+                actionIndexCur = DEVICE_ACTION_DISPLAY;
+                deviceActions[DEVICE_ACTION_DISPLAY].secondsNext = moduleTicker.getDate().secondstime();  // assign current time as due time
+            } else {
+                // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
+                // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
+            }
         }
-    }
-    actionPin = GPIO_NUM_0;  // reset to zero to indicate
-    actionNum++;
-}
-
-/**
- * wait for button release or button release timeout
- */
-void detectButtonAction(void* parameter) {
-    uint64_t millisA = millis();
-    while (millis() - millisA < 1000) {
-        if (digitalRead(actionPin) == HIGH) {  // already released
-            handleButtonAction(BUTTON_ACTION_FAST);
-            vTaskDelete(NULL);
-            return;
-        }
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-    }
-    handleButtonAction(BUTTON_ACTION_SLOW);
-    vTaskDelete(NULL);
-    return;
-}
-
-/**
- * create a new "detect button action" task
- */
-void createButtonAction(gpio_num_t _actionPin) {
-    if (actionPin == 0 && _actionPin > 0) {  // only if no other task is still pending
-        actionPin = _actionPin;
-        xTaskCreate(detectButtonAction, "detect button action", 5000, NULL, 2, NULL);
+        actionNum++;
     }
 }
 
@@ -217,11 +189,6 @@ void setup() {
     Wire.begin();
     moduleTicker.begin();
     moduleSignal.begin();
-    buttonAction.begin();
-    // delay(50);  // find out why this is needed and if there could be a more efficient way to wait only for as long as neededd
-    // while (ModuleTicker.getDate().secondstime() < 500000000) {
-    //     delay(5);
-    // }
 
     // Serial.begin(115200);
     // delay(2000);
@@ -255,11 +222,14 @@ void setup() {
         setupMode = SETUP_MAIN;
     }
 
+    ButtonAction::begin(handleButtonActionComplete);
+    ButtonAction::configure(&config);
+
     // did it wake up from a button press?
     esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
     if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
         uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
-        createButtonAction((gpio_num_t)(log(wakeupStatus) / log(2)));
+        ButtonAction::createButtonAction((gpio_num_t)(log(wakeupStatus) / log(2)));
     }
 }
 
@@ -328,7 +298,7 @@ void handleActionDepower() {
  * - for debugging purposes
  */
 bool isDelayRequired() {
-    return actionPin > 0 || buttonAction.getPressedPin() > 0;
+    return ButtonAction::getActionPin() > 0 || ButtonAction::getPressedPin() > 0;
 }
 
 void secondsSleep(uint32_t seconds) {
@@ -337,8 +307,8 @@ void secondsSleep(uint32_t seconds) {
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
-    moduleSignal.prepareSleep();                                            // this may hold the neopixel power, depending on color debug setting
-    buttonAction.prepareSleep(deviceActions[actionIndexCur].isExt1Wakeup);  // if the pending action allows ext1 wakeup
+    moduleSignal.prepareSleep();                                             // this may hold the neopixel power, depending on color debug setting
+    ButtonAction::prepareSleep(deviceActions[actionIndexCur].isExt1Wakeup);  // if the pending action allows ext1 wakeup
     esp_sleep_enable_timer_wakeup(sleepMicros);
 
     // Serial.flush();
@@ -361,10 +331,6 @@ void secondsSleep(uint32_t seconds) {
     esp_deep_sleep_start();  // go to sleep
 }
 
-void handleButtonInterrupt() {
-    createButtonAction(buttonAction.getPressedPin());
-}
-
 /**
  * wait with short delays until any of the conditions below become true
  * - the specified seconds have elapsed
@@ -375,19 +341,12 @@ void secondsDelay(uint32_t seconds) {
     uint32_t millisEntry = millis();
     uint32_t millisBreak = millisEntry + seconds * ModuleTicker::MILLISECONDS_PER______SECOND;
     uint16_t actionNumEntry = actionNum;
-
-    attachInterrupt(buttonAction.A.ipin, handleButtonInterrupt, FALLING);
-    attachInterrupt(buttonAction.B.ipin, handleButtonInterrupt, FALLING);
-    attachInterrupt(buttonAction.C.ipin, handleButtonInterrupt, FALLING);
-
+    ButtonAction::attachInterrupts();
     moduleSignal.setPixelColor(COLOR_____CYAN);
     while (isDelayRequired() && millis() < millisBreak && actionNumEntry == actionNum) {
         delay(50);
     }
-
-    detachInterrupt(buttonAction.A.ipin);
-    detachInterrupt(buttonAction.B.ipin);
-    detachInterrupt(buttonAction.C.ipin);
+    ButtonAction::detachInterrupts();
 }
 
 void loop() {

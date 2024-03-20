@@ -11,23 +11,33 @@
 
 class ButtonAction {
    private:
-    uint64_t ext1Bitmask;
-    // static std::function<bool(button_t)> wakeupCallback;
-    // static gpio_num_t wakeupPin;
-    // static void buttonReleaseVTask(void* pvParameters);
+    static uint64_t ext1Bitmask;
+    static bool toggleDisplayValTFw(config_t* config);
+    static bool toggleDisplayValTBw(config_t* config);
+    static std::function<bool(config_t* config)> getActionFunction(button_action_t buttonAction, button_action_e buttonActionType);
+    static button_action_t buttonActionA;
+    static button_action_t buttonActionB;
+    static button_action_t buttonActionC;
+    static gpio_num_t actionPin;
+    static std::function<void(std::function<bool(config_t* config)>)> buttonActionCompleteCallback;
+    static void handleInterruptA();
+    static void handleInterruptB();
+    static void handleInterruptC();
+    static void detectButtonAction(void* parameter);
+    static void handleButtonAction(button_action_e buttonActionType);
 
    public:
-    ButtonAction() : A(GPIO_NUM_11), B(GPIO_NUM_12), C(GPIO_NUM_6){};
-    ButtonHelper A;
-    ButtonHelper B;
-    ButtonHelper C;
-    button_action_t buttonActionA;
-    button_action_t buttonActionB;
-    button_action_t buttonActionC;
-    void begin();
-    void prepareSleep(bool isExt1Wakeup);
-    gpio_num_t getPressedPin();
-    bool toggleDisplayValTFw(config_t *config);
+    static ButtonHelper A;
+    static ButtonHelper B;
+    static ButtonHelper C;
+    static void begin(std::function<void(std::function<bool(config_t* config)>)> buttonActionCompleteCallback);
+    static bool configure(config_t* config);
+    static void prepareSleep(bool isExt1Wakeup);
+    static gpio_num_t getPressedPin();
+    static gpio_num_t getActionPin();
+    static void attachInterrupts();
+    static void detachInterrupts();
+    static void createButtonAction(gpio_num_t actionPin);
 };
 
 #endif

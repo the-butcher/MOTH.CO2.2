@@ -18,8 +18,6 @@ const char FORMAT_6_DIGIT[] = "%6s";
 const char FORMAT_CELL_PERCENT[] = "%5s%%";
 const char FORMAT_STALE[] = "%3s%% stale";
 
-const String SYMBOL__PM_M = "¦";
-const String SYMBOL__PM_D = "§";
 const String SYMBOL__WIFI = "¥";
 const String SYMBOL_THEME = "¤";
 const String SYMBOL_TABLE = "£";
