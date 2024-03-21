@@ -5,41 +5,166 @@
 
 String ModuleSdcard::CSV_HEAD = "time; co2; co2_raw; temperature; humidity; pressure; percent\r\n";
 String ModuleSdcard::CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d;%s;%s;%s;%s;%s;%s\r\n";
+SdFat32 ModuleSdcard::sd32;
 
 void ModuleSdcard::begin() {
-    sd32.begin(SD_CS, SPI_CLOCK);
+    ModuleSdcard::sd32.begin(SD_CS, SPI_CLOCK);
 }
 
-void ModuleSdcard::persistValues(values_all_t* values, int count) {
+static values_all_t emptyMeasurement(uint32_t secondstime) {
+    return {
+        secondstime,                                                           // secondstime of history measurement
+        {0, SensorScd041::toShortDeg(0.0), SensorScd041::toShortHum(0.0), 0},  // co2 measurement
+        {0.0},                                                                 // bme measurement
+        {SensorEnergy::toShortPercent(0.0)}                                    // nrg measurement
+    };
+}
+
+void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], uint32_t currMeasureIndex, values_all_t history[HISTORY_____BUFFER_SIZE], config_t* config) {
+    // setup search seconds
+    uint32_t secondstimeIncr = config->displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
+    uint32_t secondstimeBase = values[currMeasureIndex % MEASUREMENT_BUFFER_SIZE].secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // the secondstime
+
+    int32_t secondstimeDiff;
+    uint32_t secondstimeIndx;
+    uint32_t secondstimeFile = 0;
+
+    // file related stuff
+    File32 datFile;
     file32_def_t fileDef32;
-    String dataFileNameLast = "";
-    String dataFilePathLast = "";
-    File32 csvFile;
-    values_all_t value;
-    for (int valueIndex = 0; valueIndex < count; valueIndex++) {
-        value = values[valueIndex];
-        fileDef32 = ModuleTicker::getFile32Def(value.secondstime);  // the file name that shall be written to
-        if (fileDef32.name != dataFileNameLast) {
-            if (csvFile) {       // file already open -> file change at midnight
-                csvFile.sync();  // write anything pending
-                csvFile.close();
+    // char buffer[128];
+    String datFileNameLast = "";
+    String datFilePathLast = "";
+
+    uint8_t hh;
+    uint8_t mm;
+    uint8_t ss;
+
+    values_all_t readValue;
+
+    int8_t historyIndexMax = -1;
+
+    for (uint8_t historyIndex = 0; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
+        secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
+        history[historyIndex] = emptyMeasurement(secondstimeIndx);
+        fileDef32 = ModuleTicker::getFile32Def(secondstimeIndx, "dat");
+        // when a new (or actually first) file is encountered -> open it
+        if (fileDef32.name != datFileNameLast) {
+            if (datFile) {
+                datFile.close();  // close the previous file
             }
-            if (fileDef32.path != dataFilePathLast) {  // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
-                buildFolders(fileDef32.path);
-                dataFilePathLast = fileDef32.path;
-            }
-            csvFile.open(fileDef32.name.c_str(), O_RDWR | O_CREAT | O_AT_END);
-            if (csvFile.size() == 0) {  // first time this file is being written to -> write csv header
-                csvFile.print(ModuleSdcard::CSV_HEAD);
-            }
-            dataFileNameLast = fileDef32.name;
+            Serial.print("opening: ");
+            Serial.println(fileDef32.name);
+            Serial.println("------------------------------------------------------");
+            datFile.open(fileDef32.name.c_str(), O_READ);
+            datFileNameLast = fileDef32.name;
         }
-        csvFile.print(toCsvLine(&value));
+        // keep reading from old to young until a date larger than search date - 30s is found
+        while (datFile.available() > 1 && secondstimeFile + 30 < secondstimeIndx) {
+            datFile.read((byte*)&readValue, sizeof(readValue));  // read the next value into readValue
+            secondstimeFile = readValue.secondstime;
+        }
+        secondstimeDiff = secondstimeFile - secondstimeIndx;
+        if (datFile.available() > 1 && abs(secondstimeDiff) < 30) {
+            Serial.print(historyIndex);
+            Serial.print(" => ");
+            Serial.print(secondstimeDiff);
+            Serial.print(" :: ");
+            Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
+            Serial.print(" ~~ ");
+            Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeFile));
+            historyIndexMax = historyIndex;
+            history[historyIndex] = readValue;
+        }
+    }
+    if (datFile) {
+        datFile.close();
     }
 
-    csvFile.sync();
-    csvFile.close();
+    Serial.println("------------------------------------------------------");
+    uint8_t measureIndex = currMeasureIndex + 1;
+    uint32_t secondstimeMeas = 0;
+    for (uint8_t historyIndex = historyIndexMax + 1; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
+        secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
+        history[historyIndex] = emptyMeasurement(secondstimeIndx);
+        while (measureIndex < currMeasureIndex + 1 + MEASUREMENT_BUFFER_SIZE && secondstimeMeas + 30 < secondstimeIndx) {
+            secondstimeMeas = values[measureIndex % MEASUREMENT_BUFFER_SIZE].secondstime;
+            // Serial.print(measureIndex);
+            // Serial.print(" ## ");
+            // Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeMeas));
+            measureIndex++;
+        }
+        secondstimeDiff = secondstimeMeas - secondstimeIndx;
+        if (abs(secondstimeDiff) < 30) {
+            Serial.print(historyIndex);
+            Serial.print(" => ");
+            Serial.print(secondstimeDiff);
+            Serial.print(" :: ");
+            Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
+            Serial.print(" ~~ ");
+            Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeMeas));
+            history[historyIndex] = values[(measureIndex - 1) % MEASUREMENT_BUFFER_SIZE];  // assign (is this a copy or a reference?)
+        }
+    }
+    Serial.println("======================================================");
 }
+
+void ModuleSdcard::persistValues(values_all_t values[MEASUREMENT_BUFFER_SIZE]) {
+    file32_def_t fileDef32;
+    String datFileNameLast = "";
+    String datFilePathLast = "";
+    File32 datFile;
+    values_all_t value;
+    for (int valueIndex = 0; valueIndex < MEASUREMENT_BUFFER_SIZE; valueIndex++) {
+        value = values[valueIndex];
+        fileDef32 = ModuleTicker::getFile32Def(value.secondstime, "dat");  // the file name that shall be written to
+        if (fileDef32.name != datFileNameLast) {
+            if (datFile) {       // file already open -> file change at midnight
+                datFile.sync();  // write anything pending
+                datFile.close();
+            }
+            if (fileDef32.path != datFileNameLast) {  // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
+                buildFolders(fileDef32.path);
+                datFilePathLast = fileDef32.path;
+            }
+            datFile.open(fileDef32.name.c_str(), O_RDWR | O_CREAT | O_AT_END);
+            datFileNameLast = fileDef32.name;
+        }
+        datFile.write((byte*)&value, sizeof(value));
+    }
+    datFile.sync();
+    datFile.close();
+}
+
+// void ModuleSdcard::persistValues(values_all_t values[MEASUREMENT_BUFFER_SIZE]) {
+//     file32_def_t fileDef32;
+//     String dataFileNameLast = "";
+//     String dataFilePathLast = "";
+//     File32 csvFile;
+//     values_all_t value;
+//     for (int valueIndex = 0; valueIndex < MEASUREMENT_BUFFER_SIZE; valueIndex++) {
+//         value = values[valueIndex];
+//         fileDef32 = ModuleTicker::getFile32Def(value.secondstime, "csv");  // the file name that shall be written to
+//         if (fileDef32.name != dataFileNameLast) {
+//             if (csvFile) {       // file already open -> file change at midnight
+//                 csvFile.sync();  // write anything pending
+//                 csvFile.close();
+//             }
+//             if (fileDef32.path != dataFilePathLast) {  // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
+//                 buildFolders(fileDef32.path);
+//                 dataFilePathLast = fileDef32.path;
+//             }
+//             csvFile.open(fileDef32.name.c_str(), O_RDWR | O_CREAT | O_AT_END);
+//             if (csvFile.size() == 0) {  // first time this file is being written to -> write csv header
+//                 csvFile.print(ModuleSdcard::CSV_HEAD);
+//             }
+//             dataFileNameLast = fileDef32.name;
+//         }
+//         csvFile.print(toCsvLine(&value));
+//     }
+//     csvFile.sync();
+//     csvFile.close();
+// }
 
 String ModuleSdcard::toCsvLine(values_all_t* value) {
     char csvBuffer[128];

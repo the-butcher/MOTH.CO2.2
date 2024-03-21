@@ -7,15 +7,15 @@
 
 class SensorEnergy {
    private:
-    Adafruit_LC709203F basePack;
-    values_nrg_t values;
+    static Adafruit_LC709203F basePack;
+    static values_nrg_t values;
 
    public:
-    void begin();
-    bool measure();
-    values_nrg_t readval();
-    bool powerUp();
-    bool powerDown();
+    static void begin();
+    static bool measure();
+    static values_nrg_t readval();
+    static bool powerUp();
+    static bool powerDown();
     static uint16_t toShortPercent(float floatValue);
     static float toFloatPercent(uint16_t shortValue);
 };

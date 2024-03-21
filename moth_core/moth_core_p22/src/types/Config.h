@@ -3,6 +3,17 @@
 
 #include <Arduino.h>
 
+/**
+ * size of the measurement buffer
+ * with a measurement interval currently hardcoded to one minute it represents the minute interval in which measurements are saved
+ */
+const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
+
+/**
+ * HISTORY_BUFFER_SIZE is identical to MEASUREMENT_BUFFER_SIZE by accident not by design, therefore redefined
+ */
+const uint8_t HISTORY_____BUFFER_SIZE = 60;
+
 typedef struct {
     uint16_t warnHi;     // upper warn level
     uint16_t riskHi;     // upper risk level
@@ -33,7 +44,9 @@ typedef enum {
     DISPLAY_VAL_T___ALT
 } display_val_t_e;
 
-// current display value in chart modus
+/**
+ * current display value in chart modus
+ */
 typedef enum {
     DISPLAY_VAL_C___CO2,
     DISPLAY_VAL_C___DEG,
@@ -41,6 +54,19 @@ typedef enum {
     DISPLAY_VAL_C___HPA,
     DISPLAY_VAL_C___ALT
 } display_val_c_e;
+
+typedef enum {
+    DISPLAY_HRS_C____01 = 1,
+    DISPLAY_HRS_C____03 = 3,
+    DISPLAY_HRS_C____06 = 6,
+    DISPLAY_HRS_C____12 = 12,
+    DISPLAY_HRS_C____24 = 24
+} display_hrs_c_e;
+
+typedef enum {
+    DISPLAY_THM___LIGHT,
+    DISPLAY_THM____DARK
+} display_thm___e;
 
 typedef struct {
     thresholds_co2_t thresholdsCo2;
@@ -50,6 +76,8 @@ typedef struct {
     display_val_m_e displayValModus;  // chart | table
     display_val_t_e displayValTable;
     display_val_c_e displayValChart;
+    display_hrs_c_e displayHrsChart;
+    display_thm___e displayValTheme;
     bool isFahrenheit;
     bool isBeep;
     float temperatureOffset;

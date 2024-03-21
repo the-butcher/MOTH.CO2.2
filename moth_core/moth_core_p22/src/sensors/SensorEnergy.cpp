@@ -1,26 +1,29 @@
 #include "SensorEnergy.h"
 
+Adafruit_LC709203F SensorEnergy::basePack;
+values_nrg_t SensorEnergy::values = {0};
+
 void SensorEnergy::begin() {
-    basePack.begin();
-    basePack.setPackSize(LC709203F_APA_3000MAH);
-    basePack.setAlarmVoltage(3.8);
+    SensorEnergy::basePack.begin();
+    SensorEnergy::basePack.setPackSize(LC709203F_APA_3000MAH);
+    SensorEnergy::basePack.setAlarmVoltage(3.8);
 }
 
 bool SensorEnergy::powerUp() {
-    return basePack.setPowerMode(LC709203F_POWER_OPERATE);
+    return SensorEnergy::basePack.setPowerMode(LC709203F_POWER_OPERATE);
 }
 
 bool SensorEnergy::powerDown() {
-    return basePack.setPowerMode(LC709203F_POWER_SLEEP);
+    return SensorEnergy::basePack.setPowerMode(LC709203F_POWER_SLEEP);
 }
 
 bool SensorEnergy::measure() {
-    values = {toShortPercent(basePack.cellPercent())};
+    SensorEnergy::values = {toShortPercent(SensorEnergy::basePack.cellPercent())};
     return true;
 }
 
 values_nrg_t SensorEnergy::readval() {
-    return values;
+    return SensorEnergy::values;
 }
 
 uint16_t SensorEnergy::toShortPercent(float floatValue) {

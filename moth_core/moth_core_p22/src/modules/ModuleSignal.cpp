@@ -11,9 +11,7 @@
 Adafruit_NeoPixel pixels(1, GPIO_NUM_33, NEO_GRB + NEO_KHZ800);
 #endif
 
-ModuleSignal::ModuleSignal() {
-    this->pixelColor = COLOR____BLACK;
-}
+color_t ModuleSignal::pixelColor = COLOR____BLACK;
 
 void ModuleSignal::begin() {
 #ifdef USE_NEOPIXEL

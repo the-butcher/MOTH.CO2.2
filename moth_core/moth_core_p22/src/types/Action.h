@@ -3,7 +3,13 @@
 
 #include <Arduino.h>
 
+#include "modules/ModuleSignal.h"
 #include "types/Config.h"
+
+typedef enum {
+    SETUP_BOOT,
+    SETUP_MAIN
+} setup_mode_t;
 
 /**
  * ONLY CHANGE WITH CARE :: INDICES OF ACTIONS MUST REMAIN CONSTANT
@@ -36,5 +42,19 @@ typedef struct {
     std::function<bool(config_t *config)> functionFast;  // a function to be executed on fast press
     std::function<bool(config_t *config)> functionSlow;  // a function to be executed on slow press
 } button_action_t;
+
+const String SYMBOL__WIFI = "¥";
+const String SYMBOL_THEME = "¤";
+const String SYMBOL_TABLE = "£";
+const String SYMBOL_CHART = "¢";
+const String SYMBOL__BEEP = "©";
+const String SYMBOL_NBEEP = "ª";
+
+const uint32_t MICROSECONDS_PER______SECOND = 1000000;
+const uint32_t MICROSECONDS_PER_MILLISECOND = 1000;
+const uint32_t MILLISECONDS_PER______SECOND = 1000;
+const uint32_t SECONDS_PER_____________HOUR = 3600;
+const uint32_t WAITTIME________________NONE = 0;
+const uint32_t WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative estimation, 3 or maybe even 2 could also work
 
 #endif

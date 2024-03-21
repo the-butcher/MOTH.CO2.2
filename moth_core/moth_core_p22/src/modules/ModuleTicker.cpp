@@ -1,25 +1,24 @@
 #include "ModuleTicker.h"
 
-uint32_t ModuleTicker::MICROSECONDS_PER______SECOND = 1000000;
-uint32_t ModuleTicker::MICROSECONDS_PER_MILLISECOND = 1000;
-uint32_t ModuleTicker::MILLISECONDS_PER______SECOND = 1000;
-uint32_t ModuleTicker::WAITTIME________________NONE = 0;
-uint32_t ModuleTicker::WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative estimation, 3 or maybe even 2 could also work
+RTC_PCF8523 ModuleTicker::baseTime;
 
 void ModuleTicker::begin() {
-    baseTime.begin();
+    ModuleTicker::baseTime.begin();
 }
 
-DateTime ModuleTicker::getDate() {
-    return baseTime.now();
+uint32_t ModuleTicker::getSecondstime() {
+    return ModuleTicker::baseTime.now().secondstime();
 }
 
-file32_def_t ModuleTicker::getFile32Def(uint32_t secondstime) {
-    DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime);
+file32_def_t ModuleTicker::getFile32Def(uint32_t secondstime, String fileFormat) {
+    return ModuleTicker::getFile32Def(DateTime(SECONDS_FROM_1970_TO_2000 + secondstime), fileFormat);
+}
+
+file32_def_t ModuleTicker::getFile32Def(DateTime date, String fileFormat) {
     char pathBuffer[10];
     sprintf(pathBuffer, "/%04d/%02d", date.year(), date.month());
     char nameBuffer[22];
-    sprintf(nameBuffer, "/%04d/%02d/%04d%02d%02d.csv", date.year(), date.month(), date.year(), date.month(), date.day());
+    sprintf(nameBuffer, "/%04d/%02d/%04d%02d%02d.%s", date.year(), date.month(), date.year(), date.month(), date.day(), fileFormat);
     return {String(pathBuffer), String(nameBuffer)};
 }
 

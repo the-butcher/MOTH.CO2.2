@@ -7,18 +7,14 @@
 
 class ModuleTicker {
    private:
-    RTC_PCF8523 baseTime;
+    static RTC_PCF8523 baseTime;
 
    public:
-    void begin();
-    DateTime getDate();
+    static void begin();
+    static uint32_t getSecondstime();
     static String getDateTimeDisplayString(uint32_t secondstime);
-    static file32_def_t getFile32Def(uint32_t secondstime);
-    static uint32_t WAITTIME________________NONE;
-    static uint32_t WAITTIME_DISPLAY_AND_DEPOWER;
-    static uint32_t MILLISECONDS_PER______SECOND;
-    static uint32_t MICROSECONDS_PER______SECOND;
-    static uint32_t MICROSECONDS_PER_MILLISECOND;
+    static file32_def_t getFile32Def(uint32_t secondstime, String fileFormat);
+    static file32_def_t getFile32Def(DateTime date, String fileFormat);
 };
 
 #endif

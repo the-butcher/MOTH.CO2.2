@@ -11,16 +11,16 @@
 
 class SensorBme280 {
    private:
-    SensorBme280Base baseSensor;
-    values_bme_t values;
+    static SensorBme280Base baseSensor;
+    static values_bme_t values;
     static float ALTITUDE__EXP;
     static float ALTITUDE_MULT;
 
    public:
-    void begin();
-    bool measure();
-    values_bme_t readval();
-    float getPressureZerolevel(float altitudeBaselevel, float pressure);
+    static void begin();
+    static bool measure();
+    static values_bme_t readval();
+    static float getPressureZerolevel(float altitudeBaselevel, float pressure);
     static float getAltitude(float pressureZerolevel, float pressure);
 };
 

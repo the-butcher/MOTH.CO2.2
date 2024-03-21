@@ -19,6 +19,7 @@
 
 #include "ModuleScreenBase.h"
 #include "ModuleTicker.h"
+#include "buttons/ButtonAction.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
@@ -34,19 +35,20 @@ typedef struct {
 
 class ModuleScreen {
    private:
-    ModuleScreenBase baseDisplay;
-    void renderHeader();
-    void renderFooter(values_all_t *measurement);
-    void drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
-    void drawAntialiasedText08(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
-    void drawAntialiasedText18(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
-    void drawAntialiasedText36(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
-    void drawAntialiasedText(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color, const GFXfont *fontL, const GFXfont *fontD, const GFXfont *fontB);
-    void clearBuffer();
-    void flushBuffer();
-    void drawOuterBorders(uint16_t color);
-    void drawInnerBorders(uint16_t color);
-    void fillRectangle(rectangle_t rectangle, uint8_t color);
+    static ModuleScreenBase baseDisplay;
+    static void renderHeader();
+    static void renderButton(button_action_t buttonAction, uint16_t x);
+    static void renderFooter(values_all_t *measurement);
+    static void drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
+    static void drawAntialiasedText08(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
+    static void drawAntialiasedText18(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
+    static void drawAntialiasedText36(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
+    static void drawAntialiasedText(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color, const GFXfont *fontL, const GFXfont *fontD, const GFXfont *fontB);
+    static void clearBuffer(config_t *config);
+    static void flushBuffer();
+    static void drawOuterBorders(uint16_t color);
+    static void drawInnerBorders(uint16_t color);
+    static void fillRectangle(rectangle_t rectangle, uint8_t color);
     static bool isWarn(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
     static bool isRisk(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
     static uint8_t getTextColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
@@ -56,9 +58,10 @@ class ModuleScreen {
     static float celsiusToFahrenheit(float celsius);
 
    public:
-    void begin();
-    void renderMeasurement(values_all_t *measurement, config_t *config);
-    void hibernate();
+    static void begin();
+    static void renderTable(values_all_t *measurement, config_t *config);
+    static void renderChart(values_all_t history[60], config_t *config);
+    static void hibernate();
 };
 
 #endif

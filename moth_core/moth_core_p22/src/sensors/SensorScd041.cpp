@@ -1,22 +1,24 @@
 #include "SensorScd041.h"
 
+SensorScd041Base SensorScd041::baseSensor;
+values_co2_t SensorScd041::values = {0, 0, 0};
+
 void SensorScd041::begin() {
-    baseSensor.begin(Wire);
-    values = {0, 0, 0};
+    SensorScd041::baseSensor.begin(Wire);
 }
 
 bool SensorScd041::configure(config_t* config) {
     // check current setting first
     float temperatureOffsetV = 0;
     float& temperatureOffsetR = temperatureOffsetV;
-    baseSensor.getTemperatureOffset(temperatureOffsetR);
+    SensorScd041::baseSensor.getTemperatureOffset(temperatureOffsetR);
     // whats about to be set
     float temperatureOffsetC = config->temperatureOffset;
     // apply, only if there is a real change
     if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
-        baseSensor.setTemperatureOffset(temperatureOffsetC);
-        baseSensor.setAutomaticSelfCalibration(0);
-        baseSensor.persistSettings();
+        SensorScd041::baseSensor.setTemperatureOffset(temperatureOffsetC);
+        SensorScd041::baseSensor.setAutomaticSelfCalibration(0);
+        SensorScd041::baseSensor.persistSettings();
         return true;
     } else {
         return false;
@@ -24,28 +26,28 @@ bool SensorScd041::configure(config_t* config) {
 }
 
 bool SensorScd041::measure() {
-    return baseSensor.measureSingleShotNoDelay();
+    return SensorScd041::baseSensor.measureSingleShotNoDelay();
 }
 
 bool SensorScd041::powerUp() {
-    return baseSensor.wakeUp();
+    return SensorScd041::baseSensor.wakeUp();
 }
 
 bool SensorScd041::powerDown() {
-    return baseSensor.powerDown();
+    return SensorScd041::baseSensor.powerDown();
 }
 
 values_co2_t SensorScd041::readval() {
     bool isDataReady = false;
-    baseSensor.getDataReadyFlag(isDataReady);
+    SensorScd041::baseSensor.getDataReadyFlag(isDataReady);
     if (isDataReady) {
         uint16_t co2;
         float deg;
         float hum;
-        baseSensor.readMeasurement(co2, deg, hum);
-        values = {co2, SensorScd041::toShortDeg(deg), SensorScd041::toShortHum(hum), co2};
+        SensorScd041::baseSensor.readMeasurement(co2, deg, hum);
+        SensorScd041::values = {co2, SensorScd041::toShortDeg(deg), SensorScd041::toShortHum(hum), co2};
     }
-    return values;
+    return SensorScd041::values;
 }
 
 uint16_t SensorScd041::toShortDeg(float floatValue) {

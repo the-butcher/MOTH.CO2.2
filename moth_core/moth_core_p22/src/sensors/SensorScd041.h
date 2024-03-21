@@ -9,16 +9,16 @@
 
 class SensorScd041 {
    private:
-    SensorScd041Base baseSensor;
-    values_co2_t values;
+    static SensorScd041Base baseSensor;
+    static values_co2_t values;
 
    public:
-    void begin();
-    bool configure(config_t* config);  // must have begun before configuration
-    bool measure();
-    values_co2_t readval();
-    bool powerUp();
-    bool powerDown();
+    static void begin();
+    static bool configure(config_t* config);  // must have begun before configuration
+    static bool measure();
+    static values_co2_t readval();
+    static bool powerUp();
+    static bool powerDown();
     static uint16_t toShortDeg(float floatValue);
     static float toFloatDeg(uint16_t shortValue);
     static uint16_t toShortHum(float floatValue);

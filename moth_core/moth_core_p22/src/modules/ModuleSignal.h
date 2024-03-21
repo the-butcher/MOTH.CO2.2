@@ -16,14 +16,13 @@ typedef enum {
 
 class ModuleSignal {
    private:
-    color_t pixelColor;
+    static color_t pixelColor;
 
    public:
-    ModuleSignal();
-    void begin();
-    void prepareSleep();
-    color_t getPixelColor();
-    void setPixelColor(color_t pixelColor);
+    static void begin();
+    static void prepareSleep();
+    static color_t getPixelColor();
+    static void setPixelColor(color_t pixelColor);
 };
 
 #endif
