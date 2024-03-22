@@ -13,6 +13,7 @@
 #include "sensors/SensorScd041.h"
 #include "types/Action.h"
 #include "types/Config.h"
+#include "types/Define.h"
 #include "types/Values.h"
 
 // device state
@@ -34,32 +35,17 @@ RTC_DATA_ATTR uint32_t nextDisplayIndex;
 uint16_t actionNum = 0;
 
 /**
- * upon button wakeup or interrupt -> give control to ButtonAction, but there needs to be a callback to main for when a button action was completed
- * ButtonAction needs to get a pointer to config, so it can be passed on to the respective handlers and so it can be used to reconfigure ButtonAction
- * ============================================================================================
- * thoughs on file handling (with the speciality of measurement history display in chart)
- * 60 measurements
- * -  1h ->  1min resolution
- * -  3h ->  3min resolution
- * ...
- * - 24h -> 24min resolution
+ * -- configuration
+ * -- clock sync
+ * -- wifi
+ * -- mqtt (+autoconnect)
+ * -- calibration of SCD41
+ * -- factory reset of SCD41
+ * -- dat to csv
+ * -- actual beep
  *
- * therefore it will be necessary to open stored csv files and find and parse the appropiate measrements
- * it can be assumed that finding data will will always involve 1-n files AND some measurements that may only live in memory at that time
- * -- 60 slots of measurements searched for could filled
- * -- starting with the oldest, open file, if not already open
- * -- iterate through file until a good enough match is found (less than 30 seconds off)
- *
- * -- poc has been implemented in esp32_csvtest (not on github yet)
- *    -- let there be a "value-provider" that will find 60 measurements from file, or in the special case if 1h from the RTC memory values (likely for the sake of power usage)
- * ============================================================================================
- * TODO :: think about how to add clock synchronization, MQTT
- * could these by extra actions, i.e. after depower
+ * -- would be nice if device-actions could be moved to a separate type, like button-actions
  */
-
-//     // TODO :: there also needs to be a way to execute actions like calibration
-//     // -- would have to pause the action cycle until complete, and resume after completion
-//     // -- if running long, there could be a pattern of inserting "void" measurements or incrementing the start seconds
 
 uint32_t getMeasureNextSeconds() {
     return secondsSetupBase + nextMeasureIndex * 60;  // add one to index to be one measurement ahead
@@ -92,6 +78,7 @@ void populateConfig() {
         DISPLAY_THM___LIGHT,  // light theme
         false,                // c2f celsius to fahrenheit
         false,                // beep
+        false,                // wifi
         1.5,                  // temperature offset
         0.0,                  // calculated sealevel pressure, 0.0 = needs recalculation
         153                   // the altitude that the seonsor was configured to (or set by the user)
@@ -102,25 +89,26 @@ void populateActions() {
     deviceActions[DEVICE_ACTION_MEASURE] = {
         DEVICE_ACTION_MEASURE,  // trigger measurements
         COLOR__MAGENTA,         // magenta while measuring
-        true,                   // allow wakeup while measurement is active
+        WAKEUP_BUTTONS,         // allow wakeup while measurement is active
         5                       // 5 seconds delay to complete measurement
     };
     deviceActions[DEVICE_ACTION_READVAL] = {
         DEVICE_ACTION_READVAL,  // read any values that the sensors may have produced
         COLOR__MAGENTA,         // magenta while reading values
-        true,                   // allow wakeup while measurement is active (but wont ever happen due to 0 wait)
+        WAKEUP_BUTTONS,         // allow wakeup while measurement is active (but wont ever happen due to 0 wait)
         0                       // no delay required after readval
     };
     deviceActions[DEVICE_ACTION_DISPLAY] = {
-        DEVICE_ACTION_DISPLAY,  // display refresh
-        COLOR______RED,         // red while refreshing display
-        false,                  // do NOT allow wakeup while display is redrawing
-        2                       // 2 seconds delay to complete redraw (TODO :: verify that the display actually gets hibernated)
+        DEVICE_ACTION_DISPLAY,          // display refresh
+        COLOR______RED,                 // red while refreshing display
+        WAKEUP_BUSYPIN,                 // do NOT allow wakeup while display is redrawing
+        3,                              // 3 seconds delay which is a rather long and conservative estimation (buut the busy wakeup should take care of things)
+        ModuleTicker::getSecondstime()  // initially set, so the entry screen renders right away
     };
     deviceActions[DEVICE_ACTION_DEPOWER] = {
         DEVICE_ACTION_DEPOWER,  // depower display
         COLOR______RED,         // red while depowering
-        true,                   // allow wakeup after depower, while waiting for a new measurement
+        WAKEUP_BUTTONS,         // allow wakeup after depower, while waiting for a new measurement
         0                       // no delay required after this action
     };
 }
@@ -131,7 +119,7 @@ uint32_t getSecondsWait(uint32_t secondsNext) {
 }
 
 /**
- * handle the detected button action (pin and type)
+ * handle a detected button action (pin and type)
  */
 void handleButtonActionComplete(std::function<bool(config_t* config)> actionFunction) {
     if (actionFunction != nullptr) {
@@ -155,6 +143,11 @@ void handleButtonActionComplete(std::function<bool(config_t* config)> actionFunc
     }
 }
 
+void handleBusyHigh() {
+    deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = ModuleTicker::getSecondstime();  // need to reset, or it will start waiting for DEPOWER again due to secondsNext
+    actionNum++;                                                                        // interrupt delay loop
+}
+
 void setup() {
     // a debug pin usable in the PKK2 tool
     pinMode(GPIO_NUM_16, OUTPUT);
@@ -170,8 +163,10 @@ void setup() {
     ModuleTicker::begin();
     ModuleSignal::begin();
 
+#ifdef USE___SERIAL
     Serial.begin(115200);
     delay(2000);
+#endif
     ModuleSignal::setPixelColor(COLOR___YELLOW);
 
     SensorScd041::begin();
@@ -192,12 +187,18 @@ void setup() {
         }
 
         populateActions();
-        deviceActions[DEVICE_ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
-        actionIndexCur = 0;  // start with high index to trigger primary wait
+        // deviceActions[DEVICE_ACTION_MEASURE].secondsNext = getMeasureNextSeconds();
+        // actionIndexCur = DEVICE_ACTION_DISPLAY; // start with DEVICE_ACTION_DISPLAY for entry screen
+        actionIndexCur = 0;
         actionIndexMax = 4;
 
         nextMeasureIndex = 0;
         nextDisplayIndex = 0;
+
+        // have a battery reading for the entry screen
+        SensorEnergy::powerUp();
+        SensorEnergy::measure();
+        SensorEnergy::powerDown();
 
         setupMode = SETUP_MAIN;
     }
@@ -205,9 +206,14 @@ void setup() {
     ButtonAction::begin(handleButtonActionComplete);
     ButtonAction::configure(&config);
 
+    ModuleScreen::begin(handleBusyHigh);
+
     // did it wake up from a button press?
     esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
-    if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
+    if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
+        handleBusyHigh();
+        deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = ModuleTicker::getSecondstime();  // has woken up from busy, no need to wait any longer for depowering
+    } else if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
         uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
         ButtonAction::createButtonAction((gpio_num_t)(log(wakeupStatus) / log(2)));
     }
@@ -252,23 +258,27 @@ void handleActionReadval() {
         ModuleSdcard::begin();
         ModuleSdcard::persistValues(measurements);
     }
-    // when pressureZerolevel == 0.0 pressure at sealevel needs to be recalculated
+    // when pressureZerolevel == 0.0 pressure at sealevel needs to be recalculated (should only happen once at startup)
     if (config.pressureZerolevel == 0.0) {
         config.pressureZerolevel = SensorBme280::getPressureZerolevel(config.altitudeBaselevel, measurementBme.pressure);
     }
 }
 
 void handleActionDisplay() {
-    uint32_t currMeasureIndex = nextMeasureIndex - 1;
-    values_all_t measurement = measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
-    if (config.displayValModus == DISPLAY_VAL_M_TABLE) {
-        ModuleScreen::renderTable(&measurement, &config);
+    if (nextMeasureIndex > 0) {
+        uint32_t currMeasureIndex = nextMeasureIndex - 1;
+        values_all_t measurement = measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
+        if (config.displayValModus == DISPLAY_VAL_M_TABLE) {
+            ModuleScreen::renderTable(&measurement, &config);
+        } else {
+            values_all_t history[HISTORY_____BUFFER_SIZE];
+            ModuleSdcard::historyValues(measurements, currMeasureIndex, history, &config);  // will fill history with values from file or current measurements
+            ModuleScreen::renderChart(history, &config);
+        }
+        nextDisplayIndex = currMeasureIndex + config.displayUpdateMinutes;
     } else {
-        values_all_t history[HISTORY_____BUFFER_SIZE];
-        ModuleSdcard::historyValues(measurements, currMeasureIndex, history, &config);  // will fill history with values from file or current measurements
-        ModuleScreen::renderChart(history, &config);
+        ModuleScreen::renderEntry(&config);
     }
-    nextDisplayIndex = currMeasureIndex + config.displayUpdateMinutes;
 }
 
 void handleActionDepower() {
@@ -287,14 +297,15 @@ bool isDelayRequired() {
     return true || ButtonAction::getActionPin() > 0 || ButtonAction::getPressedPin() > 0;
 }
 
-void secondsSleep(uint32_t seconds) {
+void secondsSleep(uint32_t seconds, wakeup_e wakeupType) {
     // convert to microseconds
     uint64_t sleepMicros = seconds * MICROSECONDS_PER______SECOND;
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
-    ModuleSignal::prepareSleep();                                            // this may hold the neopixel power, depending on color debug setting
-    ButtonAction::prepareSleep(deviceActions[actionIndexCur].isExt1Wakeup);  // if the pending action allows ext1 wakeup
+    ModuleSignal::prepareSleep();            // this may hold the neopixel power, depending on color debug setting
+    ButtonAction::prepareSleep(wakeupType);  // if the pending action allows ext1 wakeup
+    ModuleScreen::prepareSleep(wakeupType);
     esp_sleep_enable_timer_wakeup(sleepMicros);
 
     // Serial.flush();
@@ -323,16 +334,20 @@ void secondsSleep(uint32_t seconds) {
  * - isDelayRequired() becomes false
  * - actionNumEntry has changed (some button action may have completed)
  */
-void secondsDelay(uint32_t seconds) {
+void secondsDelay(uint32_t seconds, wakeup_e wakeupType) {
+    digitalWrite(GPIO_NUM_16, HIGH);
     uint32_t millisEntry = millis();
     uint32_t millisBreak = millisEntry + seconds * MILLISECONDS_PER______SECOND;
     uint16_t actionNumEntry = actionNum;
-    ButtonAction::attachInterrupts();
+    ButtonAction::attachWakeup(wakeupType);
+    ModuleScreen::attachWakeup(wakeupType);
     ModuleSignal::setPixelColor(COLOR_____CYAN);
     while (isDelayRequired() && millis() < millisBreak && actionNumEntry == actionNum) {
         delay(50);
     }
-    ButtonAction::detachInterrupts();
+    ButtonAction::detachWakeup(wakeupType);
+    ModuleScreen::detachWakeup(wakeupType);
+    digitalWrite(GPIO_NUM_16, LOW);
 }
 
 void loop() {
@@ -368,9 +383,9 @@ void loop() {
     uint32_t secondsWait = getSecondsWait(deviceActions[actionIndexCur].secondsNext);
     if (secondsWait > WAITTIME________________NONE) {
         if (isDelayRequired()) {
-            secondsDelay(secondsWait);
+            secondsDelay(secondsWait, action.wakeupType);
         } else {
-            secondsSleep(secondsWait);
+            secondsSleep(secondsWait, action.wakeupType);
         }
     }
 }

@@ -15,8 +15,8 @@ void ButtonHelper::begin() {
     rtc_gpio_deinit(gpin);
 }
 
-void ButtonHelper::prepareSleep(bool isExt1Wakeup) {
-    if (isExt1Wakeup) {
+void ButtonHelper::prepareSleep(wakeup_e wakeupType) {
+    if (wakeupType == WAKEUP_BUTTONS) {
         gpio_hold_en(gpin);
         rtc_gpio_pullup_en(gpin);
         rtc_gpio_pulldown_dis(gpin);

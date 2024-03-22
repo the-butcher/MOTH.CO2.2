@@ -1,5 +1,6 @@
-#define USE_NEOPIXEL = 1;
 #include <Arduino.h>
+
+#include "types/Action.h"
 
 #ifdef USE_NEOPIXEL
 #include <Adafruit_NeoPixel.h>

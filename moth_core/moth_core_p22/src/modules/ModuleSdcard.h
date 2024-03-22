@@ -9,6 +9,7 @@
 #include "sensors/SensorScd041.h"
 #include "types/Action.h"
 #include "types/Config.h"
+#include "types/Define.h"
 #include "types/Values.h"
 
 class ModuleSdcard {

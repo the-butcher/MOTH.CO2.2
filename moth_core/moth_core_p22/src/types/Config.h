@@ -80,6 +80,7 @@ typedef struct {
     display_thm___e displayValTheme;
     bool isFahrenheit;
     bool isBeep;
+    bool isWifi;
     float temperatureOffset;
     float pressureZerolevel;  // calculated sealevel pressure
     float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)

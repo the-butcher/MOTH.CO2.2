@@ -53,9 +53,11 @@ void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], u
             if (datFile) {
                 datFile.close();  // close the previous file
             }
+#ifdef USE___SERIAL
             Serial.print("opening: ");
             Serial.println(fileDef32.name);
             Serial.println("------------------------------------------------------");
+#endif
             datFile.open(fileDef32.name.c_str(), O_READ);
             datFileNameLast = fileDef32.name;
         }
@@ -65,23 +67,40 @@ void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], u
             secondstimeFile = readValue.secondstime;
         }
         secondstimeDiff = secondstimeFile - secondstimeIndx;
-        if (datFile.available() > 1 && abs(secondstimeDiff) < 30) {
+        if (abs(secondstimeDiff) <= 30) {
+#ifdef USE___SERIAL
             Serial.print(historyIndex);
             Serial.print(" => ");
             Serial.print(secondstimeDiff);
-            Serial.print(" :: ");
+            Serial.print(" OK ");
             Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
-            Serial.print(" ~~ ");
+            Serial.print(" :: ");
             Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeFile));
+#endif
             historyIndexMax = historyIndex;
             history[historyIndex] = readValue;
+        } else {
+#ifdef USE___SERIAL
+            Serial.print(historyIndex);
+            Serial.print(" => ");
+            Serial.print(secondstimeDiff);
+            Serial.print(" !! ");
+            Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
+            Serial.print(" :: ");
+            Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeFile));
+#endif
+        }
+        if (datFile.available() <= 1) {
+            break;
         }
     }
     if (datFile) {
         datFile.close();
     }
 
+#ifdef USE___SERIAL
     Serial.println("------------------------------------------------------");
+#endif
     uint8_t measureIndex = currMeasureIndex + 1;
     uint32_t secondstimeMeas = 0;
     for (uint8_t historyIndex = historyIndexMax + 1; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
@@ -95,18 +114,22 @@ void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], u
             measureIndex++;
         }
         secondstimeDiff = secondstimeMeas - secondstimeIndx;
-        if (abs(secondstimeDiff) < 30) {
+        if (abs(secondstimeDiff) <= 30) {
+#ifdef USE___SERIAL
             Serial.print(historyIndex);
             Serial.print(" => ");
             Serial.print(secondstimeDiff);
-            Serial.print(" :: ");
+            Serial.print(" OK ");
             Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
-            Serial.print(" ~~ ");
+            Serial.print(" :: ");
             Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeMeas));
+#endif
             history[historyIndex] = values[(measureIndex - 1) % MEASUREMENT_BUFFER_SIZE];  // assign (is this a copy or a reference?)
         }
     }
+#ifdef USE___SERIAL
     Serial.println("======================================================");
+#endif
 }
 
 void ModuleSdcard::persistValues(values_all_t values[MEASUREMENT_BUFFER_SIZE]) {

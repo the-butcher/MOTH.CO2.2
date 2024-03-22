@@ -21,11 +21,17 @@ typedef enum {
     DEVICE_ACTION_DEPOWER   // display off, energy sensor off, ...
 } device_action_e;
 
+typedef enum {
+    WAKEUP____NONE,
+    WAKEUP_BUTTONS,
+    WAKEUP_BUSYPIN
+} wakeup_e;
+
 typedef struct {
     device_action_e type;  // type of action to be performed
     color_t color;         // neopixel color associated with this action
-    bool isExt1Wakeup;     // allow button wakeup while waiting for the next action
-    uint32_t secondsWait;  // time expected for this action to complete
+    wakeup_e wakeupType;   // wakeup type after this action
+    uint32_t secondsWait;  // wait time after this action
     uint32_t secondsNext;  // time for next execution of this action
 } device_action_t;
 
@@ -47,7 +53,7 @@ const String SYMBOL__WIFI = "¥";
 const String SYMBOL_THEME = "¤";
 const String SYMBOL_TABLE = "£";
 const String SYMBOL_CHART = "¢";
-const String SYMBOL__BEEP = "©";
+const String SYMBOL_YBEEP = "©";
 const String SYMBOL_NBEEP = "ª";
 
 const uint32_t MICROSECONDS_PER______SECOND = 1000000;

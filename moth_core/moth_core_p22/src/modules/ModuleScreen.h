@@ -24,6 +24,7 @@
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
 #include "types/Config.h"
+#include "types/Define.h"
 #include "types/Values.h"
 
 typedef struct {
@@ -36,9 +37,11 @@ typedef struct {
 class ModuleScreen {
    private:
     static ModuleScreenBase baseDisplay;
+    static uint64_t ext1Bitmask;
+    static std::function<void(void)> busyHighCallback;
     static void renderHeader();
     static void renderButton(button_action_t buttonAction, uint16_t x);
-    static void renderFooter(values_all_t *measurement);
+    static void renderFooter(config_t *config);
     static void drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
     static void drawAntialiasedText08(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
     static void drawAntialiasedText18(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color);
@@ -56,11 +59,16 @@ class ModuleScreen {
     static uint8_t getVertColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
     static String formatString(String value, char const *format);
     static float celsiusToFahrenheit(float celsius);
+    static void detectBusyPinHigh(void *parameter);
 
    public:
-    static void begin();
+    static void begin(std::function<void(void)> busyHighCallback);
+    static void prepareSleep(wakeup_e wakeupType);
+    static void attachWakeup(wakeup_e wakeupType);
+    static void detachWakeup(wakeup_e wakeupType);
     static void renderTable(values_all_t *measurement, config_t *config);
     static void renderChart(values_all_t history[60], config_t *config);
+    static void renderEntry(config_t *config);
     static void hibernate();
 };
 

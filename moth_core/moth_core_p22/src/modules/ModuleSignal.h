@@ -3,6 +3,8 @@
 
 #include <driver/rtc_io.h>
 
+#include "types/Define.h"
+
 typedef enum {
     COLOR____WHITE = 0x333333,
     COLOR______RED = 0xFF0000,

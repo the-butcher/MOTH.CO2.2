@@ -14,7 +14,7 @@ class ButtonHelper {
     uint8_t ipin;     // interrupt pin
     button_action_t buttonAction;
     void begin();
-    void prepareSleep(bool isExt1Wakeup);
+    void prepareSleep(wakeup_e wakeupType);
     bool isPressed();
 };
 

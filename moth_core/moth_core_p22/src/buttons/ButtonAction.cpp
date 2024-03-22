@@ -18,10 +18,10 @@ bool ButtonAction::configure(config_t* config) {
     // TODO :: reassign button_action depending on config
     if (config->displayValModus == DISPLAY_VAL_M_TABLE) {
         if (config->displayValTable == DISPLAY_VAL_T___ALT) {
-            // buttonA changes alt by 50m
-            // buttonB changes alt by 10m
+            ButtonAction::A.buttonAction = getButtonActionAltitude5050(config);  // buttonA changes alt by 50m
+            ButtonAction::B.buttonAction = getButtonActionAltitude1010(config);  // buttonB changes alt by 10m
         } else {
-            // button A toggles wifi and sound
+            ButtonAction::A.buttonAction = getButtonActionFunctionWFBP(config);  // button A toggles wifi and sound
             ButtonAction::B.buttonAction = getButtonActionDisplayValMT(config);  // toggle modus and theme
         }
         ButtonAction::C.buttonAction = getButtonActionDisplayValTT(config);  // toggle table value
@@ -30,8 +30,6 @@ bool ButtonAction::configure(config_t* config) {
         ButtonAction::B.buttonAction = getButtonActionDisplayValMT(config);  // toggle modus and theme
         ButtonAction::C.buttonAction = getButtonActionDisplayValCC(config);  // toggle chart value
     }
-
-    // button C toggles value depending on modus
     return true;
 }
 
@@ -75,13 +73,68 @@ button_action_t ButtonAction::getButtonActionDisplayValHR(config_t* config) {
     };
 }
 
-void ButtonAction::prepareSleep(bool isExt1Wakeup) {
-    ButtonAction::A.prepareSleep(isExt1Wakeup);
-    ButtonAction::B.prepareSleep(isExt1Wakeup);
-    ButtonAction::C.prepareSleep(isExt1Wakeup);
-    if (isExt1Wakeup) {
-        esp_sleep_enable_ext1_wakeup(ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
+button_action_t ButtonAction::getButtonActionAltitude1010(config_t* config) {
+    return {
+        "-",                                // the symbol for a fast press
+        "+",                                // the symbol for a slow press,
+        "10",                               // extra information to be displayed for this button
+        ButtonAction::decrementAltitude10,  // to a shorter interval
+        ButtonAction::incrementAltitude10   // a function to be executed on slow press
+    };
+}
+
+button_action_t ButtonAction::getButtonActionAltitude5050(config_t* config) {
+    return {
+        "-",                                // the symbol for a fast press
+        "+",                                // the symbol for a slow press,
+        "50",                               // extra information to be displayed for this button
+        ButtonAction::decrementAltitude50,  // to a shorter interval
+        ButtonAction::incrementAltitude50   // a function to be executed on slow press
+    };
+}
+
+button_action_t ButtonAction::getButtonActionFunctionWFBP(config_t* config) {
+    return {
+        config->isBeep ? SYMBOL_NBEEP : SYMBOL_YBEEP,  // the symbol for a fast press
+        SYMBOL__WIFI,                                  // the symbol for a slow press,
+        "",                                            // extra information to be displayed for this button
+        ButtonAction::toggleBeep,                      // to a shorter interval
+        ButtonAction::toggleWifi                       // a function to be executed on slow press
+    };
+}
+
+void ButtonAction::prepareSleep(wakeup_e wakeupType) {
+    ButtonAction::A.prepareSleep(wakeupType);
+    ButtonAction::B.prepareSleep(wakeupType);
+    ButtonAction::C.prepareSleep(wakeupType);
+    if (wakeupType == WAKEUP_BUTTONS) {
+        esp_sleep_enable_ext1_wakeup(ButtonAction::ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
     }
+}
+
+void ButtonAction::attachWakeup(wakeup_e wakeupType) {
+    if (wakeupType == WAKEUP_BUTTONS) {
+        attachInterrupt(ButtonAction::A.ipin, ButtonAction::handleInterruptA, FALLING);
+        attachInterrupt(ButtonAction::B.ipin, ButtonAction::handleInterruptB, FALLING);
+        attachInterrupt(ButtonAction::C.ipin, ButtonAction::handleInterruptC, FALLING);
+    }
+}
+void ButtonAction::detachWakeup(wakeup_e wakeupType) {
+    if (wakeupType == WAKEUP_BUTTONS) {
+        detachInterrupt(ButtonAction::A.ipin);
+        detachInterrupt(ButtonAction::B.ipin);
+        detachInterrupt(ButtonAction::C.ipin);
+    }
+}
+
+void ButtonAction::handleInterruptA() {
+    ButtonAction::createButtonAction(ButtonAction::A.gpin);
+}
+void ButtonAction::handleInterruptB() {
+    ButtonAction::createButtonAction(ButtonAction::B.gpin);
+}
+void ButtonAction::handleInterruptC() {
+    ButtonAction::createButtonAction(ButtonAction::C.gpin);
 }
 
 gpio_num_t ButtonAction::getActionPin() {
@@ -134,6 +187,58 @@ bool ButtonAction::toggleDisplayValHBw(config_t* config) {
         // already at DISPLAY_HRS_C____01
         return false;
     }
+    return true;
+}
+
+/**
+ * button action :: toggle wifi on or off
+ */
+bool ButtonAction::toggleWifi(config_t* config) {
+    config->isWifi = !config->isWifi;
+    return true;
+}
+
+/**
+ * button action :: toggle beep on or off
+ */
+bool ButtonAction::toggleBeep(config_t* config) {
+    config->isBeep = !config->isBeep;
+    return true;
+}
+
+/**
+ * button action :: decrement the base altitude by 10m
+ */
+bool ButtonAction::decrementAltitude10(config_t* config) {
+    config->altitudeBaselevel = config->altitudeBaselevel - 10;
+    config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
+    return true;
+}
+
+/**
+ * button action :: increment the base altitude by 10m
+ */
+bool ButtonAction::incrementAltitude10(config_t* config) {
+    config->altitudeBaselevel = config->altitudeBaselevel + 10;
+    config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
+    return true;
+}
+
+/**
+ * button action :: decrement the base altitude by 50m
+ */
+bool ButtonAction::decrementAltitude50(config_t* config) {
+    config->altitudeBaselevel = config->altitudeBaselevel - 50;
+    config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
+    return true;
+}
+
+/**
+ * button action :: increment the base altitude by 10m
+ */
+bool ButtonAction::incrementAltitude50(config_t* config) {
+    config->altitudeBaselevel = config->altitudeBaselevel + 50;
+    config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
     return true;
 }
 
@@ -194,26 +299,9 @@ bool ButtonAction::toggleDisplayValThm(config_t* config) {
     return true;
 }
 
-void ButtonAction::attachInterrupts() {
-    attachInterrupt(ButtonAction::A.ipin, ButtonAction::handleInterruptA, FALLING);
-    attachInterrupt(ButtonAction::B.ipin, ButtonAction::handleInterruptB, FALLING);
-    attachInterrupt(ButtonAction::C.ipin, ButtonAction::handleInterruptC, FALLING);
-}
-void ButtonAction::detachInterrupts() {
-    detachInterrupt(ButtonAction::A.ipin);
-    detachInterrupt(ButtonAction::B.ipin);
-    detachInterrupt(ButtonAction::C.ipin);
-}
-
-void ButtonAction::handleInterruptA() {
-    ButtonAction::createButtonAction(ButtonAction::A.gpin);
-}
-void ButtonAction::handleInterruptB() {
-    ButtonAction::createButtonAction(ButtonAction::B.gpin);
-}
-void ButtonAction::handleInterruptC() {
-    ButtonAction::createButtonAction(ButtonAction::C.gpin);
-}
+// bool ButtonAction::accepts(gpio_num_t actionPin) {
+//     return actionPin == ButtonAction::A.gpin || actionPin == ButtonAction::B.gpin || actionPin == ButtonAction::C.gpin;
+// }
 
 /**
  * create a new "detect button action" task

@@ -19,9 +19,40 @@ const char FORMAT_CELL_PERCENT[] = "%5s%%";
 const char FORMAT_STALE[] = "%3s%% stale";
 
 ModuleScreenBase ModuleScreen::baseDisplay;
+uint64_t ModuleScreen::ext1Bitmask = 1ULL << PIN_EPD_BUSY;
+std::function<void(void)> ModuleScreen::busyHighCallback = nullptr;
 
-void ModuleScreen::begin() {
-    // nothing
+void ModuleScreen::begin(std::function<void(void)> busyHighCallback) {
+    ModuleScreen::busyHighCallback = busyHighCallback;
+}
+
+void ModuleScreen::prepareSleep(wakeup_e wakeupType) {
+    if (wakeupType == WAKEUP_BUSYPIN) {
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_EPD_BUSY, HIGH);
+    }
+}
+
+/**
+ * waits for the busy pin to become high, then calls busyHighCallback --> depower the display
+ */
+void ModuleScreen::detectBusyPinHigh(void *parameter) {
+    uint64_t millisA = millis();
+    while (!digitalRead(PIN_EPD_BUSY) == HIGH) {
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    busyHighCallback();
+    vTaskDelete(NULL);
+}
+
+void ModuleScreen::attachWakeup(wakeup_e wakeupType) {
+    if (wakeupType == WAKEUP_BUSYPIN) {
+        xTaskCreate(ModuleScreen::detectBusyPinHigh, "detect busy pin high", 5000, NULL, 2, NULL);
+    }
+}
+void ModuleScreen::detachWakeup(wakeup_e wakeupType) {
+    if (wakeupType == WAKEUP_BUSYPIN) {
+        // do nothing
+    }
 }
 
 void ModuleScreen::flushBuffer() {
@@ -41,9 +72,9 @@ void ModuleScreen::clearBuffer(config_t *config) {
 }
 
 void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
-    clearBuffer(config);
-    drawOuterBorders(EPD_LIGHT);
-    drawInnerBorders(EPD_LIGHT);
+    ModuleScreen::clearBuffer(config);
+    ModuleScreen::drawOuterBorders(EPD_LIGHT);
+    ModuleScreen::drawInnerBorders(EPD_LIGHT);
 
     // values for temperature and humidity
     float deg = SensorScd041::toFloatDeg(measurement->valuesCo2.deg);  // TODO reconvert to float
@@ -189,7 +220,7 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
     ModuleScreen::drawAntialiasedText08(String(humidityFrc), RECT_HUM, 72, 35, textColor);
 
     ModuleScreen::renderHeader();
-    ModuleScreen::renderFooter(measurement);
+    ModuleScreen::renderFooter(config);
 
     ModuleScreen::flushBuffer();
 }
@@ -198,8 +229,8 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
  * measurement is reference for building the measurement table backwards
  */
 void ModuleScreen::renderChart(values_all_t history[60], config_t *config) {
-    clearBuffer(config);
-    drawOuterBorders(EPD_LIGHT);
+    ModuleScreen::clearBuffer(config);
+    ModuleScreen::drawOuterBorders(EPD_LIGHT);
 
     display_val_c_e displayValChart = config->displayValChart;
 
@@ -319,7 +350,7 @@ void ModuleScreen::renderChart(values_all_t history[60], config_t *config) {
     }
 
     ModuleScreen::renderHeader();
-    ModuleScreen::renderFooter(&history[59]);
+    ModuleScreen::renderFooter(config);
 
     ModuleScreen::flushBuffer();
 }
@@ -336,8 +367,8 @@ void ModuleScreen::renderButton(button_action_t buttonAction, uint16_t x) {
     ModuleScreen::drawAntialiasedText06(buttonAction.extraLabel, RECT_TOP, x + CHAR_DIM_X6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
 }
 
-void ModuleScreen::renderFooter(values_all_t *measurement) {
-    float percent = SensorEnergy::toFloatPercent(measurement->valuesNrg.percent);
+void ModuleScreen::renderFooter(config_t *config) {
+    float percent = SensorEnergy::toFloatPercent(SensorEnergy::readval().percent);
 
     String cellPercentFormatted = formatString(String(percent, 0), FORMAT_CELL_PERCENT);
     ModuleScreen::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, LIMIT_POS_X - 14 - CHAR_DIM_X6 * cellPercentFormatted.length(), TEXT_OFFSET_Y, EPD_BLACK);
@@ -353,25 +384,35 @@ void ModuleScreen::renderFooter(values_all_t *measurement) {
     ModuleScreen::baseDisplay.drawFastHLine(RECT_NRG.xmin + 1, RECT_NRG.ymin + 1, 2, EPD_WHITE);
     ModuleScreen::baseDisplay.drawFastHLine(RECT_NRG.xmax - 3, RECT_NRG.ymin + 1, 2, EPD_WHITE);
 
-    bool isConn = false;  // TODO :: maybe a third parameter "state" BoxConn::getMode() != WIFI_OFF;
-    bool isBeep = false;  // TODO :: maybe a third parameter "state" ModuleSignal::getSound() == SOUND__ON;
-
     int charPosFooter = 7;
-    if (isBeep) {
-        ModuleScreen::drawAntialiasedText08(SYMBOL__BEEP, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
+    if (config->isBeep) {
+        ModuleScreen::drawAntialiasedText08(SYMBOL_YBEEP, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
         charPosFooter += 13;
     }
 
-    if (isConn) {
+    if (config->isWifi) {
         // String address = BoxConn::getAddress();
         // ModuleScreen::drawAntialiasedText06(BoxConn::getAddress(), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
         // String timeFormatted = BoxClock::getDateTimeDisplayString(BoxClock::getDate());
         // ModuleScreen::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
         // ModuleScreen::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter + (address.length() + 1) * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
     } else {
-        String timeFormatted = ModuleTicker::getDateTimeDisplayString(measurement->secondstime);
+        String timeFormatted = ModuleTicker::getDateTimeDisplayString(ModuleTicker::getSecondstime());
         ModuleScreen::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
     }
+}
+
+void ModuleScreen::renderEntry(config_t *config) {
+    ModuleScreen::clearBuffer(config);
+    ModuleScreen::drawOuterBorders(EPD_LIGHT);
+
+    drawAntialiasedText18("moth", RECT_TOP, 8, 98, EPD_BLACK);
+    drawAntialiasedText06("starting ...", RECT_TOP, 105, 98, EPD_BLACK);
+
+    // skip header for clean screen
+    ModuleScreen::renderFooter(config);
+
+    ModuleScreen::flushBuffer();
 }
 
 void ModuleScreen::drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {

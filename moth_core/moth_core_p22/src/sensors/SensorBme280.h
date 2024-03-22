@@ -13,6 +13,7 @@ class SensorBme280 {
    private:
     static SensorBme280Base baseSensor;
     static values_bme_t values;
+    static bool isReadRequired;
     static float ALTITUDE__EXP;
     static float ALTITUDE_MULT;
 
