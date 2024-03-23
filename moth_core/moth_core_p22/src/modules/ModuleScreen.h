@@ -25,6 +25,7 @@
 #include "sensors/SensorScd041.h"
 #include "types/Config.h"
 #include "types/Define.h"
+#include "types/Device.h"
 #include "types/Values.h"
 
 typedef struct {
@@ -52,20 +53,20 @@ class ModuleScreen {
     static void drawOuterBorders(uint16_t color);
     static void drawInnerBorders(uint16_t color);
     static void fillRectangle(rectangle_t rectangle, uint8_t color);
-    static bool isWarn(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
-    static bool isRisk(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
-    static uint8_t getTextColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
-    static uint8_t getFillColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
-    static uint8_t getVertColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi);
+    static bool isWarn(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
+    static bool isRisk(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
+    static uint8_t getTextColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
+    static uint8_t getFillColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
+    static uint8_t getVertColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
     static String formatString(String value, char const *format);
     static float celsiusToFahrenheit(float celsius);
     static void detectBusyPinHigh(void *parameter);
 
    public:
     static void begin(std::function<void(void)> busyHighCallback);
-    static void prepareSleep(wakeup_e wakeupType);
-    static void attachWakeup(wakeup_e wakeupType);
-    static void detachWakeup(wakeup_e wakeupType);
+    static void prepareSleep(wakeup_action_e wakeupType);
+    static void attachWakeup(wakeup_action_e wakeupType);
+    static void detachWakeup(wakeup_action_e wakeupType);
     static void renderTable(values_all_t *measurement, config_t *config);
     static void renderChart(values_all_t history[60], config_t *config);
     static void renderEntry(config_t *config);

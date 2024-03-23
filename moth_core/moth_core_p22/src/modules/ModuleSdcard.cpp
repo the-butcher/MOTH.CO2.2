@@ -20,10 +20,11 @@ static values_all_t emptyMeasurement(uint32_t secondstime) {
     };
 }
 
-void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], uint32_t currMeasureIndex, values_all_t history[HISTORY_____BUFFER_SIZE], config_t* config) {
+void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_t history[HISTORY_____BUFFER_SIZE]) {
     // setup search seconds
-    uint32_t secondstimeIncr = config->displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
-    uint32_t secondstimeBase = values[currMeasureIndex % MEASUREMENT_BUFFER_SIZE].secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // the secondstime
+    uint32_t currMeasureIndex = values->nextMeasureIndex - 1;
+    uint32_t secondstimeIncr = config->disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
+    uint32_t secondstimeBase = values->measurements[currMeasureIndex % MEASUREMENT_BUFFER_SIZE].secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // the secondstime
 
     int32_t secondstimeDiff;
     uint32_t secondstimeIndx;
@@ -107,7 +108,7 @@ void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], u
         secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
         history[historyIndex] = emptyMeasurement(secondstimeIndx);
         while (measureIndex < currMeasureIndex + 1 + MEASUREMENT_BUFFER_SIZE && secondstimeMeas + 30 < secondstimeIndx) {
-            secondstimeMeas = values[measureIndex % MEASUREMENT_BUFFER_SIZE].secondstime;
+            secondstimeMeas = values->measurements[measureIndex % MEASUREMENT_BUFFER_SIZE].secondstime;
             // Serial.print(measureIndex);
             // Serial.print(" ## ");
             // Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeMeas));
@@ -124,7 +125,7 @@ void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], u
             Serial.print(" :: ");
             Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeMeas));
 #endif
-            history[historyIndex] = values[(measureIndex - 1) % MEASUREMENT_BUFFER_SIZE];  // assign (is this a copy or a reference?)
+            history[historyIndex] = values->measurements[(measureIndex - 1) % MEASUREMENT_BUFFER_SIZE];  // assign (is this a copy or a reference?)
         }
     }
 #ifdef USE___SERIAL
@@ -132,14 +133,14 @@ void ModuleSdcard::historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], u
 #endif
 }
 
-void ModuleSdcard::persistValues(values_all_t values[MEASUREMENT_BUFFER_SIZE]) {
+void ModuleSdcard::persistValues(values_t* values) {
     file32_def_t fileDef32;
     String datFileNameLast = "";
     String datFilePathLast = "";
     File32 datFile;
     values_all_t value;
     for (int valueIndex = 0; valueIndex < MEASUREMENT_BUFFER_SIZE; valueIndex++) {
-        value = values[valueIndex];
+        value = values->measurements[valueIndex];
         fileDef32 = ModuleTicker::getFile32Def(value.secondstime, "dat");  // the file name that shall be written to
         if (fileDef32.name != datFileNameLast) {
             if (datFile) {       // file already open -> file change at midnight
@@ -189,20 +190,20 @@ void ModuleSdcard::persistValues(values_all_t values[MEASUREMENT_BUFFER_SIZE]) {
 //     csvFile.close();
 // }
 
-String ModuleSdcard::toCsvLine(values_all_t* value) {
-    char csvBuffer[128];
-    DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + value->secondstime);
-    float deg = SensorScd041::toFloatDeg(value->valuesCo2.deg);
-    float hum = SensorScd041::toFloatHum(value->valuesCo2.hum);
-    float percent = SensorEnergy::toFloatPercent(value->valuesNrg.percent);
-    sprintf(csvBuffer, ModuleSdcard::CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), String(value->valuesCo2.co2), String(value->valuesCo2.co2Raw), String(deg, 1), String(hum, 1), String(value->valuesBme.pressure, 2), String(percent, 2));
-    for (int i = 0; i < 128; i++) {
-        if (csvBuffer[i] == '.') {
-            csvBuffer[i] = ',';
-        }
-    }
-    return csvBuffer;
-}
+// String ModuleSdcard::toCsvLine(values_all_t* value) {
+//     char csvBuffer[128];
+//     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + value->secondstime);
+//     float deg = SensorScd041::toFloatDeg(value->valuesCo2.deg);
+//     float hum = SensorScd041::toFloatHum(value->valuesCo2.hum);
+//     float percent = SensorEnergy::toFloatPercent(value->valuesNrg.percent);
+//     sprintf(csvBuffer, ModuleSdcard::CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), String(value->valuesCo2.co2), String(value->valuesCo2.co2Raw), String(deg, 1), String(hum, 1), String(value->valuesBme.pressure, 2), String(percent, 2));
+//     for (int i = 0; i < 128; i++) {
+//         if (csvBuffer[i] == '.') {
+//             csvBuffer[i] = ',';
+//         }
+//     }
+//     return csvBuffer;
+// }
 
 bool ModuleSdcard::buildFolders(String folder) {
     return ModuleSdcard::sd32.mkdir(folder);

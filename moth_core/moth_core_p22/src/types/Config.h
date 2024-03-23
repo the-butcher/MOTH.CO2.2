@@ -3,29 +3,25 @@
 
 #include <Arduino.h>
 
-/**
- * size of the measurement buffer
- * with a measurement interval currently hardcoded to one minute it represents the minute interval in which measurements are saved
- */
-const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
-
-/**
- * HISTORY_BUFFER_SIZE is identical to MEASUREMENT_BUFFER_SIZE by accident not by design, therefore redefined
- */
-const uint8_t HISTORY_____BUFFER_SIZE = 60;
-
 typedef struct {
-    uint16_t warnHi;     // upper warn level
-    uint16_t riskHi;     // upper risk level
-    uint16_t reference;  // co2 reference value (i.e. 425)
+    uint16_t wHi;  // upper warn level
+    uint16_t rHi;  // upper risk level
+    uint16_t ref;  // co2 reference value (i.e. 425)
 } thresholds_co2_t;
 
 typedef struct {
-    uint8_t riskLo;  // lower risk level
-    uint8_t wanrLo;  // lower warn level
-    uint8_t warnHi;  // upper warn level
-    uint8_t riskHi;  // upper risk level
-} thresholds_lh_t;
+    uint8_t rLo;  // lower risk level
+    uint8_t wLo;  // lower warn level
+    uint8_t wHi;  // upper warn level
+    uint8_t rHi;  // upper risk level
+} thresholds_deg_t;
+
+typedef struct {
+    uint8_t rLo;  // lower risk level
+    uint8_t wLo;  // lower warn level
+    uint8_t wHi;  // upper warn level
+    uint8_t rHi;  // upper risk level
+} thresholds_hum_t;
 
 /**
  * render type of display (CHART | TABLE)
@@ -68,22 +64,37 @@ typedef enum {
     DISPLAY_THM____DARK
 } display_thm___e;
 
+typedef enum {
+    DISPLAY_DEG_FAHRENH,
+    DISPLAY_DEG_CELSIUS
+} display_deg___e;
+
 typedef struct {
     thresholds_co2_t thresholdsCo2;
-    thresholds_lh_t thresholdsDeg;
-    thresholds_lh_t thresholdsHum;
+    thresholds_deg_t thresholdsDeg;
+    thresholds_hum_t thresholdsHum;
     uint8_t displayUpdateMinutes;
-    display_val_m_e displayValModus;  // chart | table
+    display_val_m_e displayValModus;
     display_val_t_e displayValTable;
     display_val_c_e displayValChart;
     display_hrs_c_e displayHrsChart;
     display_thm___e displayValTheme;
-    bool isFahrenheit;
+    display_deg___e displayDegScale;
+} display_all___t;
+
+typedef struct {
+    display_all___t disp;
     bool isBeep;
     bool isWifi;
     float temperatureOffset;
     float pressureZerolevel;  // calculated sealevel pressure
     float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)
 } config_t;
+
+class Config {
+   private:
+   public:
+    static config_t load();
+};
 
 #endif

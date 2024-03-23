@@ -26,8 +26,8 @@ void ModuleScreen::begin(std::function<void(void)> busyHighCallback) {
     ModuleScreen::busyHighCallback = busyHighCallback;
 }
 
-void ModuleScreen::prepareSleep(wakeup_e wakeupType) {
-    if (wakeupType == WAKEUP_BUSYPIN) {
+void ModuleScreen::prepareSleep(wakeup_action_e wakeupType) {
+    if (wakeupType == WAKEUP_ACTION_BUSY) {
         esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_EPD_BUSY, HIGH);
     }
 }
@@ -44,13 +44,13 @@ void ModuleScreen::detectBusyPinHigh(void *parameter) {
     vTaskDelete(NULL);
 }
 
-void ModuleScreen::attachWakeup(wakeup_e wakeupType) {
-    if (wakeupType == WAKEUP_BUSYPIN) {
+void ModuleScreen::attachWakeup(wakeup_action_e wakeupType) {
+    if (wakeupType == WAKEUP_ACTION_BUSY) {
         xTaskCreate(ModuleScreen::detectBusyPinHigh, "detect busy pin high", 5000, NULL, 2, NULL);
     }
 }
-void ModuleScreen::detachWakeup(wakeup_e wakeupType) {
-    if (wakeupType == WAKEUP_BUSYPIN) {
+void ModuleScreen::detachWakeup(wakeup_action_e wakeupType) {
+    if (wakeupType == WAKEUP_ACTION_BUSY) {
         // do nothing
     }
 }
@@ -67,7 +67,7 @@ void ModuleScreen::hibernate() {
 }
 
 void ModuleScreen::clearBuffer(config_t *config) {
-    ModuleScreen::baseDisplay.begin(THINKINK_GRAYSCALE4, config->displayValTheme == DISPLAY_THM___LIGHT);
+    ModuleScreen::baseDisplay.begin(THINKINK_GRAYSCALE4, config->disp.displayValTheme == DISPLAY_THM___LIGHT);
     ModuleScreen::baseDisplay.clearBuffer();
 }
 
@@ -89,12 +89,12 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
     uint16_t charPosValueX = 193;
     uint16_t charPosFinalX;
 
-    if (config->displayValTable == DISPLAY_VAL_T___CO2) {
-        thresholds_co2_t thresholdsCo2 = config->thresholdsCo2;
+    if (config->disp.displayValTable == DISPLAY_VAL_T___CO2) {
+        thresholds_co2_t thresholdsCo2 = config->disp.thresholdsCo2;
         uint16_t co2 = measurement->valuesCo2.co2;
-        float stale = max(0.0, min(10.0, (co2 - thresholdsCo2.reference) / 380.0));  // don't allow negative stale values. max out at 10
-        float staleWarn = max(0.0, min(10.0, (thresholdsCo2.warnHi - thresholdsCo2.reference) / 380.0));
-        float staleRisk = max(0.0, min(10.0, (thresholdsCo2.riskHi - thresholdsCo2.reference) / 380.0));
+        float stale = max(0.0, min(10.0, (co2 - thresholdsCo2.ref) / 380.0));  // don't allow negative stale values. max out at 10
+        float staleWarn = max(0.0, min(10.0, (thresholdsCo2.wHi - thresholdsCo2.ref) / 380.0));
+        float staleRisk = max(0.0, min(10.0, (thresholdsCo2.rHi - thresholdsCo2.ref) / 380.0));
 
         float staleMax = 2.5;
         if (stale > 4) {
@@ -104,9 +104,9 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
         }
         int staleDif = 70 / staleMax;  // height of 1 percent, 20 for staleMax 2.5, 10 for staleMax 5, 5 for staleMax 10
 
-        textColor = getTextColor(co2, 0, 0, thresholdsCo2.warnHi, thresholdsCo2.riskHi);
-        fillColor = getFillColor(co2, 0, 0, thresholdsCo2.warnHi, thresholdsCo2.riskHi);
-        vertColor = getVertColor(co2, 0, 0, thresholdsCo2.warnHi, thresholdsCo2.riskHi);
+        textColor = getTextColor(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
+        fillColor = getFillColor(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
+        vertColor = getVertColor(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
 
         if (fillColor != EPD_WHITE) {
             ModuleScreen::fillRectangle(RECT_CO2, fillColor);
@@ -130,11 +130,11 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
             ModuleScreen::baseDisplay.drawFastVLine(i, yMax - yDimMax, yDimMax - yDimRisk, EPD_BLACK);    // risk
         }
 
-        if (ModuleScreen::isRisk(co2, 0, 0, thresholdsCo2.warnHi, thresholdsCo2.riskHi)) {  // when in risk, the risk area needs to be outlined
+        if (ModuleScreen::isRisk(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when in risk, the risk area needs to be outlined
             ModuleScreen::baseDisplay.drawFastVLine(xBarMin, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
             ModuleScreen::baseDisplay.drawFastVLine(xBarMax, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
             ModuleScreen::baseDisplay.drawFastHLine(xBarMin, yMax - yDimMax, xBarMax - xBarMin + 1, vertColor);
-        } else if (!ModuleScreen::isWarn(co2, 0, 0, thresholdsCo2.warnHi, thresholdsCo2.riskHi)) {  // when not warn and not risk, the good area needs to be outlined
+        } else if (!ModuleScreen::isWarn(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when not warn and not risk, the good area needs to be outlined
             ModuleScreen::baseDisplay.drawFastVLine(xBarMin, yMax - yDimWarn, yDimWarn, vertColor);
             ModuleScreen::baseDisplay.drawFastVLine(xBarMax, yMax - yDimWarn, yDimWarn, vertColor);
             ModuleScreen::baseDisplay.drawFastHLine(xBarMin, yMax, xBarMax - xBarMin + 1, vertColor);
@@ -167,7 +167,7 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
         }
         ModuleScreen::drawAntialiasedText06("%", RECT_CO2, xPrc, yPrc, textColor);
 
-    } else if (config->displayValTable == DISPLAY_VAL_T___HPA) {
+    } else if (config->disp.displayValTable == DISPLAY_VAL_T___HPA) {
         float pressure = measurement->valuesBme.pressure;
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
@@ -176,7 +176,7 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
         title = "pressure hPa";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
         ModuleScreen::drawAntialiasedText36(formatString(String(pressure, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
-    } else if (config->displayValTable == DISPLAY_VAL_T___ALT) {
+    } else if (config->disp.displayValTable == DISPLAY_VAL_T___ALT) {
         float altitude = SensorBme280::getAltitude(config->pressureZerolevel, measurement->valuesBme.pressure);
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
@@ -188,10 +188,10 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
     }
     ModuleScreen::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
 
-    thresholds_lh_t thresholdsDeg = config->thresholdsDeg;
-    textColor = getTextColor(deg, thresholdsDeg.riskLo, thresholdsDeg.wanrLo, thresholdsDeg.warnHi, thresholdsDeg.riskHi);
-    fillColor = getFillColor(deg, thresholdsDeg.riskLo, thresholdsDeg.wanrLo, thresholdsDeg.warnHi, thresholdsDeg.riskHi);
-    if (config->isFahrenheit) {
+    thresholds_deg_t thresholdsDeg = config->disp.thresholdsDeg;
+    textColor = getTextColor(deg, thresholdsDeg.rLo, thresholdsDeg.wLo, thresholdsDeg.wHi, thresholdsDeg.rHi);
+    fillColor = getFillColor(deg, thresholdsDeg.rLo, thresholdsDeg.wLo, thresholdsDeg.wHi, thresholdsDeg.rHi);
+    if (config->disp.displayDegScale == DISPLAY_DEG_FAHRENH) {
         deg = ModuleScreen::celsiusToFahrenheit(deg);
     }
     int temperature10 = round(deg * 10.0);
@@ -201,13 +201,13 @@ void ModuleScreen::renderTable(values_all_t *measurement, config_t *config) {
         ModuleScreen::fillRectangle(RECT_DEG, fillColor);
     }
     ModuleScreen::drawAntialiasedText18(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 0, 35, textColor);
-    ModuleScreen::drawAntialiasedText06(config->isFahrenheit ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
+    ModuleScreen::drawAntialiasedText06(config->disp.displayDegScale == DISPLAY_DEG_FAHRENH ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
     ModuleScreen::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
     ModuleScreen::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
 
-    thresholds_lh_t thresholdsHum = config->thresholdsHum;
-    textColor = getTextColor(hum, thresholdsHum.riskLo, thresholdsHum.wanrLo, thresholdsHum.warnHi, thresholdsHum.riskHi);
-    fillColor = getFillColor(hum, thresholdsHum.riskLo, thresholdsHum.wanrLo, thresholdsHum.warnHi, thresholdsHum.riskHi);
+    thresholds_hum_t thresholdsHum = config->disp.thresholdsHum;
+    textColor = getTextColor(hum, thresholdsHum.rLo, thresholdsHum.wLo, thresholdsHum.wHi, thresholdsHum.rHi);
+    fillColor = getFillColor(hum, thresholdsHum.rLo, thresholdsHum.wLo, thresholdsHum.wHi, thresholdsHum.rHi);
     int humidity10 = round(hum * 10.0);
     int humidityFix = floor(humidity10 / 10.0);
     int humidityFrc = abs(humidity10 % 10);
@@ -232,7 +232,7 @@ void ModuleScreen::renderChart(values_all_t history[60], config_t *config) {
     ModuleScreen::clearBuffer(config);
     ModuleScreen::drawOuterBorders(EPD_LIGHT);
 
-    display_val_c_e displayValChart = config->displayValChart;
+    display_val_c_e displayValChart = config->disp.displayValChart;
 
     values_all_t measurement;
     uint16_t minValue = 0;
@@ -249,7 +249,7 @@ void ModuleScreen::renderChart(values_all_t history[60], config_t *config) {
             }
         }
     } else if (displayValChart == DISPLAY_VAL_C___DEG) {
-        if (config->isFahrenheit) {
+        if (config->disp.displayDegScale == DISPLAY_DEG_FAHRENH) {
             minValue = 60;
             maxValue = 120;
         } else {
@@ -300,15 +300,15 @@ void ModuleScreen::renderChart(values_all_t history[60], config_t *config) {
     String title;
 
     if (displayValChart == DISPLAY_VAL_C___CO2) {
-        title = "CO² ppm," + String(config->displayHrsChart) + "h";  // the sup 2 has been modified in the font to display as sub
+        title = "CO² ppm," + String(config->disp.displayHrsChart) + "h";  // the sup 2 has been modified in the font to display as sub
     } else if (displayValChart == DISPLAY_VAL_C___DEG) {
-        title = config->isFahrenheit ? "temperature °F," : "temperature °C," + String(config->displayHrsChart) + "h";
+        title = config->disp.displayDegScale == DISPLAY_DEG_FAHRENH ? "temperature °F," : "temperature °C," + String(config->disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C___HUM) {
-        title = "humidity %," + String(config->displayHrsChart) + "h";
+        title = "humidity %," + String(config->disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C___HPA) {
-        title = "pressure hPa," + String(config->displayHrsChart) + "h";
+        title = "pressure hPa," + String(config->disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C___ALT) {
-        title = "altitude m," + String(config->displayHrsChart) + "h";
+        title = "altitude m," + String(config->disp.displayHrsChart) + "h";
     }
     ModuleScreen::drawAntialiasedText06(title, RECT_CO2, LIMIT_POS_X - title.length() * CHAR_DIM_X6 + 3, charPosLabelY, EPD_BLACK);
 
@@ -485,34 +485,34 @@ void ModuleScreen::fillRectangle(rectangle_t rectangle, uint8_t color) {
     ModuleScreen::baseDisplay.fillRect(rectangle.xmin + 1, rectangle.ymin + 1, rectangle.xmax - rectangle.xmin - 2, rectangle.ymax - rectangle.ymin - 2, color);
 }
 
-bool ModuleScreen::isWarn(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi) {
-    return value < warnLo || value >= warnHi;
+bool ModuleScreen::isWarn(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    return value < warnLo || value >= wHi;
 }
 
-bool ModuleScreen::isRisk(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi) {
-    return value < riskLo || value >= riskHi;
+bool ModuleScreen::isRisk(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    return value < rLo || value >= rHi;
 }
 
-uint8_t ModuleScreen::getTextColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi) {
-    if (ModuleScreen::isRisk(value, riskLo, warnLo, warnHi, riskHi)) {
+uint8_t ModuleScreen::getTextColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    if (ModuleScreen::isRisk(value, rLo, warnLo, wHi, rHi)) {
         return EPD_WHITE;
     } else {
         return EPD_BLACK;
     }
 }
 
-uint8_t ModuleScreen::getFillColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi) {
-    if (ModuleScreen::isRisk(value, riskLo, warnLo, warnHi, riskHi)) {
+uint8_t ModuleScreen::getFillColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    if (ModuleScreen::isRisk(value, rLo, warnLo, wHi, rHi)) {
         return EPD_BLACK;
-    } else if (ModuleScreen::isWarn(value, riskLo, warnLo, warnHi, riskHi)) {
+    } else if (ModuleScreen::isWarn(value, rLo, warnLo, wHi, rHi)) {
         return EPD_LIGHT;
     } else {
         return EPD_WHITE;
     }
 }
 
-uint8_t ModuleScreen::getVertColor(float value, uint16_t riskLo, uint16_t warnLo, uint16_t warnHi, uint16_t riskHi) {
-    if (ModuleScreen::isRisk(value, riskLo, warnLo, warnHi, riskHi)) {
+uint8_t ModuleScreen::getVertColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    if (ModuleScreen::isRisk(value, rLo, warnLo, wHi, rHi)) {
         return EPD_LIGHT;
     } else {
         return EPD_DARK;

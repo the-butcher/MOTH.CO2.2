@@ -10,6 +10,7 @@
 #include "sensors/SensorBme280.h"
 #include "types/Action.h"
 #include "types/Config.h"
+#include "types/Device.h"
 
 class ButtonAction {
    private:
@@ -50,12 +51,11 @@ class ButtonAction {
     static ButtonHelper C;
     static void begin(std::function<void(std::function<bool(config_t* config)>)> buttonActionCompleteCallback);
     static bool configure(config_t* config);
-    static void prepareSleep(wakeup_e wakeupType);
-    static void attachWakeup(wakeup_e wakeupType);
-    static void detachWakeup(wakeup_e wakeupType);
+    static void prepareSleep(wakeup_action_e wakeupType);
+    static void attachWakeup(wakeup_action_e wakeupType);
+    static void detachWakeup(wakeup_action_e wakeupType);
     static gpio_num_t getPressedPin();
     static gpio_num_t getActionPin();
-    // static bool accepts(gpio_num_t actionPin);
     static void createButtonAction(gpio_num_t actionPin);
 };
 

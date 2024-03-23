@@ -24,9 +24,9 @@ class ModuleSdcard {
     static bool removeFolder(String folder);
     static bool existsPath(String path);
     static bool removeFile32(String file);
-    static void historyValues(values_all_t values[MEASUREMENT_BUFFER_SIZE], uint32_t currMeasureIndex, values_all_t history[HISTORY_____BUFFER_SIZE], config_t* config);
-    static void persistValues(values_all_t values[MEASUREMENT_BUFFER_SIZE]);
-    static String toCsvLine(values_all_t* value);
+    static void historyValues(values_t* values, config_t* config, values_all_t history[HISTORY_____BUFFER_SIZE]);
+    static void persistValues(values_t* values);
+    // static String toCsvLine(values_all_t* value);
 };
 
 #endif

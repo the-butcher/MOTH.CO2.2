@@ -7,33 +7,9 @@
 #include "types/Config.h"
 
 typedef enum {
-    SETUP_BOOT,
-    SETUP_MAIN
-} setup_mode_t;
-
-/**
- * ONLY CHANGE WITH CARE :: INDICES OF ACTIONS MUST REMAIN CONSTANT
- */
-typedef enum {
-    DEVICE_ACTION_MEASURE,  // i2c on, measure
-    DEVICE_ACTION_READVAL,  // read values
-    DEVICE_ACTION_DISPLAY,  // display on, render values
-    DEVICE_ACTION_DEPOWER   // display off, energy sensor off, ...
-} device_action_e;
-
-typedef enum {
-    WAKEUP____NONE,
-    WAKEUP_BUTTONS,
-    WAKEUP_BUSYPIN
-} wakeup_e;
-
-typedef struct {
-    device_action_e type;  // type of action to be performed
-    color_t color;         // neopixel color associated with this action
-    wakeup_e wakeupType;   // wakeup type after this action
-    uint32_t secondsWait;  // wait time after this action
-    uint32_t secondsNext;  // time for next execution of this action
-} device_action_t;
+    WAKEUP_ACTION_BUTN,
+    WAKEUP_ACTION_BUSY
+} wakeup_action_e;
 
 typedef enum {
     BUTTON_ACTION_FAST,
