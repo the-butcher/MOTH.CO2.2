@@ -1,5 +1,11 @@
 #include "ModuleScreen.h"
 
+#include "ModuleClock.h"
+#include "buttons/ButtonAction.h"
+#include "sensors/SensorBme280.h"
+#include "sensors/SensorEnergy.h"
+#include "sensors/SensorScd041.h"
+
 const uint16_t LIMIT_POS_X = 287;
 const uint8_t CHAR_DIM_X6 = 7;
 
@@ -20,10 +26,10 @@ const char FORMAT_STALE[] = "%3s%% stale";
 
 ModuleScreenBase ModuleScreen::baseDisplay;
 uint64_t ModuleScreen::ext1Bitmask = 1ULL << PIN_EPD_BUSY;
-std::function<void(void)> ModuleScreen::busyHighCallback = nullptr;
+std::function<void(void)> ModuleScreen::wakeupActionBusyHighCallback = nullptr;
 
-void ModuleScreen::begin(std::function<void(void)> busyHighCallback) {
-    ModuleScreen::busyHighCallback = busyHighCallback;
+void ModuleScreen::begin(std::function<void(void)> wakeupActionBusyHighCallback) {
+    ModuleScreen::wakeupActionBusyHighCallback = wakeupActionBusyHighCallback;
 }
 
 void ModuleScreen::prepareSleep(wakeup_action_e wakeupType) {
@@ -33,14 +39,15 @@ void ModuleScreen::prepareSleep(wakeup_action_e wakeupType) {
 }
 
 /**
- * waits for the busy pin to become high, then calls busyHighCallback --> depower the display
+ * waits for the busy pin to become high, then calls WakeupActionBusyHighCallback --> depower the display
+ * this function handles a "isDelayRequired = true" situation
  */
 void ModuleScreen::detectBusyPinHigh(void *parameter) {
     uint64_t millisA = millis();
     while (!digitalRead(PIN_EPD_BUSY) == HIGH) {
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
-    busyHighCallback();
+    wakeupActionBusyHighCallback();
     vTaskDelete(NULL);
 }
 
@@ -61,9 +68,9 @@ void ModuleScreen::flushBuffer() {
     // << flushBuffer
 }
 
-void ModuleScreen::hibernate() {
+void ModuleScreen::depower() {
     ModuleScreen::baseDisplay.begin(THINKINK_GRAYSCALE4, true);
-    ModuleScreen::baseDisplay.hibernate();
+    ModuleScreen::baseDisplay.depower();
 }
 
 void ModuleScreen::clearBuffer(config_t *config) {
@@ -390,16 +397,13 @@ void ModuleScreen::renderFooter(config_t *config) {
         charPosFooter += 13;
     }
 
-    if (config->isWifi) {
-        // String address = BoxConn::getAddress();
-        // ModuleScreen::drawAntialiasedText06(BoxConn::getAddress(), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
-        // String timeFormatted = BoxClock::getDateTimeDisplayString(BoxClock::getDate());
-        // ModuleScreen::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
-        // ModuleScreen::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter + (address.length() + 1) * charDimX6, TEXT_OFFSET_Y, EPD_BLACK);
-    } else {
-        String timeFormatted = ModuleTicker::getDateTimeDisplayString(ModuleTicker::getSecondstime());
-        ModuleScreen::drawAntialiasedText06(timeFormatted, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
+    if (config->wifi.isActive && ModuleWifi::isConnected()) {
+        String address = ModuleWifi::getAddress();
+        ModuleScreen::drawAntialiasedText06(address, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
+        ModuleScreen::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * CHAR_DIM_X6, TEXT_OFFSET_Y, EPD_BLACK);
+        charPosFooter += (address.length() + 1) * CHAR_DIM_X6;
     }
+    ModuleScreen::drawAntialiasedText06(ModuleClock::getDateTimeDisplayString(ModuleClock::getSecondstime()), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
 }
 
 void ModuleScreen::renderEntry(config_t *config) {
@@ -407,7 +411,7 @@ void ModuleScreen::renderEntry(config_t *config) {
     ModuleScreen::drawOuterBorders(EPD_LIGHT);
 
     drawAntialiasedText18("moth", RECT_TOP, 8, 98, EPD_BLACK);
-    drawAntialiasedText06("starting ...", RECT_TOP, 105, 98, EPD_BLACK);
+    drawAntialiasedText06(VNUM, RECT_TOP, 105, 98, EPD_BLACK);
 
     // skip header for clean screen
     ModuleScreen::renderFooter(config);

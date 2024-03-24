@@ -3,6 +3,7 @@
 
 #include <Adafruit_LC709203F.h>
 
+#include "types/Define.h"
 #include "types/Values.h"
 
 class SensorEnergy {
@@ -11,11 +12,11 @@ class SensorEnergy {
     static values_nrg_t values;
 
    public:
-    static void begin();
+    static void begin();  // will set the power mode to operational
     static bool measure();
     static values_nrg_t readval();
-    static bool powerUp();
-    static bool powerDown();
+    static bool powerup();
+    static bool depower();
     static uint16_t toShortPercent(float floatValue);
     static float toFloatPercent(uint16_t shortValue);
 };

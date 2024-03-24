@@ -21,8 +21,8 @@ typedef struct {
     String symbolFast;                                   // the symbol for a fast press
     String symbolSlow;                                   // the symbol for a slow press
     String extraLabel;                                   // extra information to be displayed for this button
-    std::function<bool(config_t *config)> functionFast;  // a function to be executed on fast press
-    std::function<bool(config_t *config)> functionSlow;  // a function to be executed on slow press
+    std::function<void(config_t *config)> functionFast;  // a function to be executed on fast press
+    std::function<void(config_t *config)> functionSlow;  // a function to be executed on slow press
 } button_action_t;
 
 const String SYMBOL__WIFI = "¥";

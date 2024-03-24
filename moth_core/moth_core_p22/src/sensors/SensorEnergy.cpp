@@ -4,16 +4,18 @@ Adafruit_LC709203F SensorEnergy::basePack;
 values_nrg_t SensorEnergy::values = {0};
 
 void SensorEnergy::begin() {
-    SensorEnergy::basePack.begin();
-    SensorEnergy::basePack.setPackSize(LC709203F_APA_3000MAH);
-    SensorEnergy::basePack.setAlarmVoltage(3.8);
+    // do nothing
 }
 
-bool SensorEnergy::powerUp() {
-    return SensorEnergy::basePack.setPowerMode(LC709203F_POWER_OPERATE);
+bool SensorEnergy::powerup() {
+    bool success = true;
+    success = success && SensorEnergy::basePack.begin();
+    success = success && SensorEnergy::basePack.setPackSize(LC709203F_APA_3000MAH);
+    success = success && SensorEnergy::basePack.setAlarmVoltage(3.8);
+    return success;
 }
 
-bool SensorEnergy::powerDown() {
+bool SensorEnergy::depower() {
     return SensorEnergy::basePack.setPowerMode(LC709203F_POWER_SLEEP);
 }
 

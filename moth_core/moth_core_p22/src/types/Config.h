@@ -80,12 +80,23 @@ typedef struct {
     display_hrs_c_e displayHrsChart;
     display_thm___e displayValTheme;
     display_deg___e displayDegScale;
-} display_all___t;
+} disp____all___t;
 
 typedef struct {
-    display_all___t disp;
+    bool isActive;
+    uint8_t networkExpiryMinutes;  // minute without activity before the network times out
+    int8_t networkConnIndexLast;   // the index of the last network a connection was established to
+} wifi____all___t;
+
+typedef struct {
+    char timezone[64];
+} time____all___t;
+
+typedef struct {
+    disp____all___t disp;
+    wifi____all___t wifi;
+    time____all___t time;
     bool isBeep;
-    bool isWifi;
     float temperatureOffset;
     float pressureZerolevel;  // calculated sealevel pressure
     float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)

@@ -1,13 +1,17 @@
 #include "ButtonAction.h"
 
+#include "modules/ModuleClock.h"
+#include "modules/ModuleSignal.h"
+#include "sensors/SensorBme280.h"
+
 ButtonHelper ButtonAction::A(GPIO_NUM_11);
 ButtonHelper ButtonAction::B(GPIO_NUM_12);
 ButtonHelper ButtonAction::C(GPIO_NUM_6);
 gpio_num_t ButtonAction::actionPin = GPIO_NUM_0;
-std::function<void(std::function<bool(config_t* config)>)> ButtonAction::buttonActionCompleteCallback = nullptr;
+std::function<void(std::function<void(config_t* config)>)> ButtonAction::buttonActionCompleteCallback = nullptr;
 uint64_t ButtonAction::ext1Bitmask = 1ULL << ButtonAction::A.gpin | 1ULL << ButtonAction::B.gpin | 1ULL << ButtonAction::C.gpin;
 
-void ButtonAction::begin(std::function<void(std::function<bool(config_t* config)>)> buttonActionCompleteCallback) {
+void ButtonAction::begin(std::function<void(std::function<void(config_t* config)>)> buttonActionCompleteCallback) {
     ButtonAction::buttonActionCompleteCallback = buttonActionCompleteCallback;
     ButtonAction::A.begin();
     ButtonAction::B.begin();
@@ -155,7 +159,7 @@ gpio_num_t ButtonAction::getPressedPin() {
 /**
  * button action :: toggle the chart hours to the next higher value
  */
-bool ButtonAction::toggleDisplayValHFw(config_t* config) {
+void ButtonAction::toggleDisplayValHFw(config_t* config) {
     if (config->disp.displayHrsChart == DISPLAY_HRS_C____01) {
         config->disp.displayHrsChart = DISPLAY_HRS_C____03;
     } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____03) {
@@ -166,15 +170,13 @@ bool ButtonAction::toggleDisplayValHFw(config_t* config) {
         config->disp.displayHrsChart = DISPLAY_HRS_C____24;
     } else {
         // already at DISPLAY_HRS_C____24
-        return false;
     }
-    return true;
 }
 
 /**
  * button action :: toggle the chart hours to the next lower value
  */
-bool ButtonAction::toggleDisplayValHBw(config_t* config) {
+void ButtonAction::toggleDisplayValHBw(config_t* config) {
     if (config->disp.displayHrsChart == DISPLAY_HRS_C____24) {
         config->disp.displayHrsChart = DISPLAY_HRS_C____12;
     } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____12) {
@@ -185,123 +187,108 @@ bool ButtonAction::toggleDisplayValHBw(config_t* config) {
         config->disp.displayHrsChart = DISPLAY_HRS_C____01;
     } else {
         // already at DISPLAY_HRS_C____01
-        return false;
     }
-    return true;
 }
 
 /**
  * button action :: toggle wifi on or off
  */
-bool ButtonAction::toggleWifi(config_t* config) {
-    config->isWifi = !config->isWifi;
-    return true;
+void ButtonAction::toggleWifi(config_t* config) {
+    config->wifi.isActive = !config->wifi.isActive;
 }
 
 /**
  * button action :: toggle beep on or off
  */
-bool ButtonAction::toggleBeep(config_t* config) {
+void ButtonAction::toggleBeep(config_t* config) {
     config->isBeep = !config->isBeep;
-    return true;
 }
 
 /**
  * button action :: decrement the base altitude by 10m
  */
-bool ButtonAction::decrementAltitude10(config_t* config) {
+void ButtonAction::decrementAltitude10(config_t* config) {
     config->altitudeBaselevel = config->altitudeBaselevel - 10;
     config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
-    return true;
 }
 
 /**
  * button action :: increment the base altitude by 10m
  */
-bool ButtonAction::incrementAltitude10(config_t* config) {
+void ButtonAction::incrementAltitude10(config_t* config) {
     config->altitudeBaselevel = config->altitudeBaselevel + 10;
     config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
-    return true;
 }
 
 /**
  * button action :: decrement the base altitude by 50m
  */
-bool ButtonAction::decrementAltitude50(config_t* config) {
+void ButtonAction::decrementAltitude50(config_t* config) {
     config->altitudeBaselevel = config->altitudeBaselevel - 50;
     config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
-    return true;
 }
 
 /**
  * button action :: increment the base altitude by 10m
  */
-bool ButtonAction::incrementAltitude50(config_t* config) {
+void ButtonAction::incrementAltitude50(config_t* config) {
     config->altitudeBaselevel = config->altitudeBaselevel + 50;
     config->pressureZerolevel = SensorBme280::getPressureZerolevel(config->altitudeBaselevel, SensorBme280::readval().pressure);
-    return true;
 }
 
 /**
  * button action :: toggle the primary table display value forward
  */
-bool ButtonAction::toggleDisplayValTFw(config_t* config) {
+void ButtonAction::toggleDisplayValTFw(config_t* config) {
     uint8_t valueCount = DISPLAY_VAL_T___ALT + 1;
     config->disp.displayValTable = (display_val_t_e)((config->disp.displayValTable + 1) % valueCount);
-    return true;
+    ButtonAction::configure(config);
 }
 
 /**
  * button action :: toggle the primary table display value backward
  */
-bool ButtonAction::toggleDisplayValTBw(config_t* config) {
+void ButtonAction::toggleDisplayValTBw(config_t* config) {
     uint8_t valueCount = DISPLAY_VAL_T___ALT + 1;
     config->disp.displayValTable = (display_val_t_e)((config->disp.displayValTable + valueCount - 1) % valueCount);
-    return true;
+    ButtonAction::configure(config);
 }
 
 /**
  * button action :: toggle the primary table display value forward
  */
-bool ButtonAction::toggleDisplayValCFw(config_t* config) {
+void ButtonAction::toggleDisplayValCFw(config_t* config) {
     uint8_t valueCount = DISPLAY_VAL_C___ALT + 1;
     config->disp.displayValChart = (display_val_c_e)((config->disp.displayValChart + 1) % valueCount);
-    return true;
 }
 
 /**
  * button action :: toggle the primary table display value backward
  */
-bool ButtonAction::toggleDisplayValCBw(config_t* config) {
+void ButtonAction::toggleDisplayValCBw(config_t* config) {
     uint8_t valueCount = DISPLAY_VAL_C___ALT + 1;
     config->disp.displayValChart = (display_val_c_e)((config->disp.displayValChart + valueCount - 1) % valueCount);
-    return true;
 }
 
 /**
  * button action :: toggle between table and chart
  */
-bool ButtonAction::toggleDisplayValMod(config_t* config) {
+void ButtonAction::toggleDisplayValMod(config_t* config) {
     if (config->disp.displayValModus == DISPLAY_VAL_M_TABLE) {
         config->disp.displayValModus = DISPLAY_VAL_M_CHART;
     } else {
         config->disp.displayValModus = DISPLAY_VAL_M_TABLE;
     }
-    return true;
+    ButtonAction::configure(config);
 }
 
-bool ButtonAction::toggleDisplayValThm(config_t* config) {
+void ButtonAction::toggleDisplayValThm(config_t* config) {
     if (config->disp.displayValTheme == DISPLAY_THM___LIGHT) {
         config->disp.displayValTheme = DISPLAY_THM____DARK;
     } else {
         config->disp.displayValTheme = DISPLAY_THM___LIGHT;
     }
-    return true;
 }
-
-// bool ButtonAction::accepts(gpio_num_t actionPin) {
-//     return actionPin == ButtonAction::A.gpin || actionPin == ButtonAction::B.gpin || actionPin == ButtonAction::C.gpin;
-// }
 
 /**
  * create a new "detect button action" task
@@ -335,7 +322,7 @@ void ButtonAction::detectButtonActionType(void* parameter) {
  * once it is clear if the button has been pressed short or long retrieve function currently attached to the button, then pass it back to the callback
  */
 void ButtonAction::handleButtonActionType(button_action_e buttonActionType) {
-    std::function<bool(config_t * config)> actionFunction = nullptr;
+    std::function<void(config_t * config)> actionFunction = nullptr;
     if (actionPin == ButtonAction::A.gpin) {
         actionFunction = ButtonAction::getActionFunction(A.buttonAction, buttonActionType);
     } else if (actionPin == ButtonAction::B.gpin) {
@@ -347,7 +334,7 @@ void ButtonAction::handleButtonActionType(button_action_e buttonActionType) {
     actionPin = GPIO_NUM_0;
 }
 
-std::function<bool(config_t* config)> ButtonAction::getActionFunction(button_action_t buttonAction, button_action_e buttonActionType) {
+std::function<void(config_t* config)> ButtonAction::getActionFunction(button_action_t buttonAction, button_action_e buttonActionType) {
     if (buttonActionType == BUTTON_ACTION_FAST) {
         return buttonAction.functionFast;
     } else if (buttonActionType == BUTTON_ACTION_SLOW) {

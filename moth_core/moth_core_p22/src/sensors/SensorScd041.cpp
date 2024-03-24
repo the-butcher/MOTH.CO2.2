@@ -29,11 +29,11 @@ bool SensorScd041::measure() {
     return SensorScd041::baseSensor.measureSingleShotNoDelay();
 }
 
-bool SensorScd041::powerUp() {
+bool SensorScd041::powerup() {
     return SensorScd041::baseSensor.wakeUp();
 }
 
-bool SensorScd041::powerDown() {
+bool SensorScd041::depower() {
     return SensorScd041::baseSensor.powerDown();
 }
 

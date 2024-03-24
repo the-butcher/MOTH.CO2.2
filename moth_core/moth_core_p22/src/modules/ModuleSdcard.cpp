@@ -48,7 +48,7 @@ void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_
     for (uint8_t historyIndex = 0; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
         secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
         history[historyIndex] = emptyMeasurement(secondstimeIndx);
-        fileDef32 = ModuleTicker::getFile32Def(secondstimeIndx, "dat");
+        fileDef32 = ModuleClock::getFile32Def(secondstimeIndx, "dat");
         // when a new (or actually first) file is encountered -> open it
         if (fileDef32.name != datFileNameLast) {
             if (datFile) {
@@ -74,9 +74,9 @@ void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_
             Serial.print(" => ");
             Serial.print(secondstimeDiff);
             Serial.print(" OK ");
-            Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
+            Serial.print(ModuleClock::getDateTimeDisplayString(secondstimeIndx));
             Serial.print(" :: ");
-            Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeFile));
+            Serial.println(ModuleClock::getDateTimeDisplayString(secondstimeFile));
 #endif
             historyIndexMax = historyIndex;
             history[historyIndex] = readValue;
@@ -86,9 +86,9 @@ void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_
             Serial.print(" => ");
             Serial.print(secondstimeDiff);
             Serial.print(" !! ");
-            Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
+            Serial.print(ModuleClock::getDateTimeDisplayString(secondstimeIndx));
             Serial.print(" :: ");
-            Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeFile));
+            Serial.println(ModuleClock::getDateTimeDisplayString(secondstimeFile));
 #endif
         }
         if (datFile.available() <= 1) {
@@ -111,7 +111,7 @@ void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_
             secondstimeMeas = values->measurements[measureIndex % MEASUREMENT_BUFFER_SIZE].secondstime;
             // Serial.print(measureIndex);
             // Serial.print(" ## ");
-            // Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeMeas));
+            // Serial.println(ModuleClock::getDateTimeDisplayString(secondstimeMeas));
             measureIndex++;
         }
         secondstimeDiff = secondstimeMeas - secondstimeIndx;
@@ -121,9 +121,9 @@ void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_
             Serial.print(" => ");
             Serial.print(secondstimeDiff);
             Serial.print(" OK ");
-            Serial.print(ModuleTicker::getDateTimeDisplayString(secondstimeIndx));
+            Serial.print(ModuleClock::getDateTimeDisplayString(secondstimeIndx));
             Serial.print(" :: ");
-            Serial.println(ModuleTicker::getDateTimeDisplayString(secondstimeMeas));
+            Serial.println(ModuleClock::getDateTimeDisplayString(secondstimeMeas));
 #endif
             history[historyIndex] = values->measurements[(measureIndex - 1) % MEASUREMENT_BUFFER_SIZE];  // assign (is this a copy or a reference?)
         }
@@ -141,7 +141,7 @@ void ModuleSdcard::persistValues(values_t* values) {
     values_all_t value;
     for (int valueIndex = 0; valueIndex < MEASUREMENT_BUFFER_SIZE; valueIndex++) {
         value = values->measurements[valueIndex];
-        fileDef32 = ModuleTicker::getFile32Def(value.secondstime, "dat");  // the file name that shall be written to
+        fileDef32 = ModuleClock::getFile32Def(value.secondstime, "dat");  // the file name that shall be written to
         if (fileDef32.name != datFileNameLast) {
             if (datFile) {       // file already open -> file change at midnight
                 datFile.sync();  // write anything pending
@@ -168,7 +168,7 @@ void ModuleSdcard::persistValues(values_t* values) {
 //     values_all_t value;
 //     for (int valueIndex = 0; valueIndex < MEASUREMENT_BUFFER_SIZE; valueIndex++) {
 //         value = values[valueIndex];
-//         fileDef32 = ModuleTicker::getFile32Def(value.secondstime, "csv");  // the file name that shall be written to
+//         fileDef32 = ModuleClock::getFile32Def(value.secondstime, "csv");  // the file name that shall be written to
 //         if (fileDef32.name != dataFileNameLast) {
 //             if (csvFile) {       // file already open -> file change at midnight
 //                 csvFile.sync();  // write anything pending

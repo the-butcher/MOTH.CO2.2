@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <SdFat.h>
 
-#include "modules/ModuleTicker.h"
+#include "modules/ModuleClock.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
 #include "types/Action.h"

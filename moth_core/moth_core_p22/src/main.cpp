@@ -4,10 +4,11 @@
 #include <esp_wifi.h>
 
 #include "buttons/ButtonAction.h"
+#include "connect/ModuleWifi.h"
+#include "modules/ModuleClock.h"
 #include "modules/ModuleScreen.h"
 #include "modules/ModuleSdcard.h"
 #include "modules/ModuleSignal.h"
-#include "modules/ModuleTicker.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
@@ -20,28 +21,31 @@
 RTC_DATA_ATTR setup_mode_t setupMode = SETUP_BOOT;
 
 // device state
-RTC_DATA_ATTR device_t device;
+RTC_DATA_ATTR device_t device;  // size: ~88
 
 // configuration and display state
-RTC_DATA_ATTR config_t config;
+RTC_DATA_ATTR config_t config;  // size: ~56
 
-// last hour of measurements
-RTC_DATA_ATTR values_t values;
+// last hour of measurements and associated indices
+RTC_DATA_ATTR values_t values;  // size: ~1208
 
 // does not need to be RTC_DATA_ATTR
 uint16_t actionNum = 0;
 
+// uint16_t sc = sizeof(config);
+
 /**
- * -- wifi
- *    -- clock sync
+ * OK wifi
+ *    OK clock sync
  *    -- mqtt (+autoconnect)
- * -- configuration
+ * -- restore full configuration
  * -- calibration of SCD41
  * -- factory reset of SCD41
  * -- dat to csv
  * -- actual beep
+ * -- co2 low pass filter
+ * -- reimplement significant change for shorter display intervals
  *
- * -- would be nice if device-actions could be moved to a separate type, like button-actions
  */
 
 uint32_t getMeasureNextSeconds() {
@@ -49,41 +53,42 @@ uint32_t getMeasureNextSeconds() {
 }
 
 uint32_t getSecondsWait(uint32_t secondsNext) {
-    uint32_t secondsTime = ModuleTicker::getSecondstime();
+    uint32_t secondsTime = ModuleClock::getSecondstime();
     return secondsNext > secondsTime ? secondsNext - secondsTime : WAITTIME________________NONE;
 }
 
 /**
  * handle a detected button action (pin and type)
  */
-void handleButtonActionComplete(std::function<bool(config_t* config)> actionFunction) {
+void handleButtonActionComplete(std::function<void(config_t* config)> actionFunction) {
     if (actionFunction != nullptr) {
-        bool redisplay = actionFunction(&config);
-        ButtonAction::configure(&config);
-        if (redisplay) {
-            // schedule a display action
-            device.actionIndexMax = 4;  // allow actions display and depower by index
-            // waiting for DEVICE_ACTION_MEASURE and enough time to render
-            uint32_t secondsNext = device.deviceActions[DEVICE_ACTION_MEASURE].secondsNext;
-            uint32_t secondsWait = getSecondsWait(secondsNext);
-            if (device.actionIndexCur == DEVICE_ACTION_MEASURE && secondsWait >= WAITTIME_DISPLAY_AND_DEPOWER) {
-                device.actionIndexCur = DEVICE_ACTION_DISPLAY;
-                device.deviceActions[DEVICE_ACTION_DISPLAY].secondsNext = ModuleTicker::getSecondstime();  // assign current time as due time
-            } else {
-                // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
-                // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
-            }
+        actionFunction(&config);
+
+        // schedule a display action
+        device.actionIndexMax = 4;  // allow actions display and depower by index
+        // waiting for DEVICE_ACTION_MEASURE and enough time to render
+        uint32_t secondsNext = device.deviceActions[DEVICE_ACTION_MEASURE].secondsNext;
+        uint32_t secondsWait = getSecondsWait(secondsNext);
+        if (device.actionIndexCur == DEVICE_ACTION_MEASURE && secondsWait >= WAITTIME_DISPLAY_AND_DEPOWER) {
+            device.actionIndexCur = DEVICE_ACTION_DISPLAY;
+            device.deviceActions[DEVICE_ACTION_DISPLAY].secondsNext = ModuleClock::getSecondstime();  // assign current time as due time
+        } else {
+            // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
+            // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
         }
+
         actionNum++;
     }
 }
 
-void handleBusyHigh() {
-    device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = ModuleTicker::getSecondstime();  // need to reset, or it will start waiting for DEPOWER again due to secondsNext
-    actionNum++;                                                                               // interrupt delay loop
+void handleWakeupActionBusyHigh() {
+    device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = ModuleClock::getSecondstime();  // need to reset, or it will start waiting for DEPOWER again due to secondsNext
+    actionNum++;                                                                              // interrupt delay loop
 }
 
 void setup() {
+    esp_log_level_set("*", ESP_LOG_ERROR);
+    // adc_power_acquire();
     // a debug pin usable in the PKK2 tool
     pinMode(GPIO_NUM_16, OUTPUT);
     digitalWrite(GPIO_NUM_16, LOW);
@@ -95,7 +100,7 @@ void setup() {
     rtc_gpio_deinit((gpio_num_t)I2C_POWER);
 
     Wire.begin();
-    ModuleTicker::begin();
+    ModuleClock::begin();
     ModuleSignal::begin();
 
 #ifdef USE___SERIAL
@@ -109,36 +114,41 @@ void setup() {
     SensorEnergy::begin();
 
     if (setupMode == SETUP_BOOT) {
-        delay(1000);  // ModuleTicker appears to take some time to initialize, especially on boot
+        delay(1000);  // ModuleClock appears to take some time to initialize, especially on boot
 
-        ModuleSdcard::begin();
+        ModuleSdcard::begin();  // needs to be done initially, even if writing directly, will reduce power
+        ModuleWifi::begin();    // only for first file access
 
         device = Device::load();
         config = Config::load();
         if (SensorScd041::configure(&config)) {
-            ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (with a write to the scd41's eeprom)
+            ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (involving a write to the scd41's eeprom)
         }
 
+        // likely not needed due to default, TODO :: find out
         values.nextMeasureIndex = 0;
         values.nextDisplayIndex = 0;
+        values.nextConnectIndex = 3;
 
         // have a battery reading for the entry screen
-        SensorEnergy::powerUp();
+        SensorEnergy::powerup();
         SensorEnergy::measure();
-        SensorEnergy::powerDown();
+        SensorEnergy::depower();
 
         setupMode = SETUP_MAIN;
     }
 
+    // show the correct button hints and have callback in place
     ButtonAction::begin(handleButtonActionComplete);
     ButtonAction::configure(&config);
 
-    ModuleScreen::begin(handleBusyHigh);
+    // does only set the callback
+    ModuleScreen::begin(handleWakeupActionBusyHigh);
 
     // did it wake up from a button press?
     esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
     if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
-        device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = ModuleTicker::getSecondstime();  // has woken up from busy, no need to wait any longer, depower now
+        device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = ModuleClock::getSecondstime();  // has woken up from busy, no need to wait any longer, depower now
     } else if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
         uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
         ButtonAction::createButtonAction((gpio_num_t)(log(wakeupStatus) / log(2)));
@@ -153,13 +163,17 @@ void setup() {
  * - for debugging purposes
  */
 bool isDelayRequired() {
-    return true || ButtonAction::getActionPin() > 0 || ButtonAction::getPressedPin() > 0;
+#ifdef USE____DELAY
+    return true;
+#endif
+    return ButtonAction::getActionPin() > 0 || ButtonAction::getPressedPin() > 0;
 }
 
 void secondsSleep(uint32_t seconds, wakeup_action_e wakeupType) {
     // convert to microseconds
     uint64_t sleepMicros = seconds * MICROSECONDS_PER______SECOND;
 
+    esp_deep_sleep_disable_rom_logging();
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
     ModuleSignal::prepareSleep();            // this may hold the neopixel power, depending on color debug setting
@@ -182,6 +196,9 @@ void secondsSleep(uint32_t seconds, wakeup_action_e wakeupType) {
     // pinMode(SCL, INPUT);
 
     digitalWrite(GPIO_NUM_16, HIGH);  // put signal pin high for PPK2
+    // adc_power_release();
+    // esp_wifi_stop();
+
     ModuleSignal::setPixelColor(COLOR_____BLUE);
     esp_deep_sleep_start();  // go to sleep
 }
@@ -213,10 +230,10 @@ void loop() {
     if (getSecondsWait(action.secondsNext) == WAITTIME________________NONE) {  // action is due
         ModuleSignal::setPixelColor(action.color);
         Device::getFunctionByAction(action.type)(&values, &config);  // find and excute the function associated with this action
-        delay(1);                                                    // TODO :: experimental, trying to find the cause for 10s@1mA after readval
+        delay(10);                                                   // TODO :: experimental, trying to find the cause for 10s@1mA after readval
         device.actionIndexCur++;
         if (device.actionIndexCur < device.actionIndexMax) {  // more executable actions
-            device.deviceActions[device.actionIndexCur].secondsNext = ModuleTicker::getSecondstime() + action.secondsWait;
+            device.deviceActions[device.actionIndexCur].secondsNext = ModuleClock::getSecondstime() + action.secondsWait;
         } else {  // no more executable actions, rollover to zero
             device.actionIndexCur = 0;
             device.actionIndexMax = values.nextMeasureIndex == values.nextDisplayIndex ? 4 : 2;

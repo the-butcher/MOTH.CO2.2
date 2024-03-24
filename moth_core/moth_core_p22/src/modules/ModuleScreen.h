@@ -18,11 +18,7 @@
 #include <Fonts/smb36pt_l.h>
 
 #include "ModuleScreenBase.h"
-#include "ModuleTicker.h"
-#include "buttons/ButtonAction.h"
-#include "sensors/SensorBme280.h"
-#include "sensors/SensorEnergy.h"
-#include "sensors/SensorScd041.h"
+#include "connect/ModuleWifi.h"
 #include "types/Config.h"
 #include "types/Define.h"
 #include "types/Device.h"
@@ -39,7 +35,7 @@ class ModuleScreen {
    private:
     static ModuleScreenBase baseDisplay;
     static uint64_t ext1Bitmask;
-    static std::function<void(void)> busyHighCallback;
+    static std::function<void(void)> wakeupActionBusyHighCallback;
     static void renderHeader();
     static void renderButton(button_action_t buttonAction, uint16_t x);
     static void renderFooter(config_t *config);
@@ -63,14 +59,14 @@ class ModuleScreen {
     static void detectBusyPinHigh(void *parameter);
 
    public:
-    static void begin(std::function<void(void)> busyHighCallback);
+    static void begin(std::function<void(void)> WakeupActionBusyHighCallback);
     static void prepareSleep(wakeup_action_e wakeupType);
     static void attachWakeup(wakeup_action_e wakeupType);
     static void detachWakeup(wakeup_action_e wakeupType);
     static void renderTable(values_all_t *measurement, config_t *config);
     static void renderChart(values_all_t history[60], config_t *config);
     static void renderEntry(config_t *config);
-    static void hibernate();
+    static void depower();
 };
 
 #endif

@@ -17,8 +17,8 @@ class SensorScd041 {
     static bool configure(config_t* config);  // must have begun before configuration
     static bool measure();
     static values_co2_t readval();
-    static bool powerUp();
-    static bool powerDown();
+    static bool powerup();
+    static bool depower();
     static uint16_t toShortDeg(float floatValue);
     static float toFloatDeg(uint16_t shortValue);
     static uint16_t toShortHum(float floatValue);

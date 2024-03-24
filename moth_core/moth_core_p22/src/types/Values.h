@@ -41,6 +41,7 @@ typedef struct {
     values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
     uint32_t nextMeasureIndex;
     uint32_t nextDisplayIndex;
+    uint32_t nextConnectIndex;  // next index at which an autoconnect should be attempted
 } values_t;
 
 /**

@@ -210,16 +210,16 @@ class ModuleScreenBase : public Adafruit_IL0373 {
 
         // Adafruit_IL0373::update()
         EPD_command(IL0373_DISPLAY_REFRESH);  // 0x12
-        delay(100);
+        delay(10);                            // TODO :: was 100ms in original code
 
         // busy_wait();
 
         // // Adafruit_EPD::display(bool sleep)
         // partialsSinceLastFullUpdate = 0;
-        // powerDown();  // will be powered down anyways
+        // depower();  // will be powered down anyways
     }
 
-    void hibernate() {
+    void depower() {
         busy_wait();  // doublecheck for busy
         partialsSinceLastFullUpdate = 0;
         powerDown();
