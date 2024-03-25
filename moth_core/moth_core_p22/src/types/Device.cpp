@@ -2,18 +2,18 @@
 
 #include <Arduino.h>
 
-#include "connect/ModuleWifi.h"
-#include "modules/ModuleClock.h"
-#include "modules/ModuleScreen.h"
+#include "modules/ModuleDisplay.h"
 #include "modules/ModuleSdcard.h"
 #include "modules/ModuleSignal.h"
+#include "modules/ModuleWifi.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
+#include "sensors/SensorTime.h"
 
 device_t Device::load() {
-    uint32_t secondstime = ModuleClock::getSecondstime();
-    // secondsCycleBase = ModuleClock.getDate().secondstime();
+    uint32_t secondstime = SensorTime::getSecondstime();
+    // secondsCycleBase = SensorTime.getDate().secondstime();
     // secondsCycleBase = secondsCycleBase + 60 + SECONDS_BOOT_BUFFER - (secondsCycleBase + SECONDS_BOOT_BUFFER) % 60;  // first full minute after boot in secondstime
 
     device_t device;
@@ -91,11 +91,11 @@ void Device::handleActionReadval(values_t* values, config_t* config) {
     // store values
     int currMeasureIndex = values->nextMeasureIndex - 1;
     values->measurements[currMeasureIndex % MEASUREMENT_BUFFER_SIZE] = {
-        ModuleClock::getSecondstime(),  // secondstime as of RTC
-        measurementCo2,                 // sensorScd041 values
-        measurementBme,                 // sensorBme280 values
-        measurementNrg,                 // battery values
-        true                            // publishable
+        SensorTime::getSecondstime(),  // secondstime as of RTC
+        measurementCo2,                // sensorScd041 values
+        measurementBme,                // sensorBme280 values
+        measurementNrg,                // battery values
+        true                           // publishable
     };
     // power down sensors
     SensorScd041::depower();
@@ -114,44 +114,48 @@ void Device::handleActionDisplay(values_t* values, config_t* config) {
     if (values->nextMeasureIndex > 0) {
         uint32_t currMeasureIndex = values->nextMeasureIndex - 1;
 
-        if (config->wifi.isActive && !ModuleWifi::isConnected()) {
-            bool isConnected = ModuleWifi::connect(config);
-            if (!isConnected) {
-                config->wifi.isActive = false;
-            }
-        } else if (!config->wifi.isActive && ModuleWifi::isConnected()) {
-            ModuleWifi::shutoff();
+        if (config->wifi.powered && !ModuleWifi::isPowered()) {
+            ModuleWifi::powerup(config);
+        } else if (!config->wifi.powered && ModuleWifi::isPowered()) {
+            ModuleWifi::depower(config);
         }
 
         bool autoConnect = values->nextConnectIndex <= values->nextDisplayIndex;
         bool autoShutoff = false;
         if (autoConnect) {
-            if (!ModuleWifi::isConnected()) {
-                autoShutoff = ModuleWifi::connect(config);  // if the connection was successful, it also needs to be shutoff
+            if (!ModuleWifi::isPowered()) {
+                autoShutoff = ModuleWifi::powerup(config);  // if the connection was successful, it also needs to be autoShutoff
             }
-            ModuleClock::configure(config);                    // apply timezone
+            SensorTime::configure(config);                     // apply timezone
             values->nextConnectIndex = currMeasureIndex + 60;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
+            if (autoShutoff) {
+                for (int i = 0; i < 20; i++) {
+                    if (!SensorTime::isNtpWait()) {
+                        break;
+                    }
+                    delay(50);
+                }
+                ModuleWifi::depower(config);
+            }
         }
+
+        // leaving the WiFi on longer than necessary (i.e. a full display render duration) for autoConnect will consume a lot of energy
 
         values_all_t measurement = values->measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
         if (config->disp.displayValModus == DISPLAY_VAL_M_TABLE) {
-            ModuleScreen::renderTable(&measurement, config);
+            ModuleDisplay::renderTable(&measurement, config);
         } else {
             values_all_t history[HISTORY_____BUFFER_SIZE];
             ModuleSdcard::historyValues(values, config, history);  // will fill history with values from file or current measurements
-            ModuleScreen::renderChart(history, config);
+            ModuleDisplay::renderChart(history, config);
         }
         values->nextDisplayIndex = currMeasureIndex + config->disp.displayUpdateMinutes;
 
-        if (autoShutoff) {
-            ModuleWifi::shutoff();
-        }
-
     } else {
-        ModuleScreen::renderEntry(config);  // splash screen
+        ModuleDisplay::renderEntry(config);  // splash screen
     }
 }
 
 void Device::handleActionDepower(values_t* values, config_t* config) {
-    ModuleScreen::depower();
+    ModuleDisplay::depower();
 }

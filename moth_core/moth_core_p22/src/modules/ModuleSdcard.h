@@ -4,19 +4,21 @@
 #include <Arduino.h>
 #include <SdFat.h>
 
-#include "modules/ModuleClock.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
+#include "sensors/SensorTime.h"
 #include "types/Action.h"
 #include "types/Config.h"
 #include "types/Define.h"
 #include "types/Values.h"
 
+const String CSV_HEAD = "time; co2; co2_raw; temperature; humidity; pressure; percent\r\n";
+const String CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d;%s;%s;%s;%s;%s;%s\r\n";
+
 class ModuleSdcard {
    private:
     static SdFat32 sd32;
-    static String CSV_FRMT;
-    static String CSV_HEAD;
+    static bool hasBegun;
 
    public:
     static void begin();

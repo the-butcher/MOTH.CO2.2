@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "modules/ModuleClock.h"
+#include "sensors/SensorTime.h"
 
 config_t Config::load() {
     config_t config = {
@@ -33,12 +33,12 @@ config_t Config::load() {
             DISPLAY_DEG_CELSIUS,  // temperature scale
         },
         {
-
+            false,
+            3,  // network expiry minutes
+            0   // last successful connection index
         },
         {
-            false,
-            5,  // network expiry minutes
-            0   // last successful connection index
+            // static timezone char array
         },
         false,  // beep
         1.5,    // temperature offset

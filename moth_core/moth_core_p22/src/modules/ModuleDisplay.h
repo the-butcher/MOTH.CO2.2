@@ -1,5 +1,5 @@
-#ifndef ModuleScreen_h
-#define ModuleScreen_h
+#ifndef ModuleDisplay_h
+#define ModuleDisplay_h
 
 #include <Adafruit_EPD.h>
 #include <Adafruit_GFX.h>
@@ -17,8 +17,8 @@
 #include <Fonts/smb36pt_d.h>
 #include <Fonts/smb36pt_l.h>
 
-#include "ModuleScreenBase.h"
-#include "connect/ModuleWifi.h"
+#include "ModuleDisplayBase.h"
+#include "modules/ModuleWifi.h"
 #include "types/Config.h"
 #include "types/Define.h"
 #include "types/Device.h"
@@ -31,9 +31,16 @@ typedef struct {
     uint8_t ymax;
 } rectangle_t;
 
-class ModuleScreen {
+const String SYMBOL__WIFI = "¥";
+const String SYMBOL_THEME = "¤";
+const String SYMBOL_TABLE = "£";
+const String SYMBOL_CHART = "¢";
+const String SYMBOL_YBEEP = "©";
+const String SYMBOL_NBEEP = "ª";
+
+class ModuleDisplay {
    private:
-    static ModuleScreenBase baseDisplay;
+    static ModuleDisplayBase baseDisplay;
     static uint64_t ext1Bitmask;
     static std::function<void(void)> wakeupActionBusyHighCallback;
     static void renderHeader();

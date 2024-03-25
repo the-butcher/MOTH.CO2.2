@@ -1,8 +1,9 @@
 #include "ButtonAction.h"
 
-#include "modules/ModuleClock.h"
+#include "modules/ModuleDisplay.h"
 #include "modules/ModuleSignal.h"
 #include "sensors/SensorBme280.h"
+#include "sensors/SensorTime.h"
 
 ButtonHelper ButtonAction::A(GPIO_NUM_11);
 ButtonHelper ButtonAction::B(GPIO_NUM_12);
@@ -194,7 +195,7 @@ void ButtonAction::toggleDisplayValHBw(config_t* config) {
  * button action :: toggle wifi on or off
  */
 void ButtonAction::toggleWifi(config_t* config) {
-    config->wifi.isActive = !config->wifi.isActive;
+    config->wifi.powered = !config->wifi.powered;
 }
 
 /**

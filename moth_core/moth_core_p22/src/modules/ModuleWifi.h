@@ -3,6 +3,7 @@
 
 #include <WiFi.h>
 
+#include "modules/ModuleServer.h"
 #include "types/Config.h"
 #include "types/Define.h"
 
@@ -20,14 +21,20 @@ class ModuleWifi {
    private:
     static String apNetworkConn;
     static network_t configuredNetworks[10];
+    static uint32_t secondstimeExpiry;
+    static uint8_t expiryMinutes;
+
     static bool connectToNetwork(network_t* network);
     static bool enableSoftAP();
 
    public:
     static void begin();  // loads json configuration and creates a dat version for faster future accessibility
-    static bool connect(config_t* config);
-    static bool isConnected();
-    static void shutoff();
+    static bool powerup(config_t* config);
+    static bool isPowered();
+    static void depower(config_t* config);
+    static void access();
+    static void expire();
+    static uint32_t getSecondstimeExpiry();
     static String getAddress();
 };
 

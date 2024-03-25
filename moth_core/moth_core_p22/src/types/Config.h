@@ -83,7 +83,7 @@ typedef struct {
 } disp____all___t;
 
 typedef struct {
-    bool isActive;
+    bool powered;                  // the status that the wifi should have, by button action
     uint8_t networkExpiryMinutes;  // minute without activity before the network times out
     int8_t networkConnIndexLast;   // the index of the last network a connection was established to
 } wifi____all___t;

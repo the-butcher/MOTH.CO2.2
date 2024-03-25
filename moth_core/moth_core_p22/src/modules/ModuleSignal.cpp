@@ -42,6 +42,5 @@ void ModuleSignal::setPixelColor(color_t pixelColor) {
 #ifdef USE_NEOPIXEL
     pixels.setPixelColor(0, ModuleSignal::pixelColor);  // red for measuring
     pixels.show();
-    delay(100);
 #endif
 }

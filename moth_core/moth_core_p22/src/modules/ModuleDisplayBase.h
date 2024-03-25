@@ -1,5 +1,5 @@
-#ifndef ModuleScreenBase_h
-#define ModuleScreenBase_h
+#ifndef ModuleDisplayBase_h
+#define ModuleDisplayBase_h
 
 // This file is #included by Adafruit_ThinkInk.h and does not need to
 // #include anything else to pick up the EPD header or ink mode enum.
@@ -155,13 +155,13 @@ const int16_t PIN_EPD_BUSY = 14;  // A4 -> has been solder-connected to the busy
 
 // clang-format on
 
-class ModuleScreenBase : public Adafruit_IL0373 {
+class ModuleDisplayBase : public Adafruit_IL0373 {
    public:
-    ModuleScreenBase() : Adafruit_IL0373(296, 128, PIN_EPD_DC, PIN_EPD_RESET, PIN_EPD_CS, PIN_SRAM_CS, PIN_EPD_BUSY){};
+    ModuleDisplayBase() : Adafruit_IL0373(296, 128, PIN_EPD_DC, PIN_EPD_RESET, PIN_EPD_CS, PIN_SRAM_CS, PIN_EPD_BUSY){};
 
-    ModuleScreenBase(int16_t SID, int16_t SCLK, int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t MISO, int16_t BUSY = -1) : Adafruit_IL0373(296, 128, SID, SCLK, DC, RST, CS, SRCS, MISO, BUSY){};
+    ModuleDisplayBase(int16_t SID, int16_t SCLK, int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t MISO, int16_t BUSY = -1) : Adafruit_IL0373(296, 128, SID, SCLK, DC, RST, CS, SRCS, MISO, BUSY){};
 
-    ModuleScreenBase(int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t BUSY = -1, SPIClass *spi = &SPI) : Adafruit_IL0373(296, 128, DC, RST, CS, SRCS, BUSY, spi){};
+    ModuleDisplayBase(int16_t DC, int16_t RST, int16_t CS, int16_t SRCS, int16_t BUSY = -1, SPIClass *spi = &SPI) : Adafruit_IL0373(296, 128, DC, RST, CS, SRCS, BUSY, spi){};
 
     void begin(thinkinkmode_t mode, bool isLightMode) {
         Adafruit_IL0373::begin(true);

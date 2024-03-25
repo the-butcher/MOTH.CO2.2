@@ -12,8 +12,11 @@ const String WIFI_AP_KEY = "mothbox";
 const String WIFI_AP_PWD = "CO2@420PPM";
 
 String ModuleWifi::apNetworkConn = "";
+uint32_t ModuleWifi::secondstimeExpiry = 0;
+uint8_t ModuleWifi::expiryMinutes = 5;  // default
 
 void ModuleWifi::begin() {
+    ModuleSdcard::begin();
     File32 wifiFileDat;
     if (!ModuleSdcard::existsPath(FILE_WIFI_CONFIG__DAT)) {
         File32 wifiFileJson;
@@ -62,8 +65,11 @@ void ModuleWifi::begin() {
     }
 }
 
-bool ModuleWifi::connect(config_t* config) {
-    adc_power_on();
+bool ModuleWifi::powerup(config_t* config) {
+    // adc_power_on();
+
+    ModuleSdcard::begin();
+    ModuleWifi::expiryMinutes = config->wifi.networkExpiryMinutes;
 
     network_t configuredNetworks[10];
     uint8_t configuredNetworkCount = 0;
@@ -86,6 +92,9 @@ bool ModuleWifi::connect(config_t* config) {
     // connect to previous network, if defined
     if (config->wifi.networkConnIndexLast >= 0) {
         if (ModuleWifi::connectToNetwork(&configuredNetworks[config->wifi.networkConnIndexLast])) {
+            ModuleServer::begin();
+            ModuleWifi::access();
+            config->wifi.powered = true;
             return true;
         } else {
             config->wifi.networkConnIndexLast = -1;
@@ -106,52 +115,76 @@ bool ModuleWifi::connect(config_t* config) {
             if (i != config->wifi.networkConnIndexLast && confKey == scanKey) {  // found a configured network that matched one of the scanned networks
                 if (ModuleWifi::connectToNetwork(&configuredNetworks[i])) {
                     config->wifi.networkConnIndexLast = i;
+                    ModuleServer::begin();
+                    ModuleWifi::access();
+                    config->wifi.powered = true;
                     return true;
                 }
             }
         }
     }
 
-    ModuleWifi::shutoff();
+    ModuleWifi::depower(config);
     delay(500);
 
     if (ModuleWifi::enableSoftAP()) {
+        ModuleServer::begin();
+        ModuleWifi::access();
+        config->wifi.powered = true;
         return true;
     }
 
-    ModuleWifi::shutoff();  // if no connection could be established
+    ModuleWifi::depower(config);  // if no connection could be established
+    ModuleWifi::expire();
     return false;
-
-    // TODO :: set wifi expiration seconds
 }
 
-bool ModuleWifi::isConnected() {
-    return WiFi.status() == WL_CONNECTED;
+bool ModuleWifi::isPowered() {
+    wifi_mode_t wifiMode = WiFi.getMode();
+    return wifiMode == WIFI_STA || wifiMode == WIFI_AP;
 }
 
 bool ModuleWifi::connectToNetwork(network_t* network) {
+    ModuleSignal::setPixelColor(COLOR_____GRAY);
     WiFi.mode(WIFI_STA);
     WiFi.begin(network->key, network->pwd);
     for (int i = 0; i < 10; i++) {
-        if (ModuleWifi::isConnected()) {
+        if (ModuleWifi::isPowered()) {
+            ModuleSignal::setPixelColor(COLOR___YELLOW);
             return true;
         }
         delay(200);
     }
+    ModuleSignal::setPixelColor(COLOR______RED);
     return false;
 }
 
 bool ModuleWifi::enableSoftAP() {
+    ModuleSignal::setPixelColor(COLOR_____GRAY);
     WiFi.mode(WIFI_AP);
     WiFi.softAP(WIFI_AP_KEY.c_str(), WIFI_AP_PWD.c_str());
+    ModuleSignal::setPixelColor(COLOR___YELLOW);
     return true;
 }
 
-void ModuleWifi::shutoff() {
-    adc_power_off();
+void ModuleWifi::depower(config_t* config) {
+    // adc_power_off();
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
+    config->wifi.powered = false;
+}
+
+void ModuleWifi::access() {
+    ModuleWifi::secondstimeExpiry = SensorTime::getSecondstime() + ModuleWifi::expiryMinutes * SECONDS_PER___________MINUTE;
+}
+
+void ModuleWifi::expire() {
+    ModuleWifi::secondstimeExpiry = 0;
+}
+
+uint32_t ModuleWifi::getSecondstimeExpiry() {
+    return ModuleWifi::secondstimeExpiry;
 }
 
 String ModuleWifi::getAddress() {
