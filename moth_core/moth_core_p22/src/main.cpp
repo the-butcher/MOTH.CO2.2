@@ -36,7 +36,7 @@ uint16_t actionNum = 0;
 
 /**
  * OK wifi
- *    OK clock sync
+ *    -- clock sync, proper interval
  *    -- mqtt (+autoconnect for mqtt)
  *    OK async server
  *       -- full set of functions, upload, update
@@ -45,25 +45,27 @@ uint16_t actionNum = 0;
  * -- factory reset of SCD41
  * -- dat to csv
  * -- actual beep
- * -- co2 low pass filter
+ * OK co2 low pass filter
  * -- reimplement significant change for shorter display intervals
  * -- reimplement OTA
- * -- battery % as chart value
+ * OK battery % as chart value
+ * OK qr-code screen
+ * -- skip file access when the chart interval is DISPLAY_HRS_C____01
  *
  * -- the measure interval sometimes hits a second early and goes back to sleep for one second
  *    -- find out why
  *    -- solve
  */
 
-void scheduleDeviceActionDisplay() {
+void scheduleDeviceActionSetting() {
     // schedule a display action
-    device.actionIndexMax = 4;  // allow actions display and depower by index
+    device.actionIndexMax = DEVICE_ACTION_DEPOWER + 1;  // allow actions display and depower by index
     // waiting for DEVICE_ACTION_MEASURE and enough time to render
     uint32_t secondsNext = device.deviceActions[DEVICE_ACTION_MEASURE].secondsNext;
     uint32_t secondsWait = SensorTime::getSecondsUntil(secondsNext);
     if (device.actionIndexCur == DEVICE_ACTION_MEASURE && secondsWait >= WAITTIME_DISPLAY_AND_DEPOWER) {
-        device.actionIndexCur = DEVICE_ACTION_DISPLAY;
-        device.deviceActions[DEVICE_ACTION_DISPLAY].secondsNext = SensorTime::getSecondstime();  // assign current time as due time
+        device.actionIndexCur = DEVICE_ACTION_SETTING;
+        device.deviceActions[DEVICE_ACTION_SETTING].secondsNext = SensorTime::getSecondstime();  // assign current time as due time
     } else {
         // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
         // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
@@ -79,8 +81,8 @@ uint32_t getMeasureNextSeconds() {
  */
 void handleButtonActionComplete(std::function<void(config_t* config)> actionFunction) {
     if (actionFunction != nullptr) {
-        actionFunction(&config);
-        scheduleDeviceActionDisplay();
+        actionFunction(&config);        // execute the action (which, by convention, only alters the config to not interfere with program flow)
+        scheduleDeviceActionSetting();  // schedule DEVICE_ACTION_SETTING and DEVICE_ACTION_DISPLAY
         actionNum++;
     }
 }
@@ -124,14 +126,10 @@ void setup() {
 
         device = Device::load();
         config = Config::load();
+        values = Values::load();
         if (SensorScd041::configure(&config)) {
             ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (involving a write to the scd41's eeprom)
         }
-
-        // likely not needed due to default, TODO :: find out
-        values.nextMeasureIndex = 0;
-        values.nextDisplayIndex = 0;
-        values.nextConnectIndex = 3;
 
         // have a battery reading for the entry screen
         SensorEnergy::powerup();
@@ -151,7 +149,7 @@ void setup() {
     // did it wake up from a button press?
     esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
     if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
-        device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = SensorTime::getSecondstime();  // has woken up from busy, no need to wait any longer, depower now
+        handleWakeupActionBusyHigh();
     } else if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
         uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
         ButtonAction::createButtonAction((gpio_num_t)(log(wakeupStatus) / log(2)));
@@ -224,10 +222,18 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
         delay(50);
         if (SensorTime::getSecondsUntil(ModuleWifi::getSecondstimeExpiry()) == WAITTIME________________NONE && ModuleWifi::isPowered()) {
 #ifdef USE___SERIAL
-            Serial.println("expiring wifi from main");
+            Serial.println("break for wifi expiry");
 #endif
-            ModuleWifi::depower(&config);   // turn off wifi as soon as possible
-            scheduleDeviceActionDisplay();  // TODO :: does not work for unknown reasons, wifi however is turned of
+            config.wifi.powered = false;
+            scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
+            break;
+        }
+        if (ModuleServer::requestedCalibrationReference > 400) {
+#ifdef USE___SERIAL
+            Serial.println("break for calibration");
+#endif
+            scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
+            break;
         }
     }
     ButtonAction::detachWakeup(wakeupType);
@@ -245,7 +251,7 @@ void loop() {
             device.deviceActions[device.actionIndexCur].secondsNext = SensorTime::getSecondstime() + action.secondsWait;
         } else {  // no more executable actions, rollover to zero
             device.actionIndexCur = 0;
-            device.actionIndexMax = values.nextMeasureIndex == values.nextDisplayIndex ? 4 : 2;
+            device.actionIndexMax = (values.nextMeasureIndex == values.nextDisplayIndex ? DEVICE_ACTION_DEPOWER : DEVICE_ACTION_READVAL) + 1;
             device.deviceActions[DEVICE_ACTION_MEASURE].secondsNext = getMeasureNextSeconds() + 1;  // add 1, accept being a little late, rather than having to wake up twice
         }
         delay(10);  // TODO :: experimental, trying to find the cause for sporadic 10s@1mA after readval

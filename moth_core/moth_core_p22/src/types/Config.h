@@ -31,6 +31,13 @@ typedef enum {
     DISPLAY_VAL_M_CHART
 } display_val_m_e;
 
+typedef enum {
+    DISPLAY_VAL_S_ENTRY,
+    DISPLAY_VAL_S__NONE,
+    DISPLAY_VAL_S____QR,
+    DISPLAY_VAL_S_CALIB  // calibration
+} display_val_s_e;
+
 /**
  * current display value in table modus
  */
@@ -48,7 +55,8 @@ typedef enum {
     DISPLAY_VAL_C___DEG,
     DISPLAY_VAL_C___HUM,
     DISPLAY_VAL_C___HPA,
-    DISPLAY_VAL_C___ALT
+    DISPLAY_VAL_C___ALT,
+    DISPLAY_VAL_C___NRG
 } display_val_c_e;
 
 typedef enum {
@@ -74,6 +82,7 @@ typedef struct {
     thresholds_deg_t thresholdsDeg;
     thresholds_hum_t thresholdsHum;
     uint8_t displayUpdateMinutes;
+    display_val_s_e displayValSetng;
     display_val_m_e displayValModus;
     display_val_t_e displayValTable;
     display_val_c_e displayValChart;
@@ -89,15 +98,20 @@ typedef struct {
 } wifi____all___t;
 
 typedef struct {
+    uint8_t ntpUpdateMinutes;
     char timezone[64];
 } time____all___t;
+
+typedef struct {
+    float temperatureOffset;
+} sco2____all___t;
 
 typedef struct {
     disp____all___t disp;
     wifi____all___t wifi;
     time____all___t time;
+    sco2____all___t sco2;
     bool isBeep;
-    float temperatureOffset;
     float pressureZerolevel;  // calculated sealevel pressure
     float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)
 } config_t;

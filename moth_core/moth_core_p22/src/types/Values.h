@@ -15,7 +15,7 @@ const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
 const uint8_t HISTORY_____BUFFER_SIZE = 60;
 
 typedef struct {
-    uint16_t co2;
+    uint16_t co2Low;
     uint16_t deg;  // convention needed for fraction
     uint16_t hum;  // convention needed for fraction
     uint16_t co2Raw;
@@ -38,10 +38,10 @@ typedef struct {
 } values_all_t;
 
 typedef struct {
-    values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
     uint32_t nextMeasureIndex;
     uint32_t nextDisplayIndex;
     uint32_t nextConnectIndex;  // next index at which an autoconnect should be attempted
+    values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 } values_t;
 
 /**
@@ -51,5 +51,11 @@ typedef struct {
     String path;
     String name;
 } file32_def_t;
+
+class Values {
+   private:
+   public:
+    static values_t load();
+};
 
 #endif

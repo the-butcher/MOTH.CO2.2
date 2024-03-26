@@ -16,6 +16,7 @@ typedef enum {
 typedef enum {
     DEVICE_ACTION_MEASURE,  // i2c on, measure
     DEVICE_ACTION_READVAL,  // read values
+    DEVICE_ACTION_SETTING,  // any settings to be applied, i.e. after button press, or wifi request
     DEVICE_ACTION_DISPLAY,  // display on, render values
     DEVICE_ACTION_DEPOWER   // display off, energy sensor off, ...
 } device_action_e;
@@ -30,15 +31,19 @@ typedef struct {
 
 typedef struct {
     uint32_t secondsSetupBase;  // secondstime at boot time plus some buffer
-    device_action_t deviceActions[4];
+    device_action_t deviceActions[5];
     uint8_t actionIndexCur;
     uint8_t actionIndexMax;
 } device_t;
+
+const uint8_t LOWPASS_BUFFER_SIZE = 16;  // arbitrary size
+const float LOWPASS_ALPHA = 0.33;        // higher: faster reaction
 
 class Device {
    private:
     static void handleActionMeasure(values_t* values, config_t* config);
     static void handleActionReadval(values_t* values, config_t* config);
+    static void handleActionSetting(values_t* values, config_t* config);
     static void handleActionDisplay(values_t* values, config_t* config);
     static void handleActionDepower(values_t* values, config_t* config);
     static void handleActionInvalid(values_t* values, config_t* config);

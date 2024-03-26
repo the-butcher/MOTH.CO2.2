@@ -1,5 +1,7 @@
 #include "SensorScd041.h"
 
+#include "types/Define.h"
+
 SensorScd041Base SensorScd041::baseSensor;
 values_co2_t SensorScd041::values = {0, 0, 0};
 
@@ -13,7 +15,7 @@ bool SensorScd041::configure(config_t* config) {
     float& temperatureOffsetR = temperatureOffsetV;
     SensorScd041::baseSensor.getTemperatureOffset(temperatureOffsetR);
     // whats about to be set
-    float temperatureOffsetC = config->temperatureOffset;
+    float temperatureOffsetC = config->sco2.temperatureOffset;
     // apply, only if there is a real change
     if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
         SensorScd041::baseSensor.setTemperatureOffset(temperatureOffsetC);
@@ -23,6 +25,20 @@ bool SensorScd041::configure(config_t* config) {
     } else {
         return false;
     }
+}
+
+uint16_t SensorScd041::forceCalibration(uint16_t calibrationReference) {
+#ifdef USE___SERIAL
+    Serial.print("calibrationReference: ");
+    Serial.println(calibrationReference);
+#endif
+    // TODO :: return a struct instance, so the display can render appropriate information
+    return 0;
+    // uint16_t frcV = 0;
+    // uint16_t& frcR = frcV;
+    // SensorScd041::baseSensor.performForcedRecalibration(reference, frcR);
+    // delay(400);
+    // return frcV;
 }
 
 bool SensorScd041::measure() {
@@ -48,6 +64,20 @@ values_co2_t SensorScd041::readval() {
         SensorScd041::values = {co2, SensorScd041::toShortDeg(deg), SensorScd041::toShortHum(hum), co2};
     }
     return SensorScd041::values;
+}
+
+float SensorScd041::getTemperatureOffset() {
+    float degV = 0;
+    float& degR = degV;
+    SensorScd041::baseSensor.getTemperatureOffset(degR);
+    return degV;
+}
+
+bool SensorScd041::isAutomaticSelfCalibration() {
+    uint16_t ascV = 0;
+    uint16_t& ascR = ascV;
+    SensorScd041::baseSensor.getAutomaticSelfCalibration(ascR);
+    return ascV;
 }
 
 uint16_t SensorScd041::toShortDeg(float floatValue) {

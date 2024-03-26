@@ -1,9 +1,13 @@
 #include "ModuleDisplay.h"
+
+#include <qrcode.h>
+
 #include "buttons/ButtonAction.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
 #include "sensors/SensorTime.h"
+#include "types/Define.h"
 
 const uint16_t LIMIT_POS_X = 287;
 const uint8_t CHAR_DIM_X6 = 7;
@@ -97,8 +101,8 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
 
     if (config->disp.displayValTable == DISPLAY_VAL_T___CO2) {
         thresholds_co2_t thresholdsCo2 = config->disp.thresholdsCo2;
-        uint16_t co2 = measurement->valuesCo2.co2;
-        float stale = max(0.0, min(10.0, (co2 - thresholdsCo2.ref) / 380.0));  // don't allow negative stale values. max out at 10
+        uint16_t co2Low = measurement->valuesCo2.co2Low;
+        float stale = max(0.0, min(10.0, (co2Low - thresholdsCo2.ref) / 380.0));  // don't allow negative stale values. max out at 10
         float staleWarn = max(0.0, min(10.0, (thresholdsCo2.wHi - thresholdsCo2.ref) / 380.0));
         float staleRisk = max(0.0, min(10.0, (thresholdsCo2.rHi - thresholdsCo2.ref) / 380.0));
 
@@ -110,9 +114,9 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
         }
         int staleDif = 70 / staleMax;  // height of 1 percent, 20 for staleMax 2.5, 10 for staleMax 5, 5 for staleMax 10
 
-        textColor = getTextColor(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
-        fillColor = getFillColor(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
-        vertColor = getVertColor(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
+        textColor = getTextColor(co2Low, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
+        fillColor = getFillColor(co2Low, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
+        vertColor = getVertColor(co2Low, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
 
         if (fillColor != EPD_WHITE) {
             ModuleDisplay::fillRectangle(RECT_CO2, fillColor);
@@ -120,7 +124,7 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
 
         title = "CO² ppm";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * 7;
-        ModuleDisplay::drawAntialiasedText36(formatString(String(co2), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+        ModuleDisplay::drawAntialiasedText36(formatString(String(co2Low), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
 
         uint8_t yMax = RECT_CO2.ymax - 7;  // bottom limit of rebreathe indicator
         uint8_t yDim = round(stale * staleDif);
@@ -136,11 +140,11 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
             ModuleDisplay::baseDisplay.drawFastVLine(i, yMax - yDimMax, yDimMax - yDimRisk, EPD_BLACK);    // risk
         }
 
-        if (ModuleDisplay::isRisk(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when in risk, the risk area needs to be outlined
+        if (ModuleDisplay::isRisk(co2Low, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when in risk, the risk area needs to be outlined
             ModuleDisplay::baseDisplay.drawFastVLine(xBarMin, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
             ModuleDisplay::baseDisplay.drawFastVLine(xBarMax, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
             ModuleDisplay::baseDisplay.drawFastHLine(xBarMin, yMax - yDimMax, xBarMax - xBarMin + 1, vertColor);
-        } else if (!ModuleDisplay::isWarn(co2, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when not warn and not risk, the good area needs to be outlined
+        } else if (!ModuleDisplay::isWarn(co2Low, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when not warn and not risk, the good area needs to be outlined
             ModuleDisplay::baseDisplay.drawFastVLine(xBarMin, yMax - yDimWarn, yDimWarn, vertColor);
             ModuleDisplay::baseDisplay.drawFastVLine(xBarMax, yMax - yDimWarn, yDimWarn, vertColor);
             ModuleDisplay::baseDisplay.drawFastHLine(xBarMin, yMax, xBarMax - xBarMin + 1, vertColor);
@@ -158,7 +162,7 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
         if (stale > 8.5) {
             yTxt += 14;
             yPrc += 14;
-        } else if (co2 >= 1000) {  // wrap percent, shorten line
+        } else if (co2Low >= 1000) {  // wrap percent, shorten line
             yPrc += 14;
             xPrc = xBarMax + 2;
             xLin -= CHAR_DIM_X6;
@@ -246,11 +250,11 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
     if (displayValChart == DISPLAY_VAL_C___CO2) {
         for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
             measurement = history[i];
-            if (measurement.valuesCo2.co2 > 3600) {
+            if (measurement.valuesCo2.co2Low > 3600) {
                 maxValue = 6000;  // 0, 2000, 4000, (6000)
-            } else if (measurement.valuesCo2.co2 > 2400) {
+            } else if (measurement.valuesCo2.co2Low > 2400) {
                 maxValue = 4500;  // 0, 1500, 3000, (4500)
-            } else if (measurement.valuesCo2.co2 > 1200) {
+            } else if (measurement.valuesCo2.co2Low > 1200) {
                 maxValue = 3000;  // 0, 1000, 2000, (3000)
             }
         }
@@ -267,11 +271,15 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
         maxValue = 80;  // 20, 40, 60, (80)
     } else if (displayValChart == DISPLAY_VAL_C___HPA) {
         double pressureAvg = 0;
+        uint8_t validValueCount = 0;
         for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
             measurement = history[i];
-            pressureAvg += measurement.valuesBme.pressure / 100.0;
+            if (measurement.valuesBme.pressure > 0) {
+                pressureAvg += measurement.valuesBme.pressure;
+                validValueCount++;
+            }
         }
-        pressureAvg /= HISTORY_____BUFFER_SIZE;          // lets say it is 998
+        pressureAvg /= validValueCount;                  // lets say it is 998
         minValue = floor(pressureAvg / 10.0) * 10 - 10;  // 99.8 -> 99 -> 990 -> 980
         maxValue = ceil(pressureAvg / 10.0) * 10 + 10;   // 99.8 -> 100 -> 1000 -> 1010
     } else if (displayValChart == DISPLAY_VAL_C___ALT) {
@@ -279,7 +287,11 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
         float altitude;
         for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
             measurement = history[i];
-            altitude = SensorBme280::getAltitude(config->pressureZerolevel, measurement.valuesBme.pressure);
+            if (measurement.valuesBme.pressure > 0) {
+                altitude = SensorBme280::getAltitude(config->pressureZerolevel, measurement.valuesBme.pressure);
+            } else {
+                altitude = 0.0f;
+            }
             if (altitude > 1600) {
                 maxValue = 3600;  // 0, 1200, 2400, 3600
             } else if (altitude > 800) {
@@ -288,6 +300,9 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
                 maxValue = 900;  // 0, 300, 600, (900)
             }
         }
+    } else if (displayValChart == DISPLAY_VAL_C___NRG) {
+        minValue = 0;
+        maxValue = 150;  // 0, 50, 100, (150)
     }
 
     String label2 = String(minValue + (maxValue - minValue) * 2 / 3);
@@ -315,6 +330,8 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
         title = "pressure hPa," + String(config->disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C___ALT) {
         title = "altitude m," + String(config->disp.displayHrsChart) + "h";
+    } else if (displayValChart == DISPLAY_VAL_C___NRG) {
+        title = "battery %," + String(config->disp.displayHrsChart) + "h";
     }
     ModuleDisplay::drawAntialiasedText06(title, RECT_CO2, LIMIT_POS_X - title.length() * CHAR_DIM_X6 + 3, charPosLabelY, EPD_BLACK);
 
@@ -331,7 +348,7 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
         measurement = history[i];
 
         if (displayValChart == DISPLAY_VAL_C___CO2) {
-            curValue = measurement.valuesCo2.co2;
+            curValue = measurement.valuesCo2.co2Low;
         } else if (displayValChart == DISPLAY_VAL_C___DEG) {
             curValue = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);
         } else if (displayValChart == DISPLAY_VAL_C___HUM) {
@@ -339,7 +356,13 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
         } else if (displayValChart == DISPLAY_VAL_C___HPA) {
             curValue = measurement.valuesBme.pressure;
         } else if (displayValChart == DISPLAY_VAL_C___ALT) {
-            curValue = SensorBme280::getAltitude(config->pressureZerolevel, measurement.valuesBme.pressure);
+            if (measurement.valuesBme.pressure > 0) {
+                curValue = SensorBme280::getAltitude(config->pressureZerolevel, measurement.valuesBme.pressure);
+            } else {
+                curValue = 0.0f;
+            }
+        } else if (displayValChart == DISPLAY_VAL_C___NRG) {
+            curValue = SensorEnergy::toFloatPercent(measurement.valuesNrg.percent);
         }
 
         minX = basX + i * displayableBarWidth;
@@ -351,7 +374,8 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
                 baseDisplay.drawFastVLine(minX + b, minY, dimY, EPD_BLACK);
             }
         } else {
-            baseDisplay.drawFastHLine(minX, minY - 1, displayableBarWidth - 1, EPD_BLACK);
+            // indicator lines
+            // baseDisplay.drawFastHLine(minX, minY - 1, displayableBarWidth - 1, EPD_BLACK);
         }
     }
 
@@ -413,6 +437,66 @@ void ModuleDisplay::renderEntry(config_t *config) {
     drawAntialiasedText06(VNUM, RECT_TOP, 105, 98, EPD_BLACK);
 
     // skip header for clean screen
+    ModuleDisplay::renderFooter(config);
+
+    ModuleDisplay::flushBuffer();
+}
+
+void ModuleDisplay::renderQRCodes(config_t *config) {
+    ModuleDisplay::clearBuffer(config);
+    ModuleDisplay::drawOuterBorders(EPD_LIGHT);
+
+    // either http://ap_ip/login or [PREF_A_WIFI] + IP
+    String address = ModuleWifi::getRootUrl();
+    String networkName = ModuleWifi::getNetworkName();
+    String networkPass = ModuleWifi::getNetworkPass();
+
+    int qrCodeX = 12;
+    int qrCodeY = 35;
+
+    // render the network connection link
+    if (networkName != "") {
+        char networkBuf[networkName.length() + 1];
+        networkName.toCharArray(networkBuf, networkName.length() + 1);
+
+        QRCode qrcodeNetwork;
+        uint8_t qrcodeDataNetwork[qrcode_getBufferSize(3)];
+        qrcode_initText(&qrcodeNetwork, qrcodeDataNetwork, 3, 0, networkBuf);
+
+        for (uint8_t y = 0; y < qrcodeNetwork.size; y++) {
+            for (uint8_t x = 0; x < qrcodeNetwork.size; x++) {
+                if (qrcode_getModule(&qrcodeNetwork, x, y)) {
+                    baseDisplay.fillRect(x * 2 + qrCodeX, y * 2 + qrCodeY, 2, 2, EPD_BLACK);
+                }
+            }
+        }
+
+        qrCodeX = 228;
+
+        ModuleDisplay::drawAntialiasedText06("wlan", RECT_TOP, 75, 45, EPD_BLACK);
+        if (networkPass != "") {
+            ModuleDisplay::drawAntialiasedText06(ModuleWifi::getNetworkPass(), RECT_TOP, 75, 60, EPD_BLACK);
+        }
+        ModuleDisplay::drawAntialiasedText06("open", RECT_TOP, 193, 89, EPD_BLACK);
+    }
+
+    char addressBuf[address.length() + 1];
+    address.toCharArray(addressBuf, address.length() + 1);
+
+    QRCode qrcodeAddress;
+    uint8_t qrcodeDataAddress[qrcode_getBufferSize(3)];
+    qrcode_initText(&qrcodeAddress, qrcodeDataAddress, 3, 0, addressBuf);
+
+    // render the ip address within the network
+    for (uint8_t y = 0; y < qrcodeAddress.size; y++) {
+        for (uint8_t x = 0; x < qrcodeAddress.size; x++) {
+            if (qrcode_getModule(&qrcodeAddress, x, y)) {
+                baseDisplay.fillRect(x * 2 + qrCodeX, y * 2 + qrCodeY, 2, 2, EPD_BLACK);
+            }
+        }
+    }
+
+    ModuleDisplay::renderHeader();
     ModuleDisplay::renderFooter(config);
 
     ModuleDisplay::flushBuffer();

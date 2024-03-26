@@ -15,6 +15,7 @@ class SensorScd041 {
    public:
     static void begin();
     static bool configure(config_t* config);  // must have begun before configuration
+    static uint16_t forceCalibration(uint16_t calibrationReference);
     static bool measure();
     static values_co2_t readval();
     static bool powerup();
@@ -23,6 +24,8 @@ class SensorScd041 {
     static float toFloatDeg(uint16_t shortValue);
     static uint16_t toShortHum(float floatValue);
     static float toFloatHum(uint16_t shortValue);
+    static float getTemperatureOffset();
+    static bool isAutomaticSelfCalibration();
 };
 
 #endif

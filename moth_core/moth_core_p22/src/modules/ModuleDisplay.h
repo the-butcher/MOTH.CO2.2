@@ -72,6 +72,7 @@ class ModuleDisplay {
     static void detachWakeup(wakeup_action_e wakeupType);
     static void renderTable(values_all_t *measurement, config_t *config);
     static void renderChart(values_all_t history[60], config_t *config);
+    static void renderQRCodes(config_t *config);
     static void renderEntry(config_t *config);
     static void depower();
 };

@@ -17,7 +17,7 @@ static values_all_t emptyMeasurement(uint32_t secondstime) {
     return {
         secondstime,                                                           // secondstime of history measurement
         {0, SensorScd041::toShortDeg(0.0), SensorScd041::toShortHum(0.0), 0},  // co2 measurement
-        {0.0},                                                                 // bme measurement
+        {0.0f},                                                                // bme measurement
         {SensorEnergy::toShortPercent(0.0)}                                    // nrg measurement
     };
 }
@@ -56,11 +56,6 @@ void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_
             if (datFile) {
                 datFile.close();  // close the previous file
             }
-#ifdef USE___SERIAL
-            Serial.print("opening: ");
-            Serial.println(fileDef32.name);
-            Serial.println("------------------------------------------------------");
-#endif
             datFile.open(fileDef32.name.c_str(), O_READ);
             datFileNameLast = fileDef32.name;
         }

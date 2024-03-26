@@ -25,10 +25,11 @@ config_t Config::load() {
                 65   // hum rHi
             },
             3,                    // display update minutes
-            DISPLAY_VAL_M_TABLE,  // chart | table
+            DISPLAY_VAL_S_ENTRY,  // entry screen firsl
+            DISPLAY_VAL_M_TABLE,  // entry -> chart | table
             DISPLAY_VAL_T___CO2,  // value shown when rendering a measurement (table)
-            DISPLAY_VAL_C___CO2,  // value shown when rendering the chart
-            DISPLAY_HRS_C____24,  // hours to be shown in chart display
+            DISPLAY_VAL_C___ALT,  // value shown when rendering the chart
+            DISPLAY_HRS_C____01,  // hours to be shown in chart display
             DISPLAY_THM___LIGHT,  // light theme
             DISPLAY_DEG_CELSIUS,  // temperature scale
         },
@@ -38,10 +39,13 @@ config_t Config::load() {
             0   // last successful connection index
         },
         {
+            60 * 3  // ntp update
             // static timezone char array
         },
+        {
+            1.5,  // temperature offset
+        },
         false,  // beep
-        1.5,    // temperature offset
         0.0,    // calculated sealevel pressure, 0.0 = needs recalculation
         153     // the altitude that the seonsor was configured to (or set by the user)
     };

@@ -6,12 +6,7 @@
 #include "driver/adc.h"
 #include "modules/ModuleSdcard.h"
 
-const String FILE_WIFI_CONFIG_JSON = "/config/wifi.json";
-const String FILE_WIFI_CONFIG__DAT = "/config/wifi.dat";
-const String WIFI_AP_KEY = "mothbox";
-const String WIFI_AP_PWD = "CO2@420PPM";
-
-String ModuleWifi::apNetworkConn = "";
+String ModuleWifi::networkName = "";
 uint32_t ModuleWifi::secondstimeExpiry = 0;
 uint8_t ModuleWifi::expiryMinutes = 5;  // default
 
@@ -65,7 +60,7 @@ void ModuleWifi::begin() {
     }
 }
 
-bool ModuleWifi::powerup(config_t* config) {
+bool ModuleWifi::powerup(config_t* config, bool allowApMode) {
     // adc_power_on();
 
     ModuleSdcard::begin();
@@ -89,82 +84,93 @@ bool ModuleWifi::powerup(config_t* config) {
         wifiFileDat.close();
     }
 
+    bool powered = false;
+
     // connect to previous network, if defined
     if (config->wifi.networkConnIndexLast >= 0) {
         if (ModuleWifi::connectToNetwork(&configuredNetworks[config->wifi.networkConnIndexLast])) {
-            ModuleServer::begin();
-            ModuleWifi::access();
-            config->wifi.powered = true;
-            return true;
+            powered = true;
         } else {
             config->wifi.networkConnIndexLast = -1;
         }
     }
 
-    // find more networks (expensive)
-    int ssidCount = WiFi.scanNetworks();
-
-    String scanKey;
-    String confKey;
-
-    // iterate available networks
-    for (int ssidIndex = 0; ssidIndex < ssidCount; ssidIndex++) {
-        scanKey = WiFi.SSID(ssidIndex);
-        for (int i = 0; i < configuredNetworkCount; i++) {
-            confKey = String(configuredNetworks[i].key);
-            if (i != config->wifi.networkConnIndexLast && confKey == scanKey) {  // found a configured network that matched one of the scanned networks
-                if (ModuleWifi::connectToNetwork(&configuredNetworks[i])) {
-                    config->wifi.networkConnIndexLast = i;
-                    ModuleServer::begin();
-                    ModuleWifi::access();
-                    config->wifi.powered = true;
-                    return true;
+    // if no connection could be made through the default network id -> find more networks
+    if (!powered) {
+        int ssidCount = WiFi.scanNetworks();
+        String scanKey;
+        String confKey;
+        // iterate available networks
+        for (int ssidIndex = 0; ssidIndex < ssidCount; ssidIndex++) {
+            scanKey = WiFi.SSID(ssidIndex);
+            for (int i = 0; i < configuredNetworkCount; i++) {
+                confKey = String(configuredNetworks[i].key);
+                if (i != config->wifi.networkConnIndexLast && confKey == scanKey) {  // found a configured network that matched one of the scanned networks
+                    if (ModuleWifi::connectToNetwork(&configuredNetworks[i])) {
+                        config->wifi.networkConnIndexLast = i;
+                        powered = true;
+                        break;
+                    }
                 }
             }
         }
     }
 
-    ModuleWifi::depower(config);
-    delay(500);
+    // no connection through any of the configured networks, start in ap mode
+    if (!powered && allowApMode) {
+        ModuleWifi::depower(config);
+        delay(500);
+        powered = ModuleWifi::enableSoftAP();
+    }
 
-    if (ModuleWifi::enableSoftAP()) {
+    if (powered) {
         ModuleServer::begin();
         ModuleWifi::access();
         config->wifi.powered = true;
-        return true;
+    } else {
+        ModuleWifi::depower(config);  // if no connection could be established
+        ModuleWifi::expire();
+        config->wifi.powered = false;
     }
 
-    ModuleWifi::depower(config);  // if no connection could be established
-    ModuleWifi::expire();
-    return false;
+    return powered;
 }
 
 bool ModuleWifi::isPowered() {
     wifi_mode_t wifiMode = WiFi.getMode();
-    return wifiMode == WIFI_STA || wifiMode == WIFI_AP;
+    return wifiMode == WIFI_AP || (wifiMode == WIFI_STA && WiFi.isConnected());
 }
 
 bool ModuleWifi::connectToNetwork(network_t* network) {
-    ModuleSignal::setPixelColor(COLOR_____GRAY);
     WiFi.mode(WIFI_STA);
     WiFi.begin(network->key, network->pwd);
     for (int i = 0; i < 10; i++) {
         if (ModuleWifi::isPowered()) {
-            ModuleSignal::setPixelColor(COLOR___YELLOW);
+            char networkNameBuf[64];
+            sprintf(networkNameBuf, "%s%s%s", "WIFI:T:WPA;S:", network->key, ";;;");
+            ModuleWifi::networkName = String(networkNameBuf);
             return true;
         }
         delay(200);
     }
-    ModuleSignal::setPixelColor(COLOR______RED);
     return false;
 }
 
 bool ModuleWifi::enableSoftAP() {
-    ModuleSignal::setPixelColor(COLOR_____GRAY);
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(WIFI_AP_KEY.c_str(), WIFI_AP_PWD.c_str());
-    ModuleSignal::setPixelColor(COLOR___YELLOW);
-    return true;
+
+    uint64_t _chipmacid = 0LL;
+    esp_efuse_mac_get_default((uint8_t*)(&_chipmacid));
+
+    // build a unique name for the ap, TODO :: is this correct
+    char networkKeyBuf[32];
+    sprintf(networkKeyBuf, "mothbox_%s", String(_chipmacid, HEX));
+
+    char networkNameBuf[64];
+    sprintf(networkNameBuf, "WIFI:T:WPA;S:mothbox_%s;P:CO2@420PPM;;", String(_chipmacid, HEX));
+    ModuleWifi::networkName = String(networkNameBuf);
+
+    return WiFi.softAP(networkKeyBuf, WIFI_AP_PWD.c_str());
 }
 
 void ModuleWifi::depower(config_t* config) {
@@ -197,5 +203,34 @@ String ModuleWifi::getAddress() {
         return "wifi off";
     } else {
         return "wifi unknown";
+    }
+}
+
+String ModuleWifi::getRootUrl() {
+    wifi_mode_t wifiMode = WiFi.getMode();
+    if (wifiMode == WIFI_AP) {
+        return "http://" + WiFi.softAPIP().toString() + "/server/server.html";
+    } else if (wifiMode == WIFI_STA) {
+        return "http://" + WiFi.localIP().toString() + "/server/server.html";
+    } else {
+        return "";
+    }
+}
+
+String ModuleWifi::getNetworkName() {
+    wifi_mode_t wifiMode = WiFi.getMode();
+    if (wifiMode == WIFI_AP || wifiMode == WIFI_STA) {
+        return ModuleWifi::networkName;
+    } else {
+        return "";
+    }
+}
+
+String ModuleWifi::getNetworkPass() {
+    wifi_mode_t wifiMode = WiFi.getMode();
+    if (wifiMode == WIFI_AP) {
+        return WIFI_AP_PWD;
+    } else {
+        return "";
     }
 }

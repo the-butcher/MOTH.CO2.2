@@ -4,6 +4,7 @@
 #include "modules/ModuleSignal.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorTime.h"
+#include "types/Define.h"
 
 ButtonHelper ButtonAction::A(GPIO_NUM_11);
 ButtonHelper ButtonAction::B(GPIO_NUM_12);
@@ -20,7 +21,6 @@ void ButtonAction::begin(std::function<void(std::function<void(config_t* config)
 }
 
 bool ButtonAction::configure(config_t* config) {
-    // TODO :: reassign button_action depending on config
     if (config->disp.displayValModus == DISPLAY_VAL_M_TABLE) {
         if (config->disp.displayValTable == DISPLAY_VAL_T___ALT) {
             ButtonAction::A.buttonAction = getButtonActionAltitude5050(config);  // buttonA changes alt by 50m
@@ -259,7 +259,7 @@ void ButtonAction::toggleDisplayValTBw(config_t* config) {
  * button action :: toggle the primary table display value forward
  */
 void ButtonAction::toggleDisplayValCFw(config_t* config) {
-    uint8_t valueCount = DISPLAY_VAL_C___ALT + 1;
+    uint8_t valueCount = DISPLAY_VAL_C___NRG + 1;
     config->disp.displayValChart = (display_val_c_e)((config->disp.displayValChart + 1) % valueCount);
 }
 
@@ -267,7 +267,7 @@ void ButtonAction::toggleDisplayValCFw(config_t* config) {
  * button action :: toggle the primary table display value backward
  */
 void ButtonAction::toggleDisplayValCBw(config_t* config) {
-    uint8_t valueCount = DISPLAY_VAL_C___ALT + 1;
+    uint8_t valueCount = DISPLAY_VAL_C___NRG + 1;
     config->disp.displayValChart = (display_val_c_e)((config->disp.displayValChart + valueCount - 1) % valueCount);
 }
 

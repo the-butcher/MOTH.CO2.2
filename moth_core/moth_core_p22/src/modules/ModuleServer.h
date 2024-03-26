@@ -9,8 +9,10 @@ class ModuleServer {
     static bool hasBegun;
 
    public:
+    static uint16_t requestedCalibrationReference;
     static void begin();
     static void handleApiStatus(AsyncWebServerRequest *request);
+    static void handleCalibrate(AsyncWebServerRequest *request);
     static void serveStatic(AsyncWebServerRequest *request);
 };
 
