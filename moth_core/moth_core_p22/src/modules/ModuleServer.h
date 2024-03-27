@@ -12,6 +12,7 @@ class ModuleServer {
     static uint16_t requestedCalibrationReference;
     static void begin();
     static void handleApiStatus(AsyncWebServerRequest *request);
+    static void handleApiFolder(AsyncWebServerRequest *request);
     static void handleCalibrate(AsyncWebServerRequest *request);
     static void serveStatic(AsyncWebServerRequest *request);
 };

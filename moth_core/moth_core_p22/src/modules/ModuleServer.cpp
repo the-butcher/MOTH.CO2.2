@@ -14,6 +14,7 @@ void ModuleServer::begin() {
     if (!ModuleServer::hasBegun) {
         server.on("/api/calibrate", HTTP_GET, handleCalibrate);
         server.on("/api/status", HTTP_GET, handleApiStatus);
+        server.on("/api/folder", HTTP_GET, handleApiFolder);
         server.onNotFound(serveStatic);
         DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
         server.begin();
@@ -83,6 +84,61 @@ void ModuleServer::handleApiStatus(AsyncWebServerRequest *request) {
     // mqttJo["status"] = BoxMqtt::status;
     // mqttJo["active"] = BoxMqtt::isConfiguredToBeActive();
     // mqttJo["pcount"] = Measurements::getPublishableCount();
+
+    root.printTo(*response);
+    request->send(response);
+}
+
+void ModuleServer::handleApiFolder(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=10");
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = 200;
+
+    JsonArray &foldersJa = root.createNestedArray("folders");
+    JsonArray &filesJa = root.createNestedArray("files");
+
+    String folderName = "/";
+    if (request->hasParam("folder")) {
+        folderName = request->getParam("folder")->value();
+    }
+    File32 folder;
+    folder.open(folderName.c_str(), O_RDONLY);
+    File32 file;
+
+    while (file.openNext(&folder, O_RDONLY)) {
+        if (!file.isHidden()) {
+            char nameBuf[16];
+            file.getName(nameBuf, 16);
+            String name = String(nameBuf);
+
+            uint16_t pdate;
+            uint16_t ptime;
+            file.getModifyDateTime(&pdate, &ptime);
+
+            char lastModifiedBuffer[32];
+            sprintf(lastModifiedBuffer, "%d-%02d-%02d %02d:%02d:%02d", FS_YEAR(pdate), FS_MONTH(pdate), FS_DAY(pdate), FS_HOUR(ptime), FS_MINUTE(ptime), FS_SECOND(ptime));
+            String lastModified = String(lastModifiedBuffer);
+
+            // if (!BoxEncr::CONFIG_PATH.endsWith(name)) { // TODO :: reestablish
+            if (file.isDirectory()) {
+                JsonObject &itemJo = foldersJa.createNestedObject();
+                itemJo["folder"] = name;
+                itemJo["last"] = lastModified;
+            } else {
+                JsonObject &itemJo = filesJa.createNestedObject();
+                itemJo["size"] = file.size();
+                itemJo["file"] = name;
+                itemJo["last"] = lastModified;
+            }
+            // }
+        }
+        file.close();
+    }
+    folder.close();
 
     root.printTo(*response);
     request->send(response);

@@ -45,18 +45,7 @@ void ModuleWifi::begin() {
             // TODO :: handle this condition
         }
 
-        //         bool fileSuccess = wifiFile.open(ModuleWifi::CONFIG_JSON.c_str(), O_RDONLY);
-        //         if (fileSuccess) {
-        //             uint16_t pdate;
-        //             uint16_t ptime;
-        //             wifiFile.getModifyDateTime(&pdate, &ptime);
-        // #ifdef USE___SERIAL
-        //             Serial.printf("LAST WRITE: %d-%02d-%02d %02d:%02d:%02d\n", FS_YEAR(pdate), FS_MONTH(pdate), FS_DAY(pdate), FS_HOUR(ptime), FS_MINUTE(ptime), FS_SECOND(ptime));
-        // #endif
-        //         }
-        //         if (wifiFile) {
-        //             wifiFile.close();
-        //         }
+
     }
 }
 

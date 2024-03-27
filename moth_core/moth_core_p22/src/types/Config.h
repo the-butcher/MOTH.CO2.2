@@ -106,12 +106,21 @@ typedef struct {
     float temperatureOffset;
 } sco2____all___t;
 
+typedef enum {
+    SIGNAL__VAL______ON,
+    SIGNAL__VAL_____OFF
+} signal__val___e;
+
+typedef struct {
+    signal__val___e signalValSound;
+} signal__all___t;
+
 typedef struct {
     disp____all___t disp;
     wifi____all___t wifi;
     time____all___t time;
     sco2____all___t sco2;
-    bool isBeep;
+    signal__all___t sign;
     float pressureZerolevel;  // calculated sealevel pressure
     float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)
 } config_t;

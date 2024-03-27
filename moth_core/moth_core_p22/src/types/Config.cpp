@@ -45,9 +45,11 @@ config_t Config::load() {
         {
             1.5,  // temperature offset
         },
-        false,  // beep
-        0.0,    // calculated sealevel pressure, 0.0 = needs recalculation
-        153     // the altitude that the seonsor was configured to (or set by the user)
+        {
+            SIGNAL__VAL_____OFF  // warn signal
+        },
+        0.0,  // calculated sealevel pressure, 0.0 = needs recalculation
+        153   // the altitude that the seonsor was configured to (or set by the user)
     };
     String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
     timezone.toCharArray(config.time.timezone, 64);

@@ -15,6 +15,8 @@ Adafruit_NeoPixel pixels(1, GPIO_NUM_33, NEO_GRB + NEO_KHZ800);
 color_t ModuleSignal::pixelColor = COLOR____BLACK;
 
 void ModuleSignal::begin() {
+    ledcSetup(BUZZER____CHANNEL, BUZZER____FREQ_LO, BUZZER_RESOLUTION);
+    ledcAttachPin(BUZZER_______GPIO, BUZZER____CHANNEL);
 #ifdef USE_NEOPIXEL
     pixels.begin();
 #else
@@ -23,6 +25,13 @@ void ModuleSignal::begin() {
     digitalWrite(NEOPIXEL_POWER, LOW);
     rtc_gpio_deinit((gpio_num_t)NEOPIXEL_POWER);
 #endif
+}
+
+void ModuleSignal::beep() {
+    ledcWrite(BUZZER____CHANNEL, 180);
+    ledcWriteTone(BUZZER____CHANNEL, BUZZER____FREQ_LO);
+    delay(50);
+    ledcWrite(BUZZER____CHANNEL, 0);
 }
 
 void ModuleSignal::prepareSleep() {

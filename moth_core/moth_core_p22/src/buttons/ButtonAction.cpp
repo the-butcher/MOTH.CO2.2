@@ -20,6 +20,10 @@ void ButtonAction::begin(std::function<void(std::function<void(config_t* config)
     ButtonAction::C.begin();
 }
 
+/**
+ * updates the button actions based on the given config
+ * @param config
+ */
 bool ButtonAction::configure(config_t* config) {
     if (config->disp.displayValModus == DISPLAY_VAL_M_TABLE) {
         if (config->disp.displayValTable == DISPLAY_VAL_T___ALT) {
@@ -100,11 +104,11 @@ button_action_t ButtonAction::getButtonActionAltitude5050(config_t* config) {
 
 button_action_t ButtonAction::getButtonActionFunctionWFBP(config_t* config) {
     return {
-        config->isBeep ? SYMBOL_NBEEP : SYMBOL_YBEEP,  // the symbol for a fast press
-        SYMBOL__WIFI,                                  // the symbol for a slow press,
-        "",                                            // extra information to be displayed for this button
-        ButtonAction::toggleBeep,                      // to a shorter interval
-        ButtonAction::toggleWifi                       // a function to be executed on slow press
+        config->sign.signalValSound == SIGNAL__VAL______ON ? SYMBOL_NBEEP : SYMBOL_YBEEP,  // the symbol for a fast press
+        SYMBOL__WIFI,                                                                      // the symbol for a slow press,
+        "",                                                                                // extra information to be displayed for this button
+        ButtonAction::toggleBeep,                                                          // to a shorter interval
+        ButtonAction::toggleWifi                                                           // a function to be executed on slow press
     };
 }
 
@@ -202,7 +206,11 @@ void ButtonAction::toggleWifi(config_t* config) {
  * button action :: toggle beep on or off
  */
 void ButtonAction::toggleBeep(config_t* config) {
-    config->isBeep = !config->isBeep;
+    if (config->sign.signalValSound == SIGNAL__VAL______ON) {
+        config->sign.signalValSound = SIGNAL__VAL_____OFF;
+    } else {
+        config->sign.signalValSound = SIGNAL__VAL______ON;
+    }
 }
 
 /**

@@ -16,12 +16,18 @@ typedef enum {
     COLOR_____GRAY = 0x060606
 } color_t;
 
+const int BUZZER____FREQ_LO = 1000;  // 3755
+const int BUZZER____CHANNEL = 0;
+const int BUZZER_RESOLUTION = 8;  // 0 - 255
+const int BUZZER_______GPIO = GPIO_NUM_17;
+
 class ModuleSignal {
    private:
     static color_t pixelColor;
 
    public:
     static void begin();
+    static void beep();
     static void prepareSleep();
     static color_t getPixelColor();
     static void setPixelColor(color_t pixelColor);

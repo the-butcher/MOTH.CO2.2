@@ -31,69 +31,66 @@ void ModuleSdcard::historyValues(values_t* values, config_t* config, values_all_
     int32_t secondstimeDiff;
     uint32_t secondstimeIndx;
     uint32_t secondstimeFile = 0;
-
-    // file related stuff
-    File32 datFile;
-    file32_def_t fileDef32;
-    // char buffer[128];
-    String datFileNameLast = "";
-    String datFilePathLast = "";
-
-    uint8_t hh;
-    uint8_t mm;
-    uint8_t ss;
-
-    values_all_t readValue;
-
     int8_t historyIndexMax = -1;
 
-    for (uint8_t historyIndex = 0; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
-        secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
-        history[historyIndex] = emptyMeasurement(secondstimeIndx);
-        fileDef32 = SensorTime::getFile32Def(secondstimeIndx, "dat");
-        // when a new (or actually first) file is encountered -> open it
-        if (fileDef32.name != datFileNameLast) {
-            if (datFile) {
-                datFile.close();  // close the previous file
+    // file related stuff
+    if (config->disp.displayHrsChart > 1) {
+        File32 datFile;
+        file32_def_t fileDef32;
+
+        String datFileNameLast = "";
+        String datFilePathLast = "";
+
+        values_all_t readValue;
+
+        for (uint8_t historyIndex = 0; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
+            secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
+            history[historyIndex] = emptyMeasurement(secondstimeIndx);
+            fileDef32 = SensorTime::getFile32Def(secondstimeIndx, "dat");
+            // when a new (or actually first) file is encountered -> open it
+            if (fileDef32.name != datFileNameLast) {
+                if (datFile) {
+                    datFile.close();  // close the previous file
+                }
+                datFile.open(fileDef32.name.c_str(), O_READ);
+                datFileNameLast = fileDef32.name;
             }
-            datFile.open(fileDef32.name.c_str(), O_READ);
-            datFileNameLast = fileDef32.name;
-        }
-        // keep reading from old to young until a date larger than search date - 30s is found
-        while (datFile.available() > 1 && secondstimeFile + 30 < secondstimeIndx) {
-            datFile.read((byte*)&readValue, sizeof(readValue));  // read the next value into readValue
-            secondstimeFile = readValue.secondstime;
-        }
-        secondstimeDiff = secondstimeFile - secondstimeIndx;
-        if (abs(secondstimeDiff) <= 30) {
+            // keep reading from old to young until a date larger than search date - 30s is found
+            while (datFile.available() > 1 && secondstimeFile + 30 < secondstimeIndx) {
+                datFile.read((byte*)&readValue, sizeof(readValue));  // read the next value into readValue
+                secondstimeFile = readValue.secondstime;
+            }
+            secondstimeDiff = secondstimeFile - secondstimeIndx;
+            if (abs(secondstimeDiff) <= 30) {
 #ifdef USE___SERIAL
-            Serial.print(historyIndex);
-            Serial.print(" => ");
-            Serial.print(secondstimeDiff);
-            Serial.print(" OK ");
-            Serial.print(SensorTime::getDateTimeDisplayString(secondstimeIndx));
-            Serial.print(" :: ");
-            Serial.println(SensorTime::getDateTimeDisplayString(secondstimeFile));
+                Serial.print(historyIndex);
+                Serial.print(" => ");
+                Serial.print(secondstimeDiff);
+                Serial.print(" OK ");
+                Serial.print(SensorTime::getDateTimeDisplayString(secondstimeIndx));
+                Serial.print(" :: ");
+                Serial.println(SensorTime::getDateTimeDisplayString(secondstimeFile));
 #endif
-            historyIndexMax = historyIndex;
-            history[historyIndex] = readValue;
-        } else {
+                historyIndexMax = historyIndex;
+                history[historyIndex] = readValue;
+            } else {
 #ifdef USE___SERIAL
-            Serial.print(historyIndex);
-            Serial.print(" => ");
-            Serial.print(secondstimeDiff);
-            Serial.print(" !! ");
-            Serial.print(SensorTime::getDateTimeDisplayString(secondstimeIndx));
-            Serial.print(" :: ");
-            Serial.println(SensorTime::getDateTimeDisplayString(secondstimeFile));
+                Serial.print(historyIndex);
+                Serial.print(" => ");
+                Serial.print(secondstimeDiff);
+                Serial.print(" !! ");
+                Serial.print(SensorTime::getDateTimeDisplayString(secondstimeIndx));
+                Serial.print(" :: ");
+                Serial.println(SensorTime::getDateTimeDisplayString(secondstimeFile));
 #endif
+            }
+            if (datFile.available() <= 1) {
+                break;
+            }
         }
-        if (datFile.available() <= 1) {
-            break;
+        if (datFile) {
+            datFile.close();
         }
-    }
-    if (datFile) {
-        datFile.close();
     }
 
 #ifdef USE___SERIAL

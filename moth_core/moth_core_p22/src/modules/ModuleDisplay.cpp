@@ -415,7 +415,7 @@ void ModuleDisplay::renderFooter(config_t *config) {
     ModuleDisplay::baseDisplay.drawFastHLine(RECT_NRG.xmax - 3, RECT_NRG.ymin + 1, 2, EPD_WHITE);
 
     int charPosFooter = 7;
-    if (config->isBeep) {
+    if (config->sign.signalValSound == SIGNAL__VAL______ON) {
         ModuleDisplay::drawAntialiasedText08(SYMBOL_YBEEP, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
         charPosFooter += 13;
     }

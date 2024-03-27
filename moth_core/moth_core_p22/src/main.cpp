@@ -36,25 +36,24 @@ uint16_t actionNum = 0;
 
 /**
  * OK wifi
- *    -- clock sync, proper interval
+ *    OK clock sync, proper interval
  *    -- mqtt (+autoconnect for mqtt)
  *    OK async server
  *       -- full set of functions, upload, update
  * -- restore full configuration
  * -- calibration of SCD41
  * -- factory reset of SCD41
- * -- dat to csv
- * -- actual beep
- * OK co2 low pass filter
+ * -- dat to csv for file download
  * -- reimplement significant change for shorter display intervals
  * -- reimplement OTA
- * OK battery % as chart value
- * OK qr-code screen
- * -- skip file access when the chart interval is DISPLAY_HRS_C____01
+ * -- actual beep (situations other than button press too)
  *
  * -- the measure interval sometimes hits a second early and goes back to sleep for one second
  *    -- find out why
- *    -- solve
+ *    -- solve :: this would require subsecond accuracy in some place
+ *    -- find out how far millis() is off after sleep and if the second timer interval survives I2C power down
+ *    -- maybe the I2C interval could then be used to resynchronize during i.e. the measure operation (where I2C is powered over a few seconds)
+ *    -- this could maybe be verfied with the Power Profiler by directly connecting the SQW pin to the profiler
  */
 
 void scheduleDeviceActionSetting() {
@@ -81,6 +80,7 @@ uint32_t getMeasureNextSeconds() {
  */
 void handleButtonActionComplete(std::function<void(config_t* config)> actionFunction) {
     if (actionFunction != nullptr) {
+        ModuleSignal::beep();
         actionFunction(&config);        // execute the action (which, by convention, only alters the config to not interfere with program flow)
         scheduleDeviceActionSetting();  // schedule DEVICE_ACTION_SETTING and DEVICE_ACTION_DISPLAY
         actionNum++;
@@ -224,6 +224,7 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
 #ifdef USE___SERIAL
             Serial.println("break for wifi expiry");
 #endif
+            // TODO :: beep, implemented in a proper place
             config.wifi.powered = false;
             scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
             break;
@@ -232,6 +233,7 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
 #ifdef USE___SERIAL
             Serial.println("break for calibration");
 #endif
+            // TODO :: beep, implemented in a proper place
             scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
             break;
         }
