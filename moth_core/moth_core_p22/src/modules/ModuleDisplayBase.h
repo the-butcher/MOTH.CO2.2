@@ -148,7 +148,7 @@ const uint8_t ti_290t5_gray4_lut_code[] = {
 };
 
 const int16_t PIN_EPD_DC = 10;
-const int16_t PIN_EPD_RESET = 8;  // A0 -> has been bridged to the reset pin
+const int16_t PIN_EPD_RESET = 18;  // A0 -> has been bridged to the reset pin
 const int16_t PIN_EPD_CS = 9;
 const int16_t PIN_SRAM_CS = -1;
 const int16_t PIN_EPD_BUSY = 14;  // A4 -> has been solder-connected to the busy pad
@@ -216,7 +216,7 @@ class ModuleDisplayBase : public Adafruit_IL0373 {
 
         // // Adafruit_EPD::display(bool sleep)
         // partialsSinceLastFullUpdate = 0;
-        // depower();  // will be powered down anyways
+        // depower();
     }
 
     void depower() {

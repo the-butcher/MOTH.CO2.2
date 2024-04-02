@@ -25,8 +25,8 @@ void ButtonAction::begin(std::function<void(std::function<void(config_t* config)
  * @param config
  */
 bool ButtonAction::configure(config_t* config) {
-    if (config->disp.displayValModus == DISPLAY_VAL_M_TABLE) {
-        if (config->disp.displayValTable == DISPLAY_VAL_T___ALT) {
+    if (config->disp.displayValModus == DISPLAY_VAL_M__TABLE) {
+        if (config->disp.displayValTable == DISPLAY_VAL_T____ALT) {
             ButtonAction::A.buttonAction = getButtonActionAltitude5050(config);  // buttonA changes alt by 50m
             ButtonAction::B.buttonAction = getButtonActionAltitude1010(config);  // buttonB changes alt by 10m
         } else {
@@ -64,21 +64,21 @@ button_action_t ButtonAction::getButtonActionDisplayValCC(config_t* config) {
 
 button_action_t ButtonAction::getButtonActionDisplayValMT(config_t* config) {
     return {
-        config->disp.displayValModus == DISPLAY_VAL_M_TABLE ? SYMBOL_CHART : SYMBOL_TABLE,  // the symbol for a fast press
-        SYMBOL_THEME,                                                                       // the symbol for a slow press,
-        "",                                                                                 // extra information to be displayed for this button
-        ButtonAction::toggleDisplayValMod,                                                  // a function to be executed on slow press
-        ButtonAction::toggleDisplayValThm                                                   // a function to be executed on fast press
+        config->disp.displayValModus == DISPLAY_VAL_M__TABLE ? SYMBOL_CHART : SYMBOL_TABLE,  // the symbol for a fast press
+        SYMBOL_THEME,                                                                        // the symbol for a slow press,
+        "",                                                                                  // extra information to be displayed for this button
+        ButtonAction::toggleDisplayValMod,                                                   // a function to be executed on slow press
+        ButtonAction::toggleDisplayValThm                                                    // a function to be executed on fast press
     };
 }
 
 button_action_t ButtonAction::getButtonActionDisplayValHR(config_t* config) {
     return {
-        config->disp.displayHrsChart != DISPLAY_HRS_C____01 ? "-" : "",                                     // the symbol for a fast press
-        config->disp.displayHrsChart != DISPLAY_HRS_C____24 ? "+" : "",                                     // the symbol for a slow press,
-        "",                                                                                                 // extra information to be displayed for this button
-        config->disp.displayHrsChart != DISPLAY_HRS_C____01 ? ButtonAction::toggleDisplayValHBw : nullptr,  // to a shorter interval
-        config->disp.displayHrsChart != DISPLAY_HRS_C____24 ? ButtonAction::toggleDisplayValHFw : nullptr   // a function to be executed on slow press
+        config->disp.displayHrsChart != DISPLAY_HRS_C_____01 ? "-" : "",                                     // the symbol for a fast press
+        config->disp.displayHrsChart != DISPLAY_HRS_C_____24 ? "+" : "",                                     // the symbol for a slow press,
+        "",                                                                                                  // extra information to be displayed for this button
+        config->disp.displayHrsChart != DISPLAY_HRS_C_____01 ? ButtonAction::toggleDisplayValHBw : nullptr,  // to a shorter interval
+        config->disp.displayHrsChart != DISPLAY_HRS_C_____24 ? ButtonAction::toggleDisplayValHFw : nullptr   // a function to be executed on slow press
     };
 }
 
@@ -112,13 +112,16 @@ button_action_t ButtonAction::getButtonActionFunctionWFBP(config_t* config) {
     };
 }
 
+/**
+ * sets any gpio holds required, then returns the ext1Bitmask value suitable to setup ext1 wakeup
+ */
 void ButtonAction::prepareSleep(wakeup_action_e wakeupType) {
     ButtonAction::A.prepareSleep(wakeupType);
     ButtonAction::B.prepareSleep(wakeupType);
     ButtonAction::C.prepareSleep(wakeupType);
-    if (wakeupType == WAKEUP_ACTION_BUTN) {
-        esp_sleep_enable_ext1_wakeup(ButtonAction::ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
-    }
+    // if (wakeupType == WAKEUP_ACTION_BUTN) {
+    //     esp_sleep_enable_ext1_wakeup(ButtonAction::ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
+    // }
 }
 
 void ButtonAction::attachWakeup(wakeup_action_e wakeupType) {
@@ -128,6 +131,7 @@ void ButtonAction::attachWakeup(wakeup_action_e wakeupType) {
         attachInterrupt(ButtonAction::C.ipin, ButtonAction::handleInterruptC, FALLING);
     }
 }
+
 void ButtonAction::detachWakeup(wakeup_action_e wakeupType) {
     if (wakeupType == WAKEUP_ACTION_BUTN) {
         detachInterrupt(ButtonAction::A.ipin);
@@ -165,16 +169,16 @@ gpio_num_t ButtonAction::getPressedPin() {
  * button action :: toggle the chart hours to the next higher value
  */
 void ButtonAction::toggleDisplayValHFw(config_t* config) {
-    if (config->disp.displayHrsChart == DISPLAY_HRS_C____01) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____03;
-    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____03) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____06;
-    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____06) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____12;
-    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____12) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____24;
+    if (config->disp.displayHrsChart == DISPLAY_HRS_C_____01) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____03;
+    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C_____03) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____06;
+    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C_____06) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____12;
+    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C_____12) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____24;
     } else {
-        // already at DISPLAY_HRS_C____24
+        // already at DISPLAY_HRS_C_____24
     }
 }
 
@@ -182,16 +186,16 @@ void ButtonAction::toggleDisplayValHFw(config_t* config) {
  * button action :: toggle the chart hours to the next lower value
  */
 void ButtonAction::toggleDisplayValHBw(config_t* config) {
-    if (config->disp.displayHrsChart == DISPLAY_HRS_C____24) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____12;
-    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____12) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____06;
-    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____06) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____03;
-    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C____03) {
-        config->disp.displayHrsChart = DISPLAY_HRS_C____01;
+    if (config->disp.displayHrsChart == DISPLAY_HRS_C_____24) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____12;
+    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C_____12) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____06;
+    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C_____06) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____03;
+    } else if (config->disp.displayHrsChart == DISPLAY_HRS_C_____03) {
+        config->disp.displayHrsChart = DISPLAY_HRS_C_____01;
     } else {
-        // already at DISPLAY_HRS_C____01
+        // already at DISPLAY_HRS_C_____01
     }
 }
 
@@ -199,7 +203,16 @@ void ButtonAction::toggleDisplayValHBw(config_t* config) {
  * button action :: toggle wifi on or off
  */
 void ButtonAction::toggleWifi(config_t* config) {
-    config->wifi.powered = !config->wifi.powered;
+    if (config->wifi.wifiValPower == WIFI____VAL_P_CUR_N) {  // if it is actually off -> set to pending on
+        config->wifi.wifiValPower = WIFI____VAL_P_PND_Y;
+    } else if (config->wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {  // if it is actually on -> set to pending off
+        config->wifi.wifiValPower = WIFI____VAL_P_PND_Y;
+    } else {
+        // already in one of the pending states, do nothing
+    }
+#ifdef USE___SERIAL
+    Serial.printf("config->wifi.wifiValPower: %d\n", config->wifi.wifiValPower);
+#endif
 }
 
 /**
@@ -249,8 +262,12 @@ void ButtonAction::incrementAltitude50(config_t* config) {
  * button action :: toggle the primary table display value forward
  */
 void ButtonAction::toggleDisplayValTFw(config_t* config) {
-    uint8_t valueCount = DISPLAY_VAL_T___ALT + 1;
+    uint8_t valueCount = DISPLAY_VAL_T____ALT + 1;
     config->disp.displayValTable = (display_val_t_e)((config->disp.displayValTable + 1) % valueCount);
+#ifdef USE___SERIAL
+    Serial.print("toggleDisplayValTFw: ");
+    Serial.println(config->disp.displayValTable);
+#endif
     ButtonAction::configure(config);
 }
 
@@ -258,8 +275,12 @@ void ButtonAction::toggleDisplayValTFw(config_t* config) {
  * button action :: toggle the primary table display value backward
  */
 void ButtonAction::toggleDisplayValTBw(config_t* config) {
-    uint8_t valueCount = DISPLAY_VAL_T___ALT + 1;
+    uint8_t valueCount = DISPLAY_VAL_T____ALT + 1;
     config->disp.displayValTable = (display_val_t_e)((config->disp.displayValTable + valueCount - 1) % valueCount);
+#ifdef USE___SERIAL
+    Serial.print("toggleDisplayValTBw: ");
+    Serial.println(config->disp.displayValTable);
+#endif
     ButtonAction::configure(config);
 }
 
@@ -267,7 +288,7 @@ void ButtonAction::toggleDisplayValTBw(config_t* config) {
  * button action :: toggle the primary table display value forward
  */
 void ButtonAction::toggleDisplayValCFw(config_t* config) {
-    uint8_t valueCount = DISPLAY_VAL_C___NRG + 1;
+    uint8_t valueCount = DISPLAY_VAL_C____NRG + 1;
     config->disp.displayValChart = (display_val_c_e)((config->disp.displayValChart + 1) % valueCount);
 }
 
@@ -275,7 +296,7 @@ void ButtonAction::toggleDisplayValCFw(config_t* config) {
  * button action :: toggle the primary table display value backward
  */
 void ButtonAction::toggleDisplayValCBw(config_t* config) {
-    uint8_t valueCount = DISPLAY_VAL_C___NRG + 1;
+    uint8_t valueCount = DISPLAY_VAL_C____NRG + 1;
     config->disp.displayValChart = (display_val_c_e)((config->disp.displayValChart + valueCount - 1) % valueCount);
 }
 
@@ -283,19 +304,19 @@ void ButtonAction::toggleDisplayValCBw(config_t* config) {
  * button action :: toggle between table and chart
  */
 void ButtonAction::toggleDisplayValMod(config_t* config) {
-    if (config->disp.displayValModus == DISPLAY_VAL_M_TABLE) {
-        config->disp.displayValModus = DISPLAY_VAL_M_CHART;
+    if (config->disp.displayValModus == DISPLAY_VAL_M__TABLE) {
+        config->disp.displayValModus = DISPLAY_VAL_M__CHART;
     } else {
-        config->disp.displayValModus = DISPLAY_VAL_M_TABLE;
+        config->disp.displayValModus = DISPLAY_VAL_M__TABLE;
     }
     ButtonAction::configure(config);
 }
 
 void ButtonAction::toggleDisplayValThm(config_t* config) {
-    if (config->disp.displayValTheme == DISPLAY_THM___LIGHT) {
-        config->disp.displayValTheme = DISPLAY_THM____DARK;
+    if (config->disp.displayValTheme == DISPLAY_THM____LIGHT) {
+        config->disp.displayValTheme = DISPLAY_THM_____DARK;
     } else {
-        config->disp.displayValTheme = DISPLAY_THM___LIGHT;
+        config->disp.displayValTheme = DISPLAY_THM____LIGHT;
     }
 }
 

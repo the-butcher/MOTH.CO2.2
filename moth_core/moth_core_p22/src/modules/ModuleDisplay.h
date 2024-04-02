@@ -41,8 +41,8 @@ const String SYMBOL_NBEEP = "ª";
 class ModuleDisplay {
    private:
     static ModuleDisplayBase baseDisplay;
-    static uint64_t ext1Bitmask;
-    static std::function<void(void)> wakeupActionBusyHighCallback;
+    static bool interrupted;
+    static void handleInterrupt();
     static void renderHeader();
     static void renderButton(button_action_t buttonAction, uint16_t x);
     static void renderFooter(config_t *config);
@@ -63,10 +63,9 @@ class ModuleDisplay {
     static uint8_t getVertColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
     static String formatString(String value, char const *format);
     static float celsiusToFahrenheit(float celsius);
-    static void detectBusyPinHigh(void *parameter);
 
    public:
-    static void begin(std::function<void(void)> WakeupActionBusyHighCallback);
+    static void begin();
     static void prepareSleep(wakeup_action_e wakeupType);
     static void attachWakeup(wakeup_action_e wakeupType);
     static void detachWakeup(wakeup_action_e wakeupType);
@@ -75,6 +74,7 @@ class ModuleDisplay {
     static void renderQRCodes(config_t *config);
     static void renderEntry(config_t *config);
     static void depower();
+    static bool isInterrupted();
 };
 
 #endif

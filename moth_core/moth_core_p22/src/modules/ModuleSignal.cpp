@@ -21,9 +21,9 @@ void ModuleSignal::begin() {
     pixels.begin();
 #else
     // de-power the neopixel
+    rtc_gpio_deinit((gpio_num_t)NEOPIXEL_POWER);
     pinMode(NEOPIXEL_POWER, OUTPUT);
     digitalWrite(NEOPIXEL_POWER, LOW);
-    rtc_gpio_deinit((gpio_num_t)NEOPIXEL_POWER);
 #endif
 }
 

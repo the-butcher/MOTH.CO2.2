@@ -26,11 +26,13 @@ class ModuleWifi {
    private:
     static String networkName;
     static network_t configuredNetworks[10];
-    static uint32_t secondstimeExpiry;
+    static uint32_t secondstimeExpiryA;
+    static uint32_t secondstimeExpiryB;
     static uint8_t expiryMinutes;
+    static void updateSecondstimeExpiry(void* parameter);
 
-    static bool connectToNetwork(network_t* network);
-    static bool enableSoftAP();
+    static bool connectToNetwork(config_t* config, network_t* network);
+    static bool enableSoftAP(config_t* config);
 
    public:
     static void begin();  // loads json configuration and creates a dat version for faster future accessibility

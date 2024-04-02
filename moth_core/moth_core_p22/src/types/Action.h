@@ -26,6 +26,7 @@ typedef struct {
 } button_action_t;
 
 const uint32_t WAITTIME________________NONE = 0;
+// const uint32_t WAITTIME_____________FOREVER = SECONDS_PER_____________HOUR;
 const uint32_t WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative estimation, 3 or maybe even 2 could also work
 
 #endif

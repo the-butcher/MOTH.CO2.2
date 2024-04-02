@@ -30,7 +30,7 @@ typedef struct {
 } device_action_t;
 
 typedef struct {
-    uint32_t secondsSetupBase;  // secondstime at boot time plus some buffer
+    uint32_t secondstimeBoot;  // secondstime at boot time plus some buffer
     device_action_t deviceActions[5];
     uint8_t actionIndexCur;
     uint8_t actionIndexMax;
@@ -41,16 +41,16 @@ const float LOWPASS_ALPHA = 0.33;        // higher: faster reaction
 
 class Device {
    private:
-    static void handleActionMeasure(values_t* values, config_t* config);
-    static void handleActionReadval(values_t* values, config_t* config);
-    static void handleActionSetting(values_t* values, config_t* config);
-    static void handleActionDisplay(values_t* values, config_t* config);
-    static void handleActionDepower(values_t* values, config_t* config);
-    static void handleActionInvalid(values_t* values, config_t* config);
+    static void handleActionMeasure(config_t* config);
+    static void handleActionReadval(config_t* config);
+    static void handleActionSetting(config_t* config);
+    static void handleActionDisplay(config_t* config);
+    static void handleActionDepower(config_t* config);
+    static void handleActionInvalid(config_t* config);
 
    public:
     static device_t load();
-    static std::function<void(values_t* values, config_t* config)> getFunctionByAction(device_action_e action);
+    static std::function<void(config_t* config)> getFunctionByAction(device_action_e action);
 };
 
 #endif

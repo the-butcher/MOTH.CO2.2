@@ -7,8 +7,8 @@ ButtonHelper::ButtonHelper(gpio_num_t gpin) {
 }
 
 void ButtonHelper::begin() {
-    pinMode(gpin, INPUT_PULLUP);
     rtc_gpio_deinit(gpin);
+    pinMode(gpin, INPUT_PULLUP);
 }
 
 void ButtonHelper::prepareSleep(wakeup_action_e wakeupType) {

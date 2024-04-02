@@ -7,7 +7,7 @@
  * size of the measurement buffer
  * with a measurement interval currently hardcoded to one minute it represents the minute interval in which measurements are saved
  */
-const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
+const uint8_t MEASUREMENT_BUFFER_SIZE = 10;
 
 /**
  * HISTORY_BUFFER_SIZE is identical to MEASUREMENT_BUFFER_SIZE by accident not by design, therefore redefined
@@ -15,7 +15,7 @@ const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
 const uint8_t HISTORY_____BUFFER_SIZE = 60;
 
 typedef struct {
-    uint16_t co2Low;
+    uint16_t co2Lpf;
     uint16_t deg;  // convention needed for fraction
     uint16_t hum;  // convention needed for fraction
     uint16_t co2Raw;
@@ -40,7 +40,7 @@ typedef struct {
 typedef struct {
     uint32_t nextMeasureIndex;
     uint32_t nextDisplayIndex;
-    uint32_t nextConnectIndex;  // next index at which an autoconnect should be attempted
+    uint32_t nextAutoConIndex;  // next index at which an autoconnect should be attempted
     values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 } values_t;
 
@@ -55,7 +55,9 @@ typedef struct {
 class Values {
    private:
    public:
+    static values_t* values;
     static values_t load();
+    static void begin(values_t* values);
 };
 
 #endif

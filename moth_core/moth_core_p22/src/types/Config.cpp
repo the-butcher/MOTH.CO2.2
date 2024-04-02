@@ -24,22 +24,22 @@ config_t Config::load() {
                 60,  // hum wHi
                 65   // hum rHi
             },
-            3,                    // display update minutes
-            DISPLAY_VAL_S_ENTRY,  // entry screen firsl
-            DISPLAY_VAL_M_TABLE,  // entry -> chart | table
-            DISPLAY_VAL_T___CO2,  // value shown when rendering a measurement (table)
-            DISPLAY_VAL_C___ALT,  // value shown when rendering the chart
-            DISPLAY_HRS_C____01,  // hours to be shown in chart display
-            DISPLAY_THM___LIGHT,  // light theme
-            DISPLAY_DEG_CELSIUS,  // temperature scale
+            3,                     // display update minutes
+            DISPLAY_VAL_S__ENTRY,  // entry screen firsl
+            DISPLAY_VAL_M__TABLE,  // entry -> chart | table
+            DISPLAY_VAL_T____CO2,  // value shown when rendering a measurement (table)
+            DISPLAY_VAL_C____ALT,  // value shown when rendering the chart
+            DISPLAY_HRS_C_____01,  // hours to be shown in chart display
+            DISPLAY_THM____LIGHT,  // light theme
+            DISPLAY_DEG__CELSIUS,  // temperature scale
         },
         {
-            false,
-            3,  // network expiry minutes
-            0   // last successful connection index
+            WIFI____VAL_P_CUR_N,  // initial wifi state off
+            3,                    // network expiry minutes
+            0                     // last successful connection index
         },
         {
-            60 * 3  // ntp update
+            15  // ntp update interval, TODO :: reduce to i.e. 6 hours
             // static timezone char array
         },
         {
