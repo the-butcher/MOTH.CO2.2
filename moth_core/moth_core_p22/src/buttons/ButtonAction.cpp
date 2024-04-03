@@ -192,6 +192,7 @@ void ButtonAction::toggleDisplayValHFw(config_t& config) {
     } else {
         // already at DISPLAY_HRS_C_____24
     }
+    ButtonAction::configure(config);
 }
 
 /**
@@ -209,6 +210,7 @@ void ButtonAction::toggleDisplayValHBw(config_t& config) {
     } else {
         // already at DISPLAY_HRS_C_____01
     }
+    ButtonAction::configure(config);
 }
 
 /**

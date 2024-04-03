@@ -52,16 +52,9 @@ void ModuleWifi::begin() {
 bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     // adc_power_on();
 
-    // #ifdef USE___SERIAL
-    //     Serial.println("turning wifi on");
-    // #endif
-
     ModuleSdcard::begin();
 
     ModuleWifi::expiryMinutes = config.wifi.networkExpiryMinutes;
-    // #ifdef USE___SERIAL
-    //     Serial.printf("ModuleWifi::expiryMinutes: %d\n", ModuleWifi::expiryMinutes);
-    // #endif
 
     network_t configuredNetworks[10];
     uint8_t configuredNetworkCount = 0;
@@ -185,9 +178,6 @@ bool ModuleWifi::enableSoftAP(config_t& config) {
 }
 
 void ModuleWifi::depower(config_t& config) {
-    // #ifdef USE___SERIAL
-    //     Serial.println("turning wifi off");
-    // #endif
     // adc_power_off();
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);

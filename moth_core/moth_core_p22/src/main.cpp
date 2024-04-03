@@ -58,15 +58,12 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 // schedule setting and display
 void scheduleDeviceActionSetting() {
     // schedule a display action
-    device.actionIndexMax = DEVICE_ACTION_DEPOWER + 1;  // allow actions display and depower by index
+    device.actionIndexMax = DEVICE_ACTION_DEPOWER;  // allow actions display and depower by index
     uint32_t secondstime = SensorTime::getSecondstime();
     uint32_t secondswait = 60 - secondstime % 60;
     if (device.actionIndexCur == DEVICE_ACTION_MEASURE && secondswait > WAITTIME_DISPLAY_AND_DEPOWER) {
         device.actionIndexCur = DEVICE_ACTION_SETTING;
         device.deviceActions[DEVICE_ACTION_SETTING].secondsNext = SensorTime::getSecondstime();  // assign current time as due time
-    } else {
-        // not index 0 -> having reassigned actionIndexMax to 4 will take care of rendering on the next regular cycle
-        // index 0, but not enough time  -> having reassigned actionIndexMax to 4 will take care of renderingg on the next regular cycle
     }
 }
 
@@ -289,32 +286,25 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
     SensorTime::detachWakeup(wakeupType);
 }
 
-bool isDisplayRequired() {
-    // 1) directly after having redrawn
-    // display
-    uint16_t lastCo2Lpf = values.measurements[values.lastDisplayIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
-    uint16_t currCo2Lpf = values.measurements[(values.nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
-#ifdef USE___SERIAL
-    Serial.printf("nextMeasureIndex: %d, lastCo2Lpf: %d, currCo2Lpf: %d\n", values.nextMeasureIndex, values.nextMeasureIndexlastCo2Lpf, currCo2Lpf);
-#endif
-    if (values.nextMeasureIndex == values.nextDisplayIndex) {
-        return true;
-    }
-    return false;
-}
-
 void loop() {
     device_action_t action = device.deviceActions[device.actionIndexCur];
     if (SensorTime::getSecondsUntil(action.secondsNext) == WAITTIME________________NONE) {  // action is due
         ModuleSignal::setPixelColor(action.color);
-        Device::getFunctionByAction(action.type)(config);  // find and excute the function associated with this action
-        device.actionIndexCur++;
-        if (device.actionIndexCur < device.actionIndexMax) {  // more executable actions?
-            device.deviceActions[device.actionIndexCur].secondsNext = SensorTime::getSecondstime() + action.secondsWait;
-        } else {  // no more executable actions, rollover to zero
-            device.actionIndexCur = 0;
-            device.actionIndexMax = (values.nextMeasureIndex == values.nextDisplayIndex ? DEVICE_ACTION_DEPOWER : DEVICE_ACTION_READVAL) + 1;
+
+        // #ifdef USE___SERIAL
+        //         Serial.printf("executing: %d\n", device.actionIndexCur);
+        // #endif
+
+        device.actionIndexCur = Device::getFunctionByAction(action.type)(config, device.actionIndexMax);  // execute the action and see whats coming next
+
+        // #ifdef USE___SERIAL
+        //         Serial.printf("scheduling: %d\n", device.actionIndexCur);
+        // #endif
+        if (device.actionIndexCur == DEVICE_ACTION_MEASURE) {
+            device.actionIndexMax = values.nextMeasureIndex == values.nextDisplayIndex ? DEVICE_ACTION_DEPOWER : DEVICE_ACTION_READVAL;
             device.deviceActions[DEVICE_ACTION_MEASURE].secondsNext = SensorTime::getSecondstime() + SECONDS_PER_____________HOUR;
+        } else {
+            device.deviceActions[device.actionIndexCur].secondsNext = SensorTime::getSecondstime() + action.secondsWait;
         }
         delay(10);  // TODO :: experimental, trying to find the cause for sporadic 10s@1mA after readval
     }

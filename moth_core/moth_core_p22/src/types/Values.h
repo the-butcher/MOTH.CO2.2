@@ -63,6 +63,7 @@ class Values {
     static values_t* values;
     static values_t load();
     static void begin(values_t* values);
+    static bool isSignificantChange(float last, float curr);
 };
 
 #endif

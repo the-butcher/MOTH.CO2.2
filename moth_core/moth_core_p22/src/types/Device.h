@@ -33,23 +33,23 @@ typedef struct {
 typedef struct {
     uint32_t secondstimeBoot;
     device_action_t deviceActions[5];
-    uint8_t actionIndexCur;
-    uint8_t actionIndexMax;
+    device_action_e actionIndexCur;
+    device_action_e actionIndexMax;
 } device_t;
 
 class Device {
    private:
     static calibration_t calibrationResult;
-    static void handleActionMeasure(config_t& config);
-    static void handleActionReadval(config_t& config);
-    static void handleActionSetting(config_t& config);
-    static void handleActionDisplay(config_t& config);
-    static void handleActionDepower(config_t& config);
-    static void handleActionInvalid(config_t& config);
+    static device_action_e handleActionMeasure(config_t& config, device_action_e maxDeviceAction);
+    static device_action_e handleActionReadval(config_t& config, device_action_e maxDeviceAction);
+    static device_action_e handleActionSetting(config_t& config, device_action_e maxDeviceAction);
+    static device_action_e handleActionDisplay(config_t& config, device_action_e maxDeviceAction);
+    static device_action_e handleActionDepower(config_t& config, device_action_e maxDeviceAction);
+    static device_action_e handleActionInvalid(config_t& config, device_action_e maxDeviceAction);
 
    public:
     static device_t load();
-    static std::function<void(config_t& config)> getFunctionByAction(device_action_e action);
+    static std::function<device_action_e(config_t& config, device_action_e maxDeviceAction)> getFunctionByAction(device_action_e action);
 };
 
 #endif

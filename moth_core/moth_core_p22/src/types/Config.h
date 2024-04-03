@@ -79,7 +79,7 @@ typedef enum : uint8_t {
 
 typedef enum : uint8_t {
     DISPLAY_VAL_Y____FIX,  // update with fixed interval
-    DISPLAY_VAL_Y____SIG   // update upon signific change
+    DISPLAY_VAL_Y____SIG   // update upon significant change
 } display_val_y_e;
 
 typedef struct {

@@ -54,12 +54,12 @@ device_t Device::load() {
         0                       // no delay required after this action
     };
     device.actionIndexCur = DEVICE_ACTION_DISPLAY;  // start with DEVICE_ACTION_DISPLAY for entry screen
-    device.actionIndexMax = DEVICE_ACTION_DEPOWER + 1;
+    device.actionIndexMax = DEVICE_ACTION_DEPOWER;
 
     return device;
 }
 
-std::function<void(config_t& config)> Device::getFunctionByAction(device_action_e action) {
+std::function<device_action_e(config_t& config, device_action_e maxDeviceAction)> Device::getFunctionByAction(device_action_e action) {
     if (action == DEVICE_ACTION_MEASURE) {
         return handleActionMeasure;
     } else if (action == DEVICE_ACTION_READVAL) {
@@ -75,11 +75,12 @@ std::function<void(config_t& config)> Device::getFunctionByAction(device_action_
     }
 }
 
-void Device::handleActionInvalid(config_t& config) {
+device_action_e Device::handleActionInvalid(config_t& config, device_action_e maxDeviceAction) {
     // TODO :: should not be called, handle this condition
+    return DEVICE_ACTION_MEASURE;
 }
 
-void Device::handleActionMeasure(config_t& config) {
+device_action_e Device::handleActionMeasure(config_t& config, device_action_e maxDeviceAction) {
 
     SensorScd041::powerup();
 
@@ -98,9 +99,11 @@ void Device::handleActionMeasure(config_t& config) {
         SensorEnergy::depower();
     }
     Values::values->nextMeasureIndex++;
+
+    return DEVICE_ACTION_READVAL;  // read values after measuring
 }
 
-void Device::handleActionReadval(config_t& config) {
+device_action_e Device::handleActionReadval(config_t& config, device_action_e maxDeviceAction) {
 
     // read values from the sensors
     values_co2_t measurementCo2 = SensorScd041::readval();
@@ -173,9 +176,22 @@ void Device::handleActionReadval(config_t& config) {
         ModuleSdcard::begin();
         ModuleSdcard::persistValues();
     }
+
+    if (maxDeviceAction == DEVICE_ACTION_READVAL) {
+        if (config.disp.displayValCycle == DISPLAY_VAL_Y____SIG) {
+            uint16_t lastCo2Lpf = Values::values->measurements[Values::values->lastDisplayIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
+            uint16_t currCo2Lpf = Values::values->measurements[(Values::values->nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
+            if (Values::isSignificantChange(lastCo2Lpf, currCo2Lpf)) {
+                return DEVICE_ACTION_DISPLAY;  // skip settings and advance directly to display
+            }
+        }
+        return DEVICE_ACTION_MEASURE;  // meant to measure AND no displayable, significant change
+    } else {
+        return DEVICE_ACTION_SETTING;  // setting will trigger a redraw, therefore no need to check for significant change
+    }
 }
 
-void Device::handleActionSetting(config_t& config) {
+device_action_e Device::handleActionSetting(config_t& config, device_action_e maxDeviceAction) {
 
     // turn on wifi, if required and adapt display modus
     if (config.wifi.wifiValPower == WIFI____VAL_P_PND_Y && !ModuleWifi::isPowered()) {  // to be turned on, but currently off
@@ -218,9 +234,11 @@ void Device::handleActionSetting(config_t& config) {
         ModuleServer::requestedCo2Rst = false;
         SensorScd041::depower();
     }
+
+    return DEVICE_ACTION_DISPLAY;  // when settings runs, there should always be a redraw
 }
 
-void Device::handleActionDisplay(config_t& config) {
+device_action_e Device::handleActionDisplay(config_t& config, device_action_e maxDeviceAction) {
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
     if (config.disp.displayValSetng == DISPLAY_VAL_S__ENTRY) {
         ModuleDisplay::renderEntry(config);  // splash screen
@@ -245,8 +263,10 @@ void Device::handleActionDisplay(config_t& config) {
         // TODO :: handle this
     }
     config.disp.displayValSetng = DISPLAY_VAL_S___NONE;
+    return DEVICE_ACTION_DEPOWER;  // display must be depowered after drawing
 }
 
-void Device::handleActionDepower(config_t& config) {
+device_action_e Device::handleActionDepower(config_t& config, device_action_e maxDeviceAction) {
     ModuleDisplay::depower();
+    return DEVICE_ACTION_MEASURE;  // after redrawing pause, then measure
 }
