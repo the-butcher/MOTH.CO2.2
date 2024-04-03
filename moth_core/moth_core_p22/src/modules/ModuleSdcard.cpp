@@ -14,19 +14,10 @@ void ModuleSdcard::begin() {
     }
 }
 
-static values_all_t emptyMeasurement(uint32_t secondstime) {
-    return {
-        secondstime,                                                           // secondstime of history measurement
-        {0, SensorScd041::toShortDeg(0.0), SensorScd041::toShortHum(0.0), 0},  // co2 measurement
-        {0.0f},                                                                // bme measurement
-        {SensorEnergy::toShortPercent(0.0)}                                    // nrg measurement
-    };
-}
-
-void ModuleSdcard::historyValues(config_t* config, values_all_t history[HISTORY_____BUFFER_SIZE]) {
+void ModuleSdcard::historyValues(config_t& config, values_all_t history[HISTORY_____BUFFER_SIZE]) {
     // setup search seconds
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
-    uint32_t secondstimeIncr = config->disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
+    uint32_t secondstimeIncr = config.disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
     uint32_t secondstimeBase = Values::values->measurements[currMeasureIndex % MEASUREMENT_BUFFER_SIZE].secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // the secondstime
 
     int32_t secondstimeDiff;
@@ -35,7 +26,7 @@ void ModuleSdcard::historyValues(config_t* config, values_all_t history[HISTORY_
     int8_t historyIndexMax = -1;
 
     // file related stuff
-    if (config->disp.displayHrsChart > 1) {
+    if (config.disp.displayHrsChart > 1) {
         File32 datFile;
         file32_def_t fileDef32;
 
@@ -46,7 +37,7 @@ void ModuleSdcard::historyValues(config_t* config, values_all_t history[HISTORY_
 
         for (uint8_t historyIndex = 0; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
             secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
-            history[historyIndex] = emptyMeasurement(secondstimeIndx);
+            history[historyIndex] = Values::emptyMeasurement(secondstimeIndx);
             fileDef32 = SensorTime::getFile32Def(secondstimeIndx, "dat");
             // when a new (or actually first) file is encountered -> open it
             if (fileDef32.name != datFileNameLast) {
@@ -101,7 +92,7 @@ void ModuleSdcard::historyValues(config_t* config, values_all_t history[HISTORY_
     uint32_t secondstimeMeas = 0;
     for (uint8_t historyIndex = historyIndexMax + 1; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
         secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
-        history[historyIndex] = emptyMeasurement(secondstimeIndx);
+        history[historyIndex] = Values::emptyMeasurement(secondstimeIndx);
         while (measureIndex < currMeasureIndex + 1 + MEASUREMENT_BUFFER_SIZE && secondstimeMeas + 30 < secondstimeIndx) {  // TODO :: currMeasureIndex + 1 should be measureIndex
             secondstimeMeas = Values::values->measurements[measureIndex % MEASUREMENT_BUFFER_SIZE].secondstime;
             // Serial.print(measureIndex);
@@ -129,6 +120,11 @@ void ModuleSdcard::historyValues(config_t* config, values_all_t history[HISTORY_
 }
 
 void ModuleSdcard::persistValues() {
+
+#ifdef USE___SERIAL
+    Serial.println("persisting values ... ");
+#endif
+
     file32_def_t fileDef32;
     String datFileNameLast = "";
     String datFilePathLast = "";
@@ -138,8 +134,7 @@ void ModuleSdcard::persistValues() {
         value = Values::values->measurements[valueIndex];
         fileDef32 = SensorTime::getFile32Def(value.secondstime, "dat");  // the file name that shall be written to
         if (fileDef32.name != datFileNameLast) {
-            if (datFile) {       // file already open -> file change at midnight
-                datFile.sync();  // write anything pending
+            if (datFile) {  // file already open -> file change at midnight
                 datFile.close();
             }
             if (fileDef32.path != datFileNameLast) {  // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
@@ -151,7 +146,6 @@ void ModuleSdcard::persistValues() {
         }
         datFile.write((byte*)&value, sizeof(value));
     }
-    datFile.sync();
     datFile.close();
 }
 

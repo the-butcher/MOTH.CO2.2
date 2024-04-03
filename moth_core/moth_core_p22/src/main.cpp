@@ -20,21 +20,21 @@
 
 RTC_DATA_ATTR setup_mode_t setupMode = SETUP_BOOT;
 
-// device state
-RTC_DATA_ATTR device_t device;  // size: ~108
-
 // configuration and display state
-RTC_DATA_ATTR config_t config;  // size: ~128
+RTC_DATA_ATTR config_t config;  // size: ~108
 
 // last hour of measurements and associated indices
 RTC_DATA_ATTR values_t values;  // size: ~1212
+
+// device state
+RTC_DATA_ATTR device_t device;  // size: ~108
 
 // does not need to be RTC_DATA_ATTR, reset to 0 does not matter
 uint16_t actionNum = 0;
 
 const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 
-// uint16_t sc = sizeof(device);
+// uint16_t sc = sizeof(values);
 
 /**
  * OK wifi
@@ -43,14 +43,19 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  *    OK async server
  *       -- full set of functions, upload, update
  * -- restore full configuration
- * -- calibration of SCD41
- * -- factory reset of SCD41
+ * OK calibration of SCD41
+ *    -- must run 3 minutes in idle before calibrating or it will fail
+ * OK factory reset of SCD41
+ *    -- TODO :: test
  * OK dat to csv for file download
  * -- reimplement significant change for shorter display intervals
  * -- reimplement OTA
- * -- actual beep (situations other than button press too)
+ * OK actual beep (situations other than button press too)
+ * -- adapt server.html for updated api names
+ * -- fahrenheit display
  */
 
+// schedule setting and display
 void scheduleDeviceActionSetting() {
     // schedule a display action
     device.actionIndexMax = DEVICE_ACTION_DEPOWER + 1;  // allow actions display and depower by index
@@ -74,16 +79,13 @@ void scheduleDeviceActionMeasure() {
 /**
  * handle a detected button action (pin and type)
  */
-void handleButtonActionComplete(std::function<void(config_t* config)> actionFunction) {
+void handleButtonActionComplete(std::function<void(config_t& config)> actionFunction) {
     if (actionFunction != nullptr) {
-#ifdef USE___SERIAL
-        Serial.println("handling button action complete");
-#endif
-        ModuleSignal::beep();
-        actionFunction(&config);        // execute the action (which, by convention, only alters the config to not interfere with program flow)
+        ModuleSignal::beep();           // indicate completed button action
+        actionFunction(config);         // execute the action (which, by convention, only alters the config to not interfere with program flow)
         scheduleDeviceActionSetting();  // schedule DEVICE_ACTION_SETTING and DEVICE_ACTION_DISPLAY
-        actionNum++;
     }
+    actionNum++;  // interrupt delay loop
 }
 
 void scheduleDeviceActionDepower() {
@@ -133,7 +135,7 @@ void setup() {
         device = Device::load();
         config = Config::load();
         values = Values::load();
-        if (SensorScd041::configure(&config)) {
+        if (SensorScd041::configure(config)) {
             ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (involving a write to the scd41's eeprom)
         }
 
@@ -150,7 +152,7 @@ void setup() {
 
     // show the correct button hints and have callback in place
     ButtonAction::begin(handleButtonActionComplete);
-    ButtonAction::configure(&config);
+    ButtonAction::configure(config);
 
     // only sets the callback, but does not powerup anything
     ModuleDisplay::begin();
@@ -242,27 +244,39 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
 
     ModuleSignal::setPixelColor(COLOR_____CYAN);
     while (isDelayRequired() && millis() < millisBreak && actionNumEntry == actionNum) {
+
         delay(50);
+
+        // the 1 minute measure pin
         if (SensorTime::isInterrupted()) {
             scheduleDeviceActionMeasure();
             break;
         }
+
+        // the display's busy pin
         if (ModuleDisplay::isInterrupted()) {
             scheduleDeviceActionDepower();
             break;
         }
+
+        // wifi expiry
         if (SensorTime::getSecondsUntil(ModuleWifi::getSecondstimeExpiry()) == WAITTIME________________NONE && config.wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {
-// only checking for the flag, not actual WiFi status, the flag will then cause appropriate action in the settings action
-#ifdef USE___SERIAL
-            Serial.println("break for wifi off");
-#endif
             config.wifi.wifiValPower = WIFI____VAL_P_PND_N;  // set flag to pending off
             scheduleDeviceActionSetting();
             break;
         }
-        if (ModuleServer::requestedCalibrationReference > 400) {
+
+        // calibration or reset
+        if (ModuleServer::requestedCo2Ref > 400) {
 #ifdef USE___SERIAL
-            Serial.println("break for calibration");
+            Serial.println("break for co2cal");
+#endif
+            // TODO :: beep, implemented in a proper place
+            scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
+            break;
+        } else if (ModuleServer::requestedCo2Rst) {
+#ifdef USE___SERIAL
+            Serial.println("break for co2rst");
 #endif
             // TODO :: beep, implemented in a proper place
             scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
@@ -275,11 +289,25 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
     SensorTime::detachWakeup(wakeupType);
 }
 
+bool isDisplayRequired() {
+    // 1) directly after having redrawn
+    // display
+    uint16_t lastCo2Lpf = values.measurements[values.lastDisplayIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
+    uint16_t currCo2Lpf = values.measurements[(values.nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
+#ifdef USE___SERIAL
+    Serial.printf("nextMeasureIndex: %d, lastCo2Lpf: %d, currCo2Lpf: %d\n", values.nextMeasureIndex, values.nextMeasureIndexlastCo2Lpf, currCo2Lpf);
+#endif
+    if (values.nextMeasureIndex == values.nextDisplayIndex) {
+        return true;
+    }
+    return false;
+}
+
 void loop() {
     device_action_t action = device.deviceActions[device.actionIndexCur];
     if (SensorTime::getSecondsUntil(action.secondsNext) == WAITTIME________________NONE) {  // action is due
         ModuleSignal::setPixelColor(action.color);
-        Device::getFunctionByAction(action.type)(&config);  // find and excute the function associated with this action
+        Device::getFunctionByAction(action.type)(config);  // find and excute the function associated with this action
         device.actionIndexCur++;
         if (device.actionIndexCur < device.actionIndexMax) {  // more executable actions?
             device.deviceActions[device.actionIndexCur].secondsNext = SensorTime::getSecondstime() + action.secondsWait;

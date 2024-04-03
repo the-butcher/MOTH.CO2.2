@@ -9,13 +9,13 @@ void SensorScd041::begin() {
     SensorScd041::baseSensor.begin(Wire);
 }
 
-bool SensorScd041::configure(config_t* config) {
+bool SensorScd041::configure(config_t& config) {
     // check current setting first
     float temperatureOffsetV = 0;
     float& temperatureOffsetR = temperatureOffsetV;
     SensorScd041::baseSensor.getTemperatureOffset(temperatureOffsetR);
     // whats about to be set
-    float temperatureOffsetC = config->sco2.temperatureOffset;
+    float temperatureOffsetC = config.sco2.temperatureOffset;
     // apply, only if there is a real change
     if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
         SensorScd041::baseSensor.setTemperatureOffset(temperatureOffsetC);
@@ -27,18 +27,54 @@ bool SensorScd041::configure(config_t* config) {
     }
 }
 
-uint16_t SensorScd041::forceCalibration(uint16_t calibrationReference) {
-#ifdef USE___SERIAL
-    Serial.print("calibrationReference: ");
-    Serial.println(calibrationReference);
-#endif
-    // TODO :: return a struct instance, so the display can render appropriate information
-    return 0;
-    // uint16_t frcV = 0;
-    // uint16_t& frcR = frcV;
-    // SensorScd041::baseSensor.performForcedRecalibration(reference, frcR);
-    // delay(400);
-    // return frcV;
+bool SensorScd041::setCompensationAltitude(uint16_t compensationAltitude) {
+    uint16_t success = SensorScd041::baseSensor.setSensorAltitude(compensationAltitude);
+    return success == 0;
+}
+
+calibration_t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
+
+    uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
+    uint32_t currMeasureIndex = nextMeasureIndex - 1;
+    values_all_t measurement;
+    uint16_t co2Lpf = 0;
+    uint16_t co2Raw = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        measurement = Values::values->measurements[(currMeasureIndex - i + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
+        if (i == 0) {
+            co2Lpf = measurement.valuesCo2.co2Lpf;
+        }
+        co2Raw += measurement.valuesCo2.co2Raw;
+    }
+    uint16_t correctedCo2Ref = requestedCo2Ref - co2Lpf + (uint16_t)round(co2Raw / 3.0f);
+
+    uint16_t frcV = 0;
+    uint16_t& frcR = frcV;
+    int16_t offV = 0x8000;
+    SensorScd041::baseSensor.performForcedRecalibration(correctedCo2Ref, frcR);
+    delay(400);
+
+    // #ifdef USE___SERIAL
+    //     Serial.printf("frcV: %d\n", frcV);
+    // #endif
+
+    if (frcV == 0xffff) {
+        return {false, ACTION___CALIBRATION, requestedCo2Ref, correctedCo2Ref, 0};
+    } else {
+        return {true, ACTION___CALIBRATION, requestedCo2Ref, correctedCo2Ref, (int16_t)(frcV - offV)};
+    }
+}
+
+calibration_t SensorScd041::forceReset() {
+    uint16_t success = SensorScd041::baseSensor.performFactoryReset();
+    delay(400);
+    return {
+        success == 0,  // zero indicates success
+        ACTION_FACTORY_RESET,
+        0,  // no requested value
+        0,  // no corrected value
+        0   // no applied offset
+    };
 }
 
 bool SensorScd041::measure() {
@@ -71,6 +107,13 @@ float SensorScd041::getTemperatureOffset() {
     float& degR = degV;
     SensorScd041::baseSensor.getTemperatureOffset(degR);
     return degV;
+}
+
+uint16_t SensorScd041::getCompensationAltitude() {
+    uint16_t altV = 0;
+    uint16_t& altR = altV;
+    SensorScd041::baseSensor.getSensorAltitude(altR);
+    return altV;
 }
 
 bool SensorScd041::isAutomaticSelfCalibration() {

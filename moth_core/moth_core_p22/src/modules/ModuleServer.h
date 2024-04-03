@@ -15,7 +15,8 @@ class ModuleServer {
     static bool hasBegun;
 
    public:
-    static uint16_t requestedCalibrationReference;
+    static uint16_t requestedCo2Ref;
+    static bool requestedCo2Rst;
     static void begin();
     static void handleApiLatest(AsyncWebServerRequest *request);
     static void handleApiStatus(AsyncWebServerRequest *request);
@@ -23,6 +24,7 @@ class ModuleServer {
     static void handleApiDatCsv(AsyncWebServerRequest *request);
     static void handleApiValCsv(AsyncWebServerRequest *request);
     static void handleApiCo2Cal(AsyncWebServerRequest *request);
+    static void handleApiCo2Rst(AsyncWebServerRequest *request);
     static void serveStatic(AsyncWebServerRequest *request);
     static void fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_t offset);
 };

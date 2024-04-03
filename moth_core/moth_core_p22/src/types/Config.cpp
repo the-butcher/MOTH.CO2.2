@@ -24,14 +24,15 @@ config_t Config::load() {
                 60,  // hum wHi
                 65   // hum rHi
             },
-            3,                     // display update minutes
-            DISPLAY_VAL_S__ENTRY,  // entry screen firsl
+            DISPLAY_VAL_S__ENTRY,  // entry screen first
             DISPLAY_VAL_M__TABLE,  // entry -> chart | table
             DISPLAY_VAL_T____CO2,  // value shown when rendering a measurement (table)
             DISPLAY_VAL_C____ALT,  // value shown when rendering the chart
             DISPLAY_HRS_C_____01,  // hours to be shown in chart display
             DISPLAY_THM____LIGHT,  // light theme
             DISPLAY_DEG__CELSIUS,  // temperature scale
+            DISPLAY_VAL_Y____SIG,
+            3  // display update minutes
         },
         {
             WIFI____VAL_P_CUR_N,  // initial wifi state off
@@ -39,7 +40,7 @@ config_t Config::load() {
             0                     // last successful connection index
         },
         {
-            15  // ntp update interval, TODO :: reduce to i.e. 6 hours
+            360  // ntp update interval, 6 hours
             // static timezone char array
         },
         {

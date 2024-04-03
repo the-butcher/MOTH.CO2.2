@@ -83,19 +83,19 @@ void ModuleDisplay::depower() {
     ModuleDisplay::baseDisplay.depower();
 }
 
-void ModuleDisplay::clearBuffer(config_t *config) {
-    ModuleDisplay::baseDisplay.begin(THINKINK_GRAYSCALE4, config->disp.displayValTheme == DISPLAY_THM____LIGHT);
+void ModuleDisplay::clearBuffer(config_t& config) {
+    ModuleDisplay::baseDisplay.begin(THINKINK_GRAYSCALE4, config.disp.displayValTheme == DISPLAY_THM____LIGHT);
     ModuleDisplay::baseDisplay.clearBuffer();
 }
 
-void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
+void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
     ModuleDisplay::clearBuffer(config);
     ModuleDisplay::drawOuterBorders(EPD_LIGHT);
     ModuleDisplay::drawInnerBorders(EPD_LIGHT);
 
     // values for temperature and humidity
-    float deg = SensorScd041::toFloatDeg(measurement->valuesCo2.deg);  // TODO reconvert to float
-    float hum = SensorScd041::toFloatHum(measurement->valuesCo2.hum);  // TODO reconvert to float
+    float deg = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);  // TODO reconvert to float
+    float hum = SensorScd041::toFloatHum(measurement.valuesCo2.hum);  // TODO reconvert to float
 
     // variables needed
     String title;
@@ -106,12 +106,18 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
     uint16_t charPosValueX = 193;
     uint16_t charPosFinalX;
 
-    if (config->disp.displayValTable == DISPLAY_VAL_T____CO2) {
-        thresholds_co2_t thresholdsCo2 = config->disp.thresholdsCo2;
-        uint16_t co2Lpf = measurement->valuesCo2.co2Lpf;
+    if (config.disp.displayValTable == DISPLAY_VAL_T____CO2) {
+
+        thresholds_co2_t thresholdsCo2 = config.disp.thresholdsCo2;
+        uint16_t co2Lpf = measurement.valuesCo2.co2Lpf;
+
         float stale = max(0.0, min(10.0, (co2Lpf - thresholdsCo2.ref) / 380.0));  // don't allow negative stale values. max out at 10
         float staleWarn = max(0.0, min(10.0, (thresholdsCo2.wHi - thresholdsCo2.ref) / 380.0));
         float staleRisk = max(0.0, min(10.0, (thresholdsCo2.rHi - thresholdsCo2.ref) / 380.0));
+
+        // #ifdef USE___SERIAL
+        //         Serial.printf("co2Lpf %d, thresholdsCo2.ref: %d, stale: %f\n", co2Lpf, thresholdsCo2.ref, stale);
+        // #endif
 
         float staleMax = 2.5;
         if (stale > 4) {
@@ -184,8 +190,8 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
         }
         ModuleDisplay::drawAntialiasedText06("%", RECT_CO2, xPrc, yPrc, textColor);
 
-    } else if (config->disp.displayValTable == DISPLAY_VAL_T____HPA) {
-        float pressure = measurement->valuesBme.pressure;
+    } else if (config.disp.displayValTable == DISPLAY_VAL_T____HPA) {
+        float pressure = measurement.valuesBme.pressure;
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
@@ -193,8 +199,8 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
         title = "pressure hPa";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
         ModuleDisplay::drawAntialiasedText36(formatString(String(pressure, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
-    } else if (config->disp.displayValTable == DISPLAY_VAL_T____ALT) {
-        float altitude = SensorBme280::getAltitude(config->pressureZerolevel, measurement->valuesBme.pressure);
+    } else if (config.disp.displayValTable == DISPLAY_VAL_T____ALT) {
+        float altitude = SensorBme280::getAltitude(config.pressureZerolevel, measurement.valuesBme.pressure);
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
@@ -204,15 +210,15 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
         ModuleDisplay::drawAntialiasedText36(formatString(String(altitude, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     } else {
 #ifdef USE___SERIAL
-        Serial.printf("unhandled displayValTable: %d\n", config->disp.displayValTable);
+        Serial.printf("unhandled displayValTable: %d\n", config.disp.displayValTable);
 #endif
     }
     ModuleDisplay::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
 
-    thresholds_deg_t thresholdsDeg = config->disp.thresholdsDeg;
+    thresholds_deg_t thresholdsDeg = config.disp.thresholdsDeg;
     textColor = getTextColor(deg, thresholdsDeg.rLo, thresholdsDeg.wLo, thresholdsDeg.wHi, thresholdsDeg.rHi);
     fillColor = getFillColor(deg, thresholdsDeg.rLo, thresholdsDeg.wLo, thresholdsDeg.wHi, thresholdsDeg.rHi);
-    if (config->disp.displayDegScale == DISPLAY_DEG__FAHRENH) {
+    if (config.disp.displayDegScale == DISPLAY_DEG__FAHRENH) {
         deg = ModuleDisplay::celsiusToFahrenheit(deg);
     }
     int temperature10 = round(deg * 10.0);
@@ -222,11 +228,11 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
         ModuleDisplay::fillRectangle(RECT_DEG, fillColor);
     }
     ModuleDisplay::drawAntialiasedText18(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 0, 35, textColor);
-    ModuleDisplay::drawAntialiasedText06(config->disp.displayDegScale == DISPLAY_DEG__FAHRENH ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
+    ModuleDisplay::drawAntialiasedText06(config.disp.displayDegScale == DISPLAY_DEG__FAHRENH ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
     ModuleDisplay::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
     ModuleDisplay::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
 
-    thresholds_hum_t thresholdsHum = config->disp.thresholdsHum;
+    thresholds_hum_t thresholdsHum = config.disp.thresholdsHum;
     textColor = getTextColor(hum, thresholdsHum.rLo, thresholdsHum.wLo, thresholdsHum.wHi, thresholdsHum.rHi);
     fillColor = getFillColor(hum, thresholdsHum.rLo, thresholdsHum.wLo, thresholdsHum.wHi, thresholdsHum.rHi);
     int humidity10 = round(hum * 10.0);
@@ -249,11 +255,11 @@ void ModuleDisplay::renderTable(values_all_t *measurement, config_t *config) {
 /**
  * measurement is reference for building the measurement table backwards
  */
-void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
+void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
     ModuleDisplay::clearBuffer(config);
     ModuleDisplay::drawOuterBorders(EPD_LIGHT);
 
-    display_val_c_e displayValChart = config->disp.displayValChart;
+    display_val_c_e displayValChart = config.disp.displayValChart;
 
     values_all_t measurement;
     uint16_t minValue = 0;
@@ -270,7 +276,7 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
             }
         }
     } else if (displayValChart == DISPLAY_VAL_C____DEG) {
-        if (config->disp.displayDegScale == DISPLAY_DEG__FAHRENH) {
+        if (config.disp.displayDegScale == DISPLAY_DEG__FAHRENH) {
             minValue = 60;
             maxValue = 120;
         } else {
@@ -299,7 +305,7 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
         for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
             measurement = history[i];
             if (measurement.valuesBme.pressure > 0) {
-                altitude = SensorBme280::getAltitude(config->pressureZerolevel, measurement.valuesBme.pressure);
+                altitude = SensorBme280::getAltitude(config.pressureZerolevel, measurement.valuesBme.pressure);
             } else {
                 altitude = 0.0f;
             }
@@ -332,17 +338,17 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
     String title;
 
     if (displayValChart == DISPLAY_VAL_C____CO2) {
-        title = "CO² ppm," + String(config->disp.displayHrsChart) + "h";  // the sup 2 has been modified in the font to display as sub
+        title = "CO² ppm," + String(config.disp.displayHrsChart) + "h";  // the sup 2 has been modified in the font to display as sub
     } else if (displayValChart == DISPLAY_VAL_C____DEG) {
-        title = config->disp.displayDegScale == DISPLAY_DEG__FAHRENH ? "temperature °F," : "temperature °C," + String(config->disp.displayHrsChart) + "h";
+        title = config.disp.displayDegScale == DISPLAY_DEG__FAHRENH ? "temperature °F," : "temperature °C," + String(config.disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C____HUM) {
-        title = "humidity %," + String(config->disp.displayHrsChart) + "h";
+        title = "humidity %," + String(config.disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C____HPA) {
-        title = "pressure hPa," + String(config->disp.displayHrsChart) + "h";
+        title = "pressure hPa," + String(config.disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C____ALT) {
-        title = "altitude m," + String(config->disp.displayHrsChart) + "h";
+        title = "altitude m," + String(config.disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C____NRG) {
-        title = "battery %," + String(config->disp.displayHrsChart) + "h";
+        title = "battery %," + String(config.disp.displayHrsChart) + "h";
     }
     ModuleDisplay::drawAntialiasedText06(title, RECT_CO2, LIMIT_POS_X - title.length() * CHAR_DIM_X6 + 3, charPosLabelY, EPD_BLACK);
 
@@ -368,7 +374,7 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t *config) {
             curValue = measurement.valuesBme.pressure;
         } else if (displayValChart == DISPLAY_VAL_C____ALT) {
             if (measurement.valuesBme.pressure > 0) {
-                curValue = SensorBme280::getAltitude(config->pressureZerolevel, measurement.valuesBme.pressure);
+                curValue = SensorBme280::getAltitude(config.pressureZerolevel, measurement.valuesBme.pressure);
             } else {
                 curValue = 0.0f;
             }
@@ -408,7 +414,7 @@ void ModuleDisplay::renderButton(button_action_t buttonAction, uint16_t x) {
     ModuleDisplay::drawAntialiasedText06(buttonAction.extraLabel, RECT_TOP, x + CHAR_DIM_X6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
 }
 
-void ModuleDisplay::renderFooter(config_t *config) {
+void ModuleDisplay::renderFooter(config_t& config) {
     float percent = SensorEnergy::toFloatPercent(SensorEnergy::readval().percent);
 
     String cellPercentFormatted = formatString(String(percent, 0), FORMAT_CELL_PERCENT);
@@ -426,12 +432,12 @@ void ModuleDisplay::renderFooter(config_t *config) {
     ModuleDisplay::baseDisplay.drawFastHLine(RECT_NRG.xmax - 3, RECT_NRG.ymin + 1, 2, EPD_WHITE);
 
     int charPosFooter = 7;
-    if (config->sign.signalValSound == SIGNAL__VAL______ON) {
+    if (config.sign.signalValSound == SIGNAL__VAL______ON) {
         ModuleDisplay::drawAntialiasedText08(SYMBOL_YBEEP, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
         charPosFooter += 13;
     }
 
-    if (config->wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {
+    if (config.wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {
         String address = ModuleWifi::getAddress();
         ModuleDisplay::drawAntialiasedText06(address, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
         ModuleDisplay::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * CHAR_DIM_X6, TEXT_OFFSET_Y, EPD_BLACK);
@@ -440,7 +446,7 @@ void ModuleDisplay::renderFooter(config_t *config) {
     ModuleDisplay::drawAntialiasedText06(SensorTime::getDateTimeDisplayString(SensorTime::getSecondstime()), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
 }
 
-void ModuleDisplay::renderEntry(config_t *config) {
+void ModuleDisplay::renderEntry(config_t& config) {
     ModuleDisplay::clearBuffer(config);
     ModuleDisplay::drawOuterBorders(EPD_LIGHT);
 
@@ -453,7 +459,31 @@ void ModuleDisplay::renderEntry(config_t *config) {
     ModuleDisplay::flushBuffer();
 }
 
-void ModuleDisplay::renderQRCodes(config_t *config) {
+void ModuleDisplay::renderCo2(config_t& config, calibration_t calibration) {
+
+    ModuleDisplay::clearBuffer(config);
+    ModuleDisplay::drawOuterBorders(EPD_LIGHT);
+
+    char titleBuf[32];
+    sprintf(titleBuf, "%s (%s)", calibration.action == ACTION___CALIBRATION ? "CALIBRATION" : "RESET", calibration.success ? "success" : "failure");
+
+    drawAntialiasedText08(String(titleBuf), RECT_TOP, 8, 40, EPD_BLACK);
+    if (calibration.action == ACTION___CALIBRATION) {
+        drawAntialiasedText08("req: ", RECT_TOP, 8, 60, EPD_BLACK);
+        drawAntialiasedText08(String(calibration.requestedCo2Ref), RECT_TOP, 50, 60, EPD_BLACK);
+        drawAntialiasedText08("cor: ", RECT_TOP, 8, 78, EPD_BLACK);
+        drawAntialiasedText08(String(calibration.correctedCo2Ref), RECT_TOP, 50, 78, EPD_BLACK);
+        drawAntialiasedText08("off: ", RECT_TOP, 8, 96, EPD_BLACK);
+        drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
+    }
+
+    ModuleDisplay::renderHeader();
+    ModuleDisplay::renderFooter(config);
+
+    ModuleDisplay::flushBuffer();
+}
+
+void ModuleDisplay::renderQRCodes(config_t& config) {
     ModuleDisplay::clearBuffer(config);
     ModuleDisplay::drawOuterBorders(EPD_LIGHT);
 
@@ -532,7 +562,7 @@ void ModuleDisplay::drawAntialiasedText36(String text, rectangle_t rectangle, in
 /**
  * when switching fonts, setFont(...) must be called before setCursor(...), or there may be a y-offset on the very first text
  */
-void ModuleDisplay::drawAntialiasedText(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color, const GFXfont *fontL, const GFXfont *fontD, const GFXfont *fontB) {
+void ModuleDisplay::drawAntialiasedText(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color, const GFXfont* fontL, const GFXfont* fontD, const GFXfont* fontB) {
     ModuleDisplay::baseDisplay.setFont(fontL);
     ModuleDisplay::baseDisplay.setCursor(rectangle.xmin + xRel, rectangle.ymin + yRel);
     ModuleDisplay::baseDisplay.setTextColor(color == EPD_BLACK ? EPD_LIGHT : EPD_DARK);
@@ -617,7 +647,7 @@ uint8_t ModuleDisplay::getVertColor(float value, uint16_t rLo, uint16_t warnLo, 
     }
 }
 
-String ModuleDisplay::formatString(String value, char const *format) {
+String ModuleDisplay::formatString(String value, char const* format) {
     char padBuffer[16];
     sprintf(padBuffer, format, value);
     return padBuffer;

@@ -1,11 +1,12 @@
 #ifndef Device_h
 #define Device_h
 
+#include "sensors/SensorScd041.h"
 #include "types/Action.h"
 #include "types/Config.h"
 #include "types/Values.h"
 
-typedef enum {
+typedef enum : uint8_t {
     SETUP_BOOT,
     SETUP_MAIN
 } setup_mode_t;
@@ -13,7 +14,7 @@ typedef enum {
 /**
  * ONLY CHANGE WITH CARE :: INDICES OF ACTIONS MUST REMAIN CONSTANT
  */
-typedef enum {
+typedef enum : uint8_t {
     DEVICE_ACTION_MEASURE,  // i2c on, measure
     DEVICE_ACTION_READVAL,  // read values
     DEVICE_ACTION_SETTING,  // any settings to be applied, i.e. after button press, or wifi request
@@ -30,27 +31,25 @@ typedef struct {
 } device_action_t;
 
 typedef struct {
-    uint32_t secondstimeBoot;  // secondstime at boot time plus some buffer
+    uint32_t secondstimeBoot;
     device_action_t deviceActions[5];
     uint8_t actionIndexCur;
     uint8_t actionIndexMax;
 } device_t;
 
-const uint8_t LOWPASS_BUFFER_SIZE = 16;  // arbitrary size
-const float LOWPASS_ALPHA = 0.33;        // higher: faster reaction
-
 class Device {
    private:
-    static void handleActionMeasure(config_t* config);
-    static void handleActionReadval(config_t* config);
-    static void handleActionSetting(config_t* config);
-    static void handleActionDisplay(config_t* config);
-    static void handleActionDepower(config_t* config);
-    static void handleActionInvalid(config_t* config);
+    static calibration_t calibrationResult;
+    static void handleActionMeasure(config_t& config);
+    static void handleActionReadval(config_t& config);
+    static void handleActionSetting(config_t& config);
+    static void handleActionDisplay(config_t& config);
+    static void handleActionDepower(config_t& config);
+    static void handleActionInvalid(config_t& config);
 
    public:
     static device_t load();
-    static std::function<void(config_t* config)> getFunctionByAction(device_action_e action);
+    static std::function<void(config_t& config)> getFunctionByAction(device_action_e action);
 };
 
 #endif

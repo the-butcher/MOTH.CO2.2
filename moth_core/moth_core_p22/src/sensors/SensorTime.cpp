@@ -21,10 +21,10 @@ void SensorTime::begin() {
     sntp_set_time_sync_notification_cb(SensorTime::handleNtpUpdate);
 }
 
-void SensorTime::configure(config_t* config) {
-    setenv("TZ", config->time.timezone, 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+void SensorTime::configure(config_t& config) {
+    setenv("TZ", config.time.timezone, 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
     tzset();
-    configTzTime(config->time.timezone, "pool.ntp.org", "time.nist.gov");  // will trigger actual ntp update call
+    configTzTime(config.time.timezone, "pool.ntp.org", "time.nist.gov");  // will trigger actual ntp update call
     SensorTime::ntpWait = true;
 }
 
@@ -77,9 +77,9 @@ void SensorTime::handleNtpUpdate(struct timeval* t) {
     DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
     SensorTime::baseSensor.adjust(now);
     SensorTime::secondstimeOffsetUtc = SECONDS_FROM_1970_TO_2000 + now.secondstime() - t->tv_sec;
-#ifdef USE___SERIAL
-    Serial.printf("secondstimeOffsetUtc: %d\n", secondstimeOffsetUtc);
-#endif
+    // #ifdef USE___SERIAL
+    //     Serial.printf("secondstimeOffsetUtc: %d\n", secondstimeOffsetUtc);
+    // #endif
     SensorTime::ntpWait = false;
 }
 
@@ -181,11 +181,12 @@ String SensorTime::getNameOfMonth(DateTime date) {
     }
 }
 
+/**
+ * provides a datetime callback function so dat files can be written with correct timestamps
+ * used in ModuleSdCard::begin(...)
+ */
 void SensorTime::dateTimeCallback(uint16_t* date, uint16_t* time) {
     DateTime now = SensorTime::baseSensor.now();
-    *date = FS_DATE(now.year(), now.month(), now.day());
-    *time = FS_TIME(now.hour(), now.minute(), now.second());
-#ifdef USE___SERIAL
-    Serial.printf("dateTimeCallback, date: %d, time: %d\n", date, time);
-#endif
+    *date = FAT_DATE(now.year(), now.month(), now.day());
+    *time = FAT_TIME(now.hour(), now.minute(), now.second());
 }

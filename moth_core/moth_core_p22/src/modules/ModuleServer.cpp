@@ -12,7 +12,8 @@
 
 AsyncWebServer ModuleServer::server(80);
 bool ModuleServer::hasBegun = false;
-uint16_t ModuleServer::requestedCalibrationReference = 0;
+uint16_t ModuleServer::requestedCo2Ref = 0;
+bool ModuleServer::requestedCo2Rst = false;
 
 void ModuleServer::begin() {
     if (!ModuleServer::hasBegun) {
@@ -22,6 +23,7 @@ void ModuleServer::begin() {
         server.on("/api/datcsv", HTTP_GET, handleApiDatCsv);  // get csv from data stored in dat files
         server.on("/api/valcsv", HTTP_GET, handleApiValCsv);  // get csv from data measured in the last hour
         server.on("/api/co2cal", HTTP_GET, handleApiCo2Cal);
+        server.on("/api/co2rst", HTTP_GET, handleApiCo2Rst);
         server.onNotFound(serveStatic);
         DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
         server.begin();
@@ -71,9 +73,10 @@ void ModuleServer::handleApiStatus(AsyncWebServerRequest *request) {
     root["freq"] = ESP.getCpuFreqMHz();
 
     JsonObject &scd041Jo = root.createNestedObject("scd041");
-    // scd041Jo["co2r"] = SensorScd041::getCo2Reference();
+    // scd041Jo["co2r"] = SensorScd041::getCo2Reference(); // TODO :: decide whether and how to expose config to ModuleServer
     scd041Jo["toff"] = SensorScd041::getTemperatureOffset();
     scd041Jo["iasc"] = SensorScd041::isAutomaticSelfCalibration();
+    scd041Jo["calt"] = SensorScd041::getCompensationAltitude();
 
     // JsonObject &wifiJo = root.createNestedObject("wifi");
     // wifiJo["config"] = BoxConn::formatConfigStatus(BoxConn::configStatus);
@@ -120,7 +123,7 @@ void ModuleServer::handleApiFolder(AsyncWebServerRequest *request) {
 
             uint16_t pdate;
             uint16_t ptime;
-            file.getAccessDateTime(&pdate, &ptime);
+            file.getModifyDateTime(&pdate, &ptime);
 
 #ifdef USE___SERIAL
             Serial.printf("listing file or folder, name %s, pdate: %d, ptime: %d\n", name, pdate, ptime);
@@ -150,15 +153,12 @@ void ModuleServer::handleApiFolder(AsyncWebServerRequest *request) {
 }
 
 void ModuleServer::handleApiDatCsv(AsyncWebServerRequest *request) {
-#ifdef USE___SERIAL
-    Serial.println("entering handleApiDatCsv");
-#endif
     ModuleWifi::access();
     if (request->hasParam("file")) {
         String datFileName = "/" + request->getParam("file")->value();
         String csvLine;
         if (ModuleSdcard::existsPath(datFileName)) {
-            DatCsvResponse *response = new DatCsvResponse(datFileName);
+            DatCsvResponse *response = new DatCsvResponse(datFileName);  // cache headers in ValuesResponse
             request->send(response);
         } else {
             AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -184,11 +184,8 @@ void ModuleServer::handleApiDatCsv(AsyncWebServerRequest *request) {
 }
 
 void ModuleServer::handleApiValCsv(AsyncWebServerRequest *request) {
-#ifdef USE___SERIAL
-    Serial.println("entering handleApiValCsv");
-#endif
     ModuleWifi::access();
-    ValuesResponse *response = new ValuesResponse();
+    ValuesResponse *response = new ValuesResponse();  // cache headers in ValuesResponse
     request->send(response);
 }
 
@@ -204,7 +201,7 @@ void ModuleServer::handleApiCo2Cal(AsyncWebServerRequest *request) {
         String refRaw = request->getParam("ref")->value();
         int ref = refRaw.toInt();
         if (ref >= 400) {
-            ModuleServer::requestedCalibrationReference = ref;
+            ModuleServer::requestedCo2Ref = ref;
             root["ref"] = ref;
             response->addHeader("Cache-Control", "max-age=180");
         } else {
@@ -215,6 +212,21 @@ void ModuleServer::handleApiCo2Cal(AsyncWebServerRequest *request) {
         root["code"] = 400;
         root["desc"] = "ref must be specified";
     }
+
+    root.printTo(*response);
+    request->send(response);
+}
+
+void ModuleServer::handleApiCo2Rst(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=180");
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = 200;
+
+    ModuleServer::requestedCo2Rst = true;
 
     root.printTo(*response);
     request->send(response);
@@ -234,6 +246,9 @@ void ModuleServer::serveStatic(AsyncWebServerRequest *request) {
         } else if (fileType == ".ttf") {
             fileType = "font/ttf";
         }
+#ifdef USE___SERIAL
+        Serial.printf("url: %s, method: %d\n", url, request->method());
+#endif
         File32Response *response = new File32Response(url, fileType);
         response->addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT");
         request->send(response);

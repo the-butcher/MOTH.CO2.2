@@ -7,12 +7,15 @@
  * size of the measurement buffer
  * with a measurement interval currently hardcoded to one minute it represents the minute interval in which measurements are saved
  */
-const uint8_t MEASUREMENT_BUFFER_SIZE = 10;
+const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
 
 /**
  * HISTORY_BUFFER_SIZE is identical to MEASUREMENT_BUFFER_SIZE by accident not by design, therefore redefined
  */
 const uint8_t HISTORY_____BUFFER_SIZE = 60;
+
+const uint8_t LOWPASS_____BUFFER_SIZE = 16;  // arbitrary size
+const float LOWPASS___________ALPHA = 0.33;  // higher: faster reaction
 
 typedef struct {
     uint16_t co2Lpf;
@@ -39,7 +42,8 @@ typedef struct {
 
 typedef struct {
     uint32_t nextMeasureIndex;
-    uint32_t nextDisplayIndex;
+    uint32_t nextDisplayIndex;  // next index for a regular display refresh
+    uint32_t lastDisplayIndex;  // the last index rendered in either table or chart
     uint32_t nextAutoConIndex;  // next index at which an autoconnect should be attempted
     values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 } values_t;
@@ -55,6 +59,7 @@ typedef struct {
 class Values {
    private:
    public:
+    static values_all_t emptyMeasurement(uint32_t secondstime);
     static values_t* values;
     static values_t load();
     static void begin(values_t* values);

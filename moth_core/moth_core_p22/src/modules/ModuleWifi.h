@@ -31,14 +31,14 @@ class ModuleWifi {
     static uint8_t expiryMinutes;
     static void updateSecondstimeExpiry(void* parameter);
 
-    static bool connectToNetwork(config_t* config, network_t* network);
-    static bool enableSoftAP(config_t* config);
+    static bool connectToNetwork(config_t& config, network_t& network);
+    static bool enableSoftAP(config_t& config);
 
    public:
     static void begin();  // loads json configuration and creates a dat version for faster future accessibility
-    static bool powerup(config_t* config, bool allowApMode);
+    static bool powerup(config_t& config, bool allowApMode);
     static bool isPowered();
-    static void depower(config_t* config);
+    static void depower(config_t& config);
     static void access();
     static void expire();
     static uint32_t getSecondstimeExpiry();

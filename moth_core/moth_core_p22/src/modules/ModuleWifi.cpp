@@ -36,7 +36,7 @@ void ModuleWifi::begin() {
                     wifiFileDat.write((byte*)&network, sizeof(network));
                 }
                 if (wifiFileDat) {
-                    wifiFileDat.sync();
+                    // wifiFileDat.flush();
                     wifiFileDat.close();
                 }
 
@@ -49,19 +49,19 @@ void ModuleWifi::begin() {
     }
 }
 
-bool ModuleWifi::powerup(config_t* config, bool allowApMode) {
+bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     // adc_power_on();
 
-#ifdef USE___SERIAL
-    Serial.println("turning wifi on");
-#endif
+    // #ifdef USE___SERIAL
+    //     Serial.println("turning wifi on");
+    // #endif
 
     ModuleSdcard::begin();
 
-    ModuleWifi::expiryMinutes = config->wifi.networkExpiryMinutes;
-#ifdef USE___SERIAL
-    Serial.printf("ModuleWifi::expiryMinutes: %d\n", ModuleWifi::expiryMinutes);
-#endif
+    ModuleWifi::expiryMinutes = config.wifi.networkExpiryMinutes;
+    // #ifdef USE___SERIAL
+    //     Serial.printf("ModuleWifi::expiryMinutes: %d\n", ModuleWifi::expiryMinutes);
+    // #endif
 
     network_t configuredNetworks[10];
     uint8_t configuredNetworkCount = 0;
@@ -84,11 +84,11 @@ bool ModuleWifi::powerup(config_t* config, bool allowApMode) {
     bool powerupSuccess = false;
 
     // connect to previous network, if defined
-    if (config->wifi.networkConnIndexLast >= 0) {
-        if (ModuleWifi::connectToNetwork(config, &configuredNetworks[config->wifi.networkConnIndexLast])) {
+    if (config.wifi.networkConnIndexLast >= 0) {
+        if (ModuleWifi::connectToNetwork(config, configuredNetworks[config.wifi.networkConnIndexLast])) {
             powerupSuccess = true;
         } else {
-            config->wifi.networkConnIndexLast = -1;
+            config.wifi.networkConnIndexLast = -1;
         }
     }
 
@@ -102,9 +102,9 @@ bool ModuleWifi::powerup(config_t* config, bool allowApMode) {
             scanKey = WiFi.SSID(ssidIndex);
             for (int i = 0; i < configuredNetworkCount; i++) {
                 confKey = String(configuredNetworks[i].key);
-                if (i != config->wifi.networkConnIndexLast && confKey == scanKey) {  // found a configured network that matched one of the scanned networks
-                    if (ModuleWifi::connectToNetwork(config, &configuredNetworks[i])) {
-                        config->wifi.networkConnIndexLast = i;
+                if (i != config.wifi.networkConnIndexLast && confKey == scanKey) {  // found a configured network that matched one of the scanned networks
+                    if (ModuleWifi::connectToNetwork(config, configuredNetworks[i])) {
+                        config.wifi.networkConnIndexLast = i;
                         powerupSuccess = true;
                         break;
                     }
@@ -115,9 +115,9 @@ bool ModuleWifi::powerup(config_t* config, bool allowApMode) {
 
     // no connection through any of the configured networks, start in ap mode
     if (!powerupSuccess && allowApMode) {
-#ifdef USE___SERIAL
-        Serial.println("turning wifi off (powerup1)");
-#endif
+        // #ifdef USE___SERIAL
+        //         Serial.println("turning wifi off (powerup1)");
+        // #endif
         ModuleWifi::depower(config);  // sets valPower to WIFI____VAL_P_CUR_N
         delay(500);
         powerupSuccess = ModuleWifi::enableSoftAP(config);
@@ -127,9 +127,9 @@ bool ModuleWifi::powerup(config_t* config, bool allowApMode) {
         ModuleServer::begin();
         ModuleWifi::access();
     } else {
-#ifdef USE___SERIAL
-        Serial.println("turning wifi off (powerup2)");
-#endif
+        // #ifdef USE___SERIAL
+        //         Serial.println("turning wifi off (powerup2)");
+        // #endif
         ModuleWifi::depower(config);  // if no connection could be established, set valPower to WIFI____VAL_P_CUR_N
         ModuleWifi::expire();
     }
@@ -142,23 +142,23 @@ bool ModuleWifi::isPowered() {
     return wifiMode == WIFI_AP || (wifiMode == WIFI_STA && WiFi.isConnected());
 }
 
-bool ModuleWifi::connectToNetwork(config_t* config, network_t* network) {
+bool ModuleWifi::connectToNetwork(config_t& config, network_t& network) {
     WiFi.mode(WIFI_STA);
-    WiFi.begin(network->key, network->pwd);
+    WiFi.begin(network.key, network.pwd);
     for (int i = 0; i < 10; i++) {
         delay(200);
         if (ModuleWifi::isPowered()) {
             char networkNameBuf[64];
-            sprintf(networkNameBuf, "%s%s%s", "WIFI:T:WPA;S:", network->key, ";;;");
+            sprintf(networkNameBuf, "%s%s%s", "WIFI:T:WPA;S:", network.key, ";;;");
             ModuleWifi::networkName = String(networkNameBuf);
-            config->wifi.wifiValPower = WIFI____VAL_P_CUR_Y;  // set flat to current on
+            config.wifi.wifiValPower = WIFI____VAL_P_CUR_Y;  // set flat to current on
             return true;
         }
     }
     return false;
 }
 
-bool ModuleWifi::enableSoftAP(config_t* config) {
+bool ModuleWifi::enableSoftAP(config_t& config) {
     WiFi.mode(WIFI_AP);
 
     uint64_t _chipmacid = 0LL;
@@ -177,22 +177,22 @@ bool ModuleWifi::enableSoftAP(config_t* config) {
     for (int i = 0; i < 10; i++) {
         delay(200);
         if (ModuleWifi::isPowered()) {
-            config->wifi.wifiValPower = WIFI____VAL_P_CUR_Y;  // set flat to current on
+            config.wifi.wifiValPower = WIFI____VAL_P_CUR_Y;  // set flat to current on
             return true;
         }
     }
     return false;
 }
 
-void ModuleWifi::depower(config_t* config) {
-#ifdef USE___SERIAL
-    Serial.println("turning wifi off");
-#endif
+void ModuleWifi::depower(config_t& config) {
+    // #ifdef USE___SERIAL
+    //     Serial.println("turning wifi off");
+    // #endif
     // adc_power_off();
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
-    config->wifi.wifiValPower = WIFI____VAL_P_CUR_N;  // set flag to currently off
+    config.wifi.wifiValPower = WIFI____VAL_P_CUR_N;  // set flag to currently off
 }
 
 /**
@@ -206,12 +206,12 @@ void ModuleWifi::access() {
 void ModuleWifi::updateSecondstimeExpiry(void* parameter) {
     uint32_t secondstimeExpiry = SensorTime::getSecondstime() + ModuleWifi::expiryMinutes * SECONDS_PER___________MINUTE;
     ModuleWifi::secondstimeExpiryA = secondstimeExpiry;
-    vTaskDelay(50);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
     ModuleWifi::secondstimeExpiryB = secondstimeExpiry;
-#ifdef USE___SERIAL
-    Serial.print("setting wifi expiry to: ");
-    Serial.println(SensorTime::getDateTimeSecondsString(ModuleWifi::secondstimeExpiryA));
-#endif
+    // #ifdef USE___SERIAL
+    //     Serial.print("setting wifi expiry to: ");
+    //     Serial.println(SensorTime::getDateTimeSecondsString(ModuleWifi::secondstimeExpiryA));
+    // #endif
     vTaskDelete(NULL);
     return;
 }
@@ -219,9 +219,9 @@ void ModuleWifi::updateSecondstimeExpiry(void* parameter) {
 void ModuleWifi::expire() {
     ModuleWifi::secondstimeExpiryA = 0;
     ModuleWifi::secondstimeExpiryB = 0;
-#ifdef USE___SERIAL
-    Serial.println("setting wifi expiry to 0");
-#endif
+    // #ifdef USE___SERIAL
+    //     Serial.println("setting wifi expiry to 0");
+    // #endif
 }
 
 uint32_t ModuleWifi::getSecondstimeExpiry() {

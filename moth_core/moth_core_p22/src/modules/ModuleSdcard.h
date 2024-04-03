@@ -23,7 +23,7 @@ class ModuleSdcard {
     static bool removeFolder(String folder);
     static bool existsPath(String path);
     static bool removeFile32(String file);
-    static void historyValues(config_t* config, values_all_t history[HISTORY_____BUFFER_SIZE]);
+    static void historyValues(config_t& config, values_all_t history[HISTORY_____BUFFER_SIZE]);
     static void persistValues();
 };
 

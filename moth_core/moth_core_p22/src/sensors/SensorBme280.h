@@ -9,13 +9,15 @@
 #include "types/Config.h"
 #include "types/Values.h"
 
+const float ALTITUDE__EXP = 0.190284;
+const float ALTITUDE_MULT = 44307.69396;
+const float PRESSURE_ZERO = 1013.25;
+
 class SensorBme280 {
    private:
     static SensorBme280Base baseSensor;
     static values_bme_t values;
     static bool isReadRequired;
-    static float ALTITUDE__EXP;
-    static float ALTITUDE_MULT;
 
    public:
     static void begin();

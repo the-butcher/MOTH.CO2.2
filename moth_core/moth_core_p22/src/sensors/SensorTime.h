@@ -13,6 +13,9 @@ const uint16_t MILLISECONDS_PER______SECOND = 1000;
 const uint8_t SECONDS_PER___________MINUTE = 60;
 const uint16_t SECONDS_PER_____________HOUR = SECONDS_PER___________MINUTE * 60;
 
+const uint32_t WAITTIME________________NONE = 0;
+const uint32_t WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative estimation, 3 or maybe even 2 could also work
+
 /**
  * GPIO_NUM_8  :: A5
  */
@@ -32,7 +35,7 @@ class SensorTime {
    public:
     static void begin();
     static void setup();
-    static void configure(config_t* config);
+    static void configure(config_t& config);
     static void prepareSleep(wakeup_action_e wakeupType);
     static void attachWakeup(wakeup_action_e wakeupType);
     static void detachWakeup(wakeup_action_e wakeupType);
