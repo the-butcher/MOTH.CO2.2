@@ -48,9 +48,9 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  *    -- must run 3 minutes in idle before calibrating or it will fail (not turning off i2c power and not powering off scd41 basicall means idle)
  * OK factory reset of SCD41, TODO :: test
  * OK reimplement OTA, TODO :: test
- * -- adapt server.html for updated api names, TODO :: upload updated build
  * -- co2 cal and rst could be handled through requested configuration
  * -- configurable mode for scd41
+ * -- cache of server and chart seems to be broken, introduce proper Last-Modified header and If-Modified since logic
  */
 
 // schedule setting and display
