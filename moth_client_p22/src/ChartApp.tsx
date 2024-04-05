@@ -150,8 +150,8 @@ const propertyLookup: { [K in string]: IChartProperty } = {
 
 const ChartApp = () => {
 
-  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  const boxUrl = `http://192.168.0.73/api`; // when running directly from device
+  const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  // const boxUrl = `http://192.168.0.73/api`; // when running directly from device
 
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartMinX, setChartMinX] = useState<number>();

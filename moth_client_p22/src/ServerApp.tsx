@@ -74,8 +74,8 @@ const darkTheme = createTheme({
 
 const ServerApp = () => {
 
-  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  const boxUrl = `http://192.168.0.73/api`; // when running directly from device
+  const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  // const boxUrl = `http://192.168.0.73/api`; // when running directly from device
 
   const urlParams = new URLSearchParams(window.location.search);
   // const boxUrlParamValue = `http://${urlParams.get("boxUrl")}/api`; // when not running directly from device
