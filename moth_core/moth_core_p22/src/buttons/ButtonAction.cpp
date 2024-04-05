@@ -24,7 +24,7 @@ void ButtonAction::begin(std::function<void(std::function<void(config_t& config)
  * updates the button actions based on the given config
  * @param config
  */
-bool ButtonAction::configure(config_t& config) {
+bool ButtonAction::adapt(config_t& config) {
     if (config.disp.displayValModus == DISPLAY_VAL_M__TABLE) {
         if (config.disp.displayValTable == DISPLAY_VAL_T____ALT) {
             ButtonAction::A.buttonAction = getButtonActionAltitude5050(config);  // buttonA changes alt by 50m
@@ -192,7 +192,7 @@ void ButtonAction::toggleDisplayValHFw(config_t& config) {
     } else {
         // already at DISPLAY_HRS_C_____24
     }
-    ButtonAction::configure(config);
+    ButtonAction::adapt(config);
 }
 
 /**
@@ -210,7 +210,7 @@ void ButtonAction::toggleDisplayValHBw(config_t& config) {
     } else {
         // already at DISPLAY_HRS_C_____01
     }
-    ButtonAction::configure(config);
+    ButtonAction::adapt(config);
 }
 
 /**
@@ -275,7 +275,7 @@ void ButtonAction::incrementAltitude50(config_t& config) {
 void ButtonAction::toggleDisplayValTFw(config_t& config) {
     uint8_t valueCount = DISPLAY_VAL_T____ALT + 1;
     config.disp.displayValTable = (display_val_t_e)((config.disp.displayValTable + 1) % valueCount);
-    ButtonAction::configure(config);
+    ButtonAction::adapt(config);
 }
 
 /**
@@ -284,7 +284,7 @@ void ButtonAction::toggleDisplayValTFw(config_t& config) {
 void ButtonAction::toggleDisplayValTBw(config_t& config) {
     uint8_t valueCount = DISPLAY_VAL_T____ALT + 1;
     config.disp.displayValTable = (display_val_t_e)((config.disp.displayValTable + valueCount - 1) % valueCount);
-    ButtonAction::configure(config);
+    ButtonAction::adapt(config);
 }
 
 /**
@@ -312,7 +312,7 @@ void ButtonAction::toggleDisplayValMod(config_t& config) {
     } else {
         config.disp.displayValModus = DISPLAY_VAL_M__TABLE;
     }
-    ButtonAction::configure(config);
+    ButtonAction::adapt(config);
 }
 
 void ButtonAction::toggleDisplayValThm(config_t& config) {

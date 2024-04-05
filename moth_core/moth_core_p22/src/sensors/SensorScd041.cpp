@@ -4,6 +4,7 @@
 
 SensorScd041Base SensorScd041::baseSensor;
 values_co2_t SensorScd041::values = {0, 0, 0};
+sco2____val_m_e SensorScd041::mode = SCO2___VAL_M___IDLE;
 
 void SensorScd041::begin() {
     SensorScd041::baseSensor.begin(Wire);
@@ -81,12 +82,30 @@ bool SensorScd041::measure() {
     return SensorScd041::baseSensor.measureSingleShotNoDelay();
 }
 
-bool SensorScd041::powerup() {
-    return SensorScd041::baseSensor.wakeUp();
+bool SensorScd041::powerup(config_t& config) {
+    if (SensorScd041::mode = SCO2___VAL_M_CYCLED) {  // currently depowered
+        bool success = SensorScd041::baseSensor.wakeUp();
+        if (success) {
+            SensorScd041::mode = SCO2___VAL_M___IDLE;  // could be powered and is now IDLE
+        }
+        return success;
+    } else {
+        // nothing to do (was already in IDLE)
+        return true;
+    }
 }
 
-bool SensorScd041::depower() {
-    return SensorScd041::baseSensor.powerDown();
+bool SensorScd041::depower(config_t& config) {
+    if (config.sco2.sensorMode == SCO2___VAL_M_CYCLED) {  // aloowed to toggle to cycled
+        bool success = SensorScd041::baseSensor.powerDown();
+        if (success) {
+            SensorScd041::mode = SCO2___VAL_M_CYCLED;
+        }
+        return success;
+    } else {
+        // nothing to do (the configured IDLE mode forbids depowering)
+        return true;
+    }
 }
 
 values_co2_t SensorScd041::readval() {
@@ -102,26 +121,26 @@ values_co2_t SensorScd041::readval() {
     return SensorScd041::values;
 }
 
-float SensorScd041::getTemperatureOffset() {
-    float degV = 0;
-    float& degR = degV;
-    SensorScd041::baseSensor.getTemperatureOffset(degR);
-    return degV;
-}
+// float SensorScd041::getTemperatureOffset() {
+//     float degV = 0;
+//     float& degR = degV;
+//     SensorScd041::baseSensor.getTemperatureOffset(degR);
+//     return degV;
+// }
 
-uint16_t SensorScd041::getCompensationAltitude() {
-    uint16_t altV = 0;
-    uint16_t& altR = altV;
-    SensorScd041::baseSensor.getSensorAltitude(altR);
-    return altV;
-}
+// uint16_t SensorScd041::getCompensationAltitude() {
+//     uint16_t altV = 0;
+//     uint16_t& altR = altV;
+//     SensorScd041::baseSensor.getSensorAltitude(altR);
+//     return altV;
+// }
 
-bool SensorScd041::isAutomaticSelfCalibration() {
-    uint16_t ascV = 0;
-    uint16_t& ascR = ascV;
-    SensorScd041::baseSensor.getAutomaticSelfCalibration(ascR);
-    return ascV;
-}
+// bool SensorScd041::isAutomaticSelfCalibration() {
+//     uint16_t ascV = 0;
+//     uint16_t& ascR = ascV;
+//     SensorScd041::baseSensor.getAutomaticSelfCalibration(ascR);
+//     return ascV;
+// }
 
 uint16_t SensorScd041::toShortDeg(float floatValue) {
     return round((min(50.0f, max(-50.0f, floatValue)) + 50.0f) * 640.0f);
@@ -137,4 +156,11 @@ uint16_t SensorScd041::toShortHum(float floatValue) {
 
 float SensorScd041::toFloatHum(uint16_t shortValue) {
     return shortValue / 640.0f;
+}
+
+float SensorScd041::toFahrenheit(float celsius) {
+#ifdef USE___SERIAL
+    Serial.printf("celsius: %d\n", celsius);
+#endif
+    return celsius * 9.0 / 5.0 + 32.0;
 }

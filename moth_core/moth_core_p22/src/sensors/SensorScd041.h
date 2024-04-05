@@ -24,6 +24,7 @@ class SensorScd041 {
    private:
     static SensorScd041Base baseSensor;
     static values_co2_t values;
+    static sco2____val_m_e mode;
 
    public:
     static void begin();
@@ -33,15 +34,16 @@ class SensorScd041 {
     static calibration_t forceReset();
     static bool measure();
     static values_co2_t readval();
-    static bool powerup();
-    static bool depower();
+    static bool powerup(config_t& config);
+    static bool depower(config_t& config);
     static uint16_t toShortDeg(float floatValue);
     static float toFloatDeg(uint16_t shortValue);
     static uint16_t toShortHum(float floatValue);
     static float toFloatHum(uint16_t shortValue);
-    static float getTemperatureOffset();
-    static uint16_t getCompensationAltitude();
-    static bool isAutomaticSelfCalibration();
+    static float toFahrenheit(float celsius);
+    // static float getTemperatureOffset();
+    // static uint16_t getCompensationAltitude();
+    // static bool isAutomaticSelfCalibration();
 };
 
 #endif

@@ -34,8 +34,8 @@ class SensorTime {
 
    public:
     static void begin();
-    static void setup();
-    static void configure(config_t& config);
+    static void configure();
+    static void setupNtpUpdate(config_t& config);
     static void prepareSleep(wakeup_action_e wakeupType);
     static void attachWakeup(wakeup_action_e wakeupType);
     static void detachWakeup(wakeup_action_e wakeupType);

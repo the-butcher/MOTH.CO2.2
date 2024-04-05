@@ -2,17 +2,20 @@
 
 Adafruit_LC709203F SensorEnergy::basePack;
 values_nrg_t SensorEnergy::values = {0};
+bool SensorEnergy::hasBegun = false;
+bool SensorEnergy::isReadRequired = true;
 
 void SensorEnergy::begin() {
-    // do nothing
+    if (!SensorEnergy::hasBegun) {
+        SensorEnergy::basePack.begin();
+        SensorEnergy::basePack.setPackSize(LC709203F_APA_3000MAH);
+        SensorEnergy::basePack.setAlarmVoltage(3.8);
+        SensorEnergy::hasBegun = true;
+    }
 }
 
 bool SensorEnergy::powerup() {
-    bool success = true;
-    success = success && SensorEnergy::basePack.begin();
-    success = success && SensorEnergy::basePack.setPackSize(LC709203F_APA_3000MAH);
-    success = success && SensorEnergy::basePack.setAlarmVoltage(3.8);
-    return success;
+    return SensorEnergy::basePack.setPowerMode(LC709203F_POWER_OPERATE);
 }
 
 bool SensorEnergy::depower() {
@@ -20,11 +23,15 @@ bool SensorEnergy::depower() {
 }
 
 bool SensorEnergy::measure() {
-    SensorEnergy::values = {toShortPercent(SensorEnergy::basePack.cellPercent())};
+    isReadRequired = true;
     return true;
 }
 
 values_nrg_t SensorEnergy::readval() {
+    if (SensorEnergy::isReadRequired) {
+        SensorEnergy::values = {toShortPercent(SensorEnergy::basePack.cellPercent())};
+        SensorEnergy::isReadRequired = false;
+    }
     return SensorEnergy::values;
 }
 

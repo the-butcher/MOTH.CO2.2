@@ -17,7 +17,10 @@ const String FILE_WIFI_CONFIG__DAT = "/config/wifi.dat";
 const String WIFI_AP_KEY = "mothbox";
 const String WIFI_AP_PWD = "CO2@420PPM";
 
+const uint8_t NETWORKS_BUFFER_SIZE = 10;
+
 typedef struct {
+    int32_t rssi;
     char key[64];
     char pwd[64];
 } network_t;
@@ -25,16 +28,15 @@ typedef struct {
 class ModuleWifi {
    private:
     static String networkName;
-    static network_t configuredNetworks[10];
-    static uint32_t secondstimeExpiryA;
-    static uint32_t secondstimeExpiryB;
+    static uint32_t secondstimeExpiry;
     static uint8_t expiryMinutes;
     static void updateSecondstimeExpiry(void* parameter);
-
+    static void scanNetworks(void* parameter);
     static bool connectToNetwork(config_t& config, network_t& network);
     static bool enableSoftAP(config_t& config);
 
    public:
+    static network_t discoveredNetworks[NETWORKS_BUFFER_SIZE];
     static void begin();  // loads json configuration and creates a dat version for faster future accessibility
     static bool powerup(config_t& config, bool allowApMode);
     static bool isPowered();

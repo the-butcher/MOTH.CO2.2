@@ -26,9 +26,15 @@
 #include "ThinkInk_290_Grayscale4_T5_Clone.h"
 #include "Thresholds.h"
 
-typedef enum { DISPLAY_STATE_TABLE, DISPLAY_STATE_CHART } display_state_t;
+typedef enum {
+    DISPLAY_STATE_TABLE,
+    DISPLAY_STATE_CHART
+} display_state_t;
 
-typedef enum { DISPLAY_THEME_LIGHT, DISPLAY_THEME__DARK } display_theme_t;
+typedef enum {
+    DISPLAY_THEME_LIGHT,
+    DISPLAY_THEME__DARK
+} display_theme_t;
 
 /**
  * the value to be shown in chart
@@ -69,18 +75,11 @@ class BoxDisplay {
     static void fillRectangle(Rectangle rectangle, uint16_t color);
     static void drawOuterBorders(uint16_t color);
     static void drawInnerBorders(uint16_t color);
-    static void drawAntialiasedText06(String text, Rectangle rectangle,
-                                      int xRel, int yRel, uint16_t color);
-    static void drawAntialiasedText08(String text, Rectangle rectangle,
-                                      int xRel, int yRel, uint16_t color);
-    static void drawAntialiasedText18(String text, Rectangle rectangle,
-                                      int xRel, int yRel, uint16_t color);
-    static void drawAntialiasedText36(String text, Rectangle rectangle,
-                                      int xRel, int yRel, uint16_t color);
-    static void drawAntialiasedText(String text, Rectangle rectangle, int xRel,
-                                    int yRel, uint16_t color,
-                                    const GFXfont *fontL, const GFXfont *fontD,
-                                    const GFXfont *fontB);
+    static void drawAntialiasedText06(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
+    static void drawAntialiasedText08(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
+    static void drawAntialiasedText18(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
+    static void drawAntialiasedText36(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color);
+    static void drawAntialiasedText(String text, Rectangle rectangle, int xRel, int yRel, uint16_t color, const GFXfont *fontL, const GFXfont *fontD, const GFXfont *fontB);
     static bool isWarn(float value, Thresholds thresholds);
     static bool isRisk(float value, Thresholds thresholds);
     static void renderChart();

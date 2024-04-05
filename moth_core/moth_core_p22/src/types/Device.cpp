@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "buttons/ButtonAction.h"
 #include "modules/ModuleDisplay.h"
 #include "modules/ModuleSdcard.h"
 #include "modules/ModuleServer.h"
@@ -14,14 +15,12 @@
 #include "types/Define.h"
 
 calibration_t Device::calibrationResult;
+uint32_t Device::secondstimeBoot;
 
 device_t Device::load() {
-    uint32_t secondstime = SensorTime::getSecondstime();
-    // secondsCycleBase = SensorTime.getDate().secondstime();
-    // secondsCycleBase = secondsCycleBase + 60 + SECONDS_BOOT_BUFFER - (secondsCycleBase + SECONDS_BOOT_BUFFER) % 60;  // first full minute after boot in secondstime
 
+    uint32_t secondstime = SensorTime::getSecondstime();
     device_t device;
-    device.secondstimeBoot = secondstime;
     device.deviceActions[DEVICE_ACTION_MEASURE] = {
         DEVICE_ACTION_MEASURE,  // trigger measurements
         COLOR__MAGENTA,         // magenta while measuring
@@ -44,7 +43,7 @@ device_t Device::load() {
         DEVICE_ACTION_DISPLAY,  // display refresh
         COLOR______RED,         // red while refreshing display
         WAKEUP_ACTION_BUSY,     // do NOT allow wakeup while display is redrawing
-        3,                      // 3 seconds delay which is a rather long and conservative estimation (buut the busy wakeup should take care of things)
+        3,                      // 3 seconds delay which is a rather long and conservative estimation (buut the busy wakeup should take care of things at the best possible moment)
         secondstime             // initially set, so the entry screen will render right after start
     };
     device.deviceActions[DEVICE_ACTION_DEPOWER] = {
@@ -56,7 +55,24 @@ device_t Device::load() {
     device.actionIndexCur = DEVICE_ACTION_DISPLAY;  // start with DEVICE_ACTION_DISPLAY for entry screen
     device.actionIndexMax = DEVICE_ACTION_DEPOWER;
 
+    // calculate ext1Bitmask, sorting the pins is a precaution to ensure descending order
+    gpio_num_t ext1Pins[4] = {ButtonAction::A.gpin, ButtonAction::B.gpin, PIN_RTC_SQW, ButtonAction::C.gpin};
+    qsort(ext1Pins, 4, sizeof(gpio_num_t), Device::cmpfunc);
+    uint64_t ext1Bitmask = 0;
+    for (uint8_t i = 0; i < 4; i++) {
+        ext1Bitmask |= 1ULL << ext1Pins[i];
+    }
+    device.ext1Bitmask = ext1Bitmask;
+
     return device;
+}
+
+int Device::cmpfunc(const void* a, const void* b) {
+    return (*(gpio_num_t*)b - *(gpio_num_t*)a);
+}
+
+void Device::begin(uint32_t secondstimeBoot) {
+    Device::secondstimeBoot = secondstimeBoot;
 }
 
 std::function<device_action_e(config_t& config, device_action_e maxDeviceAction)> Device::getFunctionByAction(device_action_e action) {
@@ -82,23 +98,33 @@ device_action_e Device::handleActionInvalid(config_t& config, device_action_e ma
 
 device_action_e Device::handleActionMeasure(config_t& config, device_action_e maxDeviceAction) {
 
-    SensorScd041::powerup();
+    Values::values->nextMeasureIndex++;
 
-    // TODO :: find out if compensationAltitude survives the powerDown and i2c off commands
-    float pressure = SensorBme280::readval().pressure;
-    if (pressure > 0) {
-        uint16_t compensationAltitude = (uint16_t)round(SensorBme280::getAltitude(PRESSURE_ZERO, pressure));
-        SensorScd041::setCompensationAltitude(compensationAltitude);
+    uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
+    uint32_t currMeasureIndex = nextMeasureIndex - 1;
+
+    bool isExtendedCycle = currMeasureIndex % 5 == 0;
+
+    SensorScd041::powerup(config);
+
+    // battery measurement and pressure compensation are done in lower intervals
+    if (isExtendedCycle) {
+
+        SensorEnergy::powerup();
+
+        float pressure = SensorBme280::readval().pressure;
+        if (pressure > 0) {
+            uint16_t compensationAltitude = (uint16_t)round(SensorBme280::getAltitude(PRESSURE_ZERO, pressure));
+            SensorScd041::setCompensationAltitude(compensationAltitude);
+        }
     }
 
     SensorScd041::measure();
     SensorBme280::measure();
-    if (Values::values->nextMeasureIndex % 3 == 0) {  // only measure battery every three minutes to save some power
-        SensorEnergy::powerup();
+
+    if (isExtendedCycle) {
         SensorEnergy::measure();
-        SensorEnergy::depower();
     }
-    Values::values->nextMeasureIndex++;
 
     return DEVICE_ACTION_READVAL;  // read values after measuring
 }
@@ -137,8 +163,9 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
         true                           // publishable
     };
 
-    // power down co2 sensor
-    SensorScd041::depower();
+    // power down sensors
+    SensorScd041::depower(config);
+    SensorEnergy::depower();
 
     // apply low pass filtering to co2 values
     // https://github.com/LinnesLab/KickFilters/blob/master/KickFilters.h
@@ -208,7 +235,7 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         if (!ModuleWifi::isPowered()) {
             autoShutoff = ModuleWifi::powerup(config, false);  // if the connection was successful, it also needs to be autoShutoff
         }
-        SensorTime::configure(config);                                                                           // apply timezone
+        SensorTime::setupNtpUpdate(config);                                                                      // apply timezone
         Values::values->nextAutoConIndex = Values::values->nextMeasureIndex - 1 + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
         if (autoShutoff) {
             for (int i = 0; i < 25; i++) {
@@ -222,17 +249,17 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
     }
 
     if (ModuleServer::requestedCo2Ref > 400) {
-        SensorScd041::powerup();
+        SensorScd041::powerup(config);
         Device::calibrationResult = SensorScd041::forceCalibration(ModuleServer::requestedCo2Ref);  // calibrate and store result
         config.disp.displayValSetng = DISPLAY_VAL_S____CO2;                                         // next display should show the calibration result
         ModuleServer::requestedCo2Ref = 0;                                                          // reset requested calibration value
-        SensorScd041::depower();
+        SensorScd041::depower(config);
     } else if (ModuleServer::requestedCo2Rst) {
-        SensorScd041::powerup();
+        SensorScd041::powerup(config);
         Device::calibrationResult = SensorScd041::forceReset();  // reset and store result
         config.disp.displayValSetng = DISPLAY_VAL_S____CO2;      // next display should show the calibration result
         ModuleServer::requestedCo2Rst = false;
-        SensorScd041::depower();
+        SensorScd041::depower(config);
     }
 
     return DEVICE_ACTION_DISPLAY;  // when settings runs, there should always be a redraw
@@ -268,5 +295,6 @@ device_action_e Device::handleActionDisplay(config_t& config, device_action_e ma
 
 device_action_e Device::handleActionDepower(config_t& config, device_action_e maxDeviceAction) {
     ModuleDisplay::depower();
+    SensorEnergy::depower();       // redundant, but battery monitor does not seem to depower properly after display cycles
     return DEVICE_ACTION_MEASURE;  // after redrawing pause, then measure
 }

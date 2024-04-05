@@ -17,14 +17,14 @@ void SensorBme280::begin() {
 
 bool SensorBme280::measure() {
     bool result = SensorBme280::baseSensor.takeForcedMeasurementNoDelay();
-    isReadRequired = true;
+    SensorBme280::isReadRequired = true;
     return result;
 }
 
 values_bme_t SensorBme280::readval() {
-    if (isReadRequired) {
+    if (SensorBme280::isReadRequired) {
         SensorBme280::values = {SensorBme280::baseSensor.readPressure() / 100.0f};
-        isReadRequired = false;
+        SensorBme280::isReadRequired = false;
     }
     return SensorBme280::values;
 }

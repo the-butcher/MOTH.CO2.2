@@ -30,27 +30,28 @@ config_t Config::load() {
             DISPLAY_VAL_C____ALT,  // value shown when rendering the chart
             DISPLAY_HRS_C_____01,  // hours to be shown in chart display
             DISPLAY_THM____LIGHT,  // light theme
-            DISPLAY_DEG__CELSIUS,  // temperature scale
+            DISPLAY_VAL_D______C,  // temperature scale
             DISPLAY_VAL_Y____SIG,
             3  // display update minutes
         },
         {
             WIFI____VAL_P_CUR_N,  // initial wifi state off
-            3,                    // network expiry minutes
+            10,                   // network expiry minutes
             0                     // last successful connection index
         },
         {
             360  // ntp update interval, 6 hours
-            // static timezone char array
+            // [static timezone char array [64]]
         },
         {
-            1.5,  // temperature offset
+            1.5,                 // temperature offset
+            SCO2___VAL_M___IDLE  // sensor mode (power cycled, against recommendations, idle, when turning off i2c which may be a hidden power cylce, the sensor calibrates, which it does not when power cycled)
         },
         {
             SIGNAL__VAL_____OFF  // warn signal
         },
         0.0,  // calculated sealevel pressure, 0.0 = needs recalculation
-        153   // the altitude that the seonsor was configured to (or set by the user)
+        153   // the altitude that the sensor was configured to (or set to by the user)
     };
     String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
     timezone.toCharArray(config.time.timezone, 64);

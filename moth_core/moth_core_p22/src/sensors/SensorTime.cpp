@@ -11,6 +11,17 @@ bool SensorTime::ntpWait = false;
 bool SensorTime::interrupted = false;
 int32_t SensorTime::secondstimeOffsetUtc;
 
+/**
+ * called once when the device boots
+ */
+void SensorTime::configure() {
+    SensorTime::baseSensor.deconfigureAllTimers();
+    SensorTime::baseSensor.enableCountdownTimer(PCF8523_FrequencyMinute, 1);
+}
+
+/**
+ * called every time the main setup function is called
+ */
 void SensorTime::begin() {
     SensorTime::baseSensor.begin();
 
@@ -19,18 +30,6 @@ void SensorTime::begin() {
 
     sntp_servermode_dhcp(1);
     sntp_set_time_sync_notification_cb(SensorTime::handleNtpUpdate);
-}
-
-void SensorTime::configure(config_t& config) {
-    setenv("TZ", config.time.timezone, 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
-    tzset();
-    configTzTime(config.time.timezone, "pool.ntp.org", "time.nist.gov");  // will trigger actual ntp update call
-    SensorTime::ntpWait = true;
-}
-
-void SensorTime::setup() {
-    SensorTime::baseSensor.deconfigureAllTimers();
-    SensorTime::baseSensor.enableCountdownTimer(PCF8523_FrequencyMinute, 1);
 }
 
 /**
@@ -66,6 +65,13 @@ void SensorTime::handleInterrupt() {
 
 bool SensorTime::isInterrupted() {
     return SensorTime::interrupted;
+}
+
+void SensorTime::setupNtpUpdate(config_t& config) {
+    setenv("TZ", config.time.timezone, 1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+    tzset();
+    configTzTime(config.time.timezone, "pool.ntp.org", "time.nist.gov");  // will trigger actual ntp update call
+    SensorTime::ntpWait = true;
 }
 
 /**

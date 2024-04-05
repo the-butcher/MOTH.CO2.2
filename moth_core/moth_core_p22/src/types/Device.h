@@ -31,14 +31,15 @@ typedef struct {
 } device_action_t;
 
 typedef struct {
-    uint32_t secondstimeBoot;
     device_action_t deviceActions[5];
     device_action_e actionIndexCur;
     device_action_e actionIndexMax;
+    uint64_t ext1Bitmask;
 } device_t;
 
 class Device {
    private:
+    static int cmpfunc(const void* a, const void* b);
     static calibration_t calibrationResult;
     static device_action_e handleActionMeasure(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionReadval(config_t& config, device_action_e maxDeviceAction);
@@ -48,7 +49,9 @@ class Device {
     static device_action_e handleActionInvalid(config_t& config, device_action_e maxDeviceAction);
 
    public:
+    static uint32_t secondstimeBoot;
     static device_t load();
+    static void begin(uint32_t secondstimeBoot);
     static std::function<device_action_e(config_t& config, device_action_e maxDeviceAction)> getFunctionByAction(device_action_e action);
 };
 

@@ -8,9 +8,9 @@
 #include "sensors/SensorTime.h"
 
 String ModuleWifi::networkName = "";
-uint32_t ModuleWifi::secondstimeExpiryA = 0;
-uint32_t ModuleWifi::secondstimeExpiryB = 0;
+uint32_t ModuleWifi::secondstimeExpiry = 0;
 uint8_t ModuleWifi::expiryMinutes = 5;  // default
+network_t ModuleWifi::discoveredNetworks[NETWORKS_BUFFER_SIZE];
 
 void ModuleWifi::begin() {
     ModuleSdcard::begin();
@@ -30,7 +30,7 @@ void ModuleWifi::begin() {
                 for (uint8_t jsonNetworkIndex = 0; jsonNetworkIndex < jsonNetworkCount; jsonNetworkIndex++) {
                     key = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______KEY] | "";
                     pwd = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______PWD] | "";
-                    network = {};
+                    network = {0};
                     key.toCharArray(network.key, 64);
                     pwd.toCharArray(network.pwd, 64);
                     wifiFileDat.write((byte*)&network, sizeof(network));
@@ -56,7 +56,7 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
 
     ModuleWifi::expiryMinutes = config.wifi.networkExpiryMinutes;
 
-    network_t configuredNetworks[10];
+    network_t configuredNetworks[NETWORKS_BUFFER_SIZE];
     uint8_t configuredNetworkCount = 0;
     // access the dat-file whether it existed or was just created
     File32 wifiFileDat;
@@ -127,7 +127,27 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         ModuleWifi::expire();
     }
 
+    if (allowApMode) {
+        xTaskCreate(ModuleWifi::scanNetworks, "scan networks", 5000, NULL, 2, NULL);
+    }
+
     return powerupSuccess;
+}
+
+void ModuleWifi::scanNetworks(void* parameter) {
+    int ssidCount = WiFi.scanNetworks();
+    int ssidIndex = 0;
+    for (; ssidIndex < ssidCount; ssidIndex++) {
+        String ssid = WiFi.SSID(ssidIndex);
+        int32_t rssi = WiFi.RSSI(ssidIndex);
+        ModuleWifi::discoveredNetworks[ssidIndex] = {rssi};
+        ssid.toCharArray(ModuleWifi::discoveredNetworks[ssidIndex].key, 64);
+    }
+    for (; ssidIndex < NETWORKS_BUFFER_SIZE; ssidIndex++) {
+        ModuleWifi::discoveredNetworks[ssidIndex] = {0};
+    }
+    vTaskDelete(NULL);
+    return;
 }
 
 bool ModuleWifi::isPowered() {
@@ -190,32 +210,18 @@ void ModuleWifi::depower(config_t& config) {
  * there were problems, when the main code would not see the correct expiry time while the async web requests were updating
  */
 void ModuleWifi::access() {
-    xTaskCreate(ModuleWifi::updateSecondstimeExpiry, "update wifi expiry", 5000, NULL, 2, NULL);
-}
-
-void ModuleWifi::updateSecondstimeExpiry(void* parameter) {
-    uint32_t secondstimeExpiry = SensorTime::getSecondstime() + ModuleWifi::expiryMinutes * SECONDS_PER___________MINUTE;
-    ModuleWifi::secondstimeExpiryA = secondstimeExpiry;
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    ModuleWifi::secondstimeExpiryB = secondstimeExpiry;
-    // #ifdef USE___SERIAL
-    //     Serial.print("setting wifi expiry to: ");
-    //     Serial.println(SensorTime::getDateTimeSecondsString(ModuleWifi::secondstimeExpiryA));
-    // #endif
-    vTaskDelete(NULL);
-    return;
+    ModuleWifi::secondstimeExpiry = SensorTime::getSecondstime() + ModuleWifi::expiryMinutes * SECONDS_PER___________MINUTE;
 }
 
 void ModuleWifi::expire() {
-    ModuleWifi::secondstimeExpiryA = 0;
-    ModuleWifi::secondstimeExpiryB = 0;
+    ModuleWifi::secondstimeExpiry = SensorTime::getSecondstime() + 1;
     // #ifdef USE___SERIAL
     //     Serial.println("setting wifi expiry to 0");
     // #endif
 }
 
 uint32_t ModuleWifi::getSecondstimeExpiry() {
-    return max(ModuleWifi::secondstimeExpiryA, ModuleWifi::secondstimeExpiryB);
+    return ModuleWifi::secondstimeExpiry;
 }
 
 String ModuleWifi::getAddress() {

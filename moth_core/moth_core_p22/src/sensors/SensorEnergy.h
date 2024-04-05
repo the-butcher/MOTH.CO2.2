@@ -10,6 +10,8 @@ class SensorEnergy {
    private:
     static Adafruit_LC709203F basePack;
     static values_nrg_t values;
+    static bool isReadRequired;
+    static bool hasBegun;
 
    public:
     static void begin();  // will set the power mode to operational

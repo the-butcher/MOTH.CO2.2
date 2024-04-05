@@ -47,7 +47,7 @@ class ButtonAction {
     static ButtonHelper B;
     static ButtonHelper C;
     static void begin(std::function<void(std::function<void(config_t& config)>)> buttonActionCompleteCallback);
-    static bool configure(config_t& config);
+    static bool adapt(config_t& config);
     static void prepareSleep(wakeup_action_e wakeupType);
     static void attachWakeup(wakeup_action_e wakeupType);
     static void detachWakeup(wakeup_action_e wakeupType);

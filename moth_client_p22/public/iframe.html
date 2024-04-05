@@ -1,0 +1,46 @@
+<html>
+<script>
+    window.addEventListener('message', ({ data }) => {
+        var xmlHttp = new XMLHttpRequest();
+        var qstr = data.qstr ? Object.entries(data.qstr).map((v, i) => `${v[0]}=${v[1]}`).join('&') : null;
+        var href = data.meth == 'GET' && qstr ? `${data.href}/${data.call}?${qstr}` : `${data.href}/${data.call}`;
+        xmlHttp.open(data.meth, href, true);
+        xmlHttp.onreadystatechange = function () {
+            if (xmlHttp.readyState == 4) {
+                if (xmlHttp.status !== 200) {
+                    // unexpected response statuts
+                    window.parent.postMessage({
+                        call: data.call,
+                        data: JSON.stringify({
+                            "call": data.call,
+                            "fail": xmlHttp.status
+                        })
+                    }, '*');
+                } else if (data.type == 'json' && xmlHttp.getResponseHeader("Content-Type").indexOf('json') === -1) {
+                    // unexpected response type
+                    window.parent.postMessage({
+                        call: data.call,
+                        data: JSON.stringify({
+                            "call": data.call,
+                            "fail": xmlHttp.getResponseHeader("Content-Type")
+                        })
+                    }, '*');
+                } else {
+                    // either json expected and assumed to be valid, or any other content type
+                    window.parent.postMessage({
+                        call: data.call,
+                        data: xmlHttp.responseText
+                    }, '*');
+                }
+            }
+        };
+        xmlHttp.send(data.meth == 'POST' ? qstr : null);
+    });
+    window.onload = () => {
+        window.parent.postMessage({
+            event: 'loaded'
+        }, '*');
+    };
+</script>
+
+</html>

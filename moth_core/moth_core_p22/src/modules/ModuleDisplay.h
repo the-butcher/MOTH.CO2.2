@@ -63,7 +63,6 @@ class ModuleDisplay {
     static uint8_t getFillColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
     static uint8_t getVertColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi);
     static String formatString(String value, char const* format);
-    static float celsiusToFahrenheit(float celsius);
 
    public:
     static void begin();

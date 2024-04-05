@@ -40,19 +40,6 @@ void ModuleDisplay::prepareSleep(wakeup_action_e wakeupType) {
     }
 }
 
-// /**
-//  * waits for the busy pin to become high, then calls WakeupActionBusyHighCallback --> depower the display
-//  * this function handles wakeup from busy when the device needs to be awake, i.e. due to active wifi
-//  */
-// void ModuleDisplay::detectBusyPinHigh(void *parameter) {
-//     uint64_t millisA = millis();
-//     while (!digitalRead(PIN_EPD_BUSY) == HIGH) {
-//         vTaskDelay(10 / portTICK_PERIOD_MS);
-//     }
-//     wakeupActionBusyHighCallback();
-//     vTaskDelete(NULL);
-// }
-
 void ModuleDisplay::attachWakeup(wakeup_action_e wakeupType) {
     if (wakeupType == WAKEUP_ACTION_BUSY) {
         attachInterrupt(digitalPinToInterrupt(PIN_EPD_BUSY), ModuleDisplay::handleInterrupt, FALLING);
@@ -94,8 +81,8 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
     ModuleDisplay::drawInnerBorders(EPD_LIGHT);
 
     // values for temperature and humidity
-    float deg = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);  // TODO reconvert to float
-    float hum = SensorScd041::toFloatHum(measurement.valuesCo2.hum);  // TODO reconvert to float
+    float deg = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);
+    float hum = SensorScd041::toFloatHum(measurement.valuesCo2.hum);
 
     // variables needed
     String title;
@@ -218,8 +205,8 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
     thresholds_deg_t thresholdsDeg = config.disp.thresholdsDeg;
     textColor = getTextColor(deg, thresholdsDeg.rLo, thresholdsDeg.wLo, thresholdsDeg.wHi, thresholdsDeg.rHi);
     fillColor = getFillColor(deg, thresholdsDeg.rLo, thresholdsDeg.wLo, thresholdsDeg.wHi, thresholdsDeg.rHi);
-    if (config.disp.displayDegScale == DISPLAY_DEG__FAHRENH) {
-        deg = ModuleDisplay::celsiusToFahrenheit(deg);
+    if (config.disp.displayDegScale == DISPLAY_VAL_D______F) {
+        deg = SensorScd041::toFahrenheit(deg);
     }
     int temperature10 = round(deg * 10.0);
     int temperatureFix = floor(temperature10 / 10.0);
@@ -228,7 +215,7 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
         ModuleDisplay::fillRectangle(RECT_DEG, fillColor);
     }
     ModuleDisplay::drawAntialiasedText18(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 0, 35, textColor);
-    ModuleDisplay::drawAntialiasedText06(config.disp.displayDegScale == DISPLAY_DEG__FAHRENH ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
+    ModuleDisplay::drawAntialiasedText06(config.disp.displayDegScale == DISPLAY_VAL_D______F ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
     ModuleDisplay::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
     ModuleDisplay::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
 
@@ -276,7 +263,7 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
             }
         }
     } else if (displayValChart == DISPLAY_VAL_C____DEG) {
-        if (config.disp.displayDegScale == DISPLAY_DEG__FAHRENH) {
+        if (config.disp.displayDegScale == DISPLAY_VAL_D______F) {
             minValue = 60;
             maxValue = 120;
         } else {
@@ -340,7 +327,7 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
     if (displayValChart == DISPLAY_VAL_C____CO2) {
         title = "CO² ppm," + String(config.disp.displayHrsChart) + "h";  // the sup 2 has been modified in the font to display as sub
     } else if (displayValChart == DISPLAY_VAL_C____DEG) {
-        title = config.disp.displayDegScale == DISPLAY_DEG__FAHRENH ? "temperature °F," : "temperature °C," + String(config.disp.displayHrsChart) + "h";
+        title = config.disp.displayDegScale == DISPLAY_VAL_D______F ? "temperature °F," : "temperature °C," + String(config.disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C____HUM) {
         title = "humidity %," + String(config.disp.displayHrsChart) + "h";
     } else if (displayValChart == DISPLAY_VAL_C____HPA) {
@@ -368,6 +355,9 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
             curValue = measurement.valuesCo2.co2Lpf;
         } else if (displayValChart == DISPLAY_VAL_C____DEG) {
             curValue = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);
+            if (config.disp.displayDegScale == DISPLAY_VAL_D______F) {
+                curValue = SensorScd041::toFahrenheit(curValue);
+            }
         } else if (displayValChart == DISPLAY_VAL_C____HUM) {
             curValue = SensorScd041::toFloatHum(measurement.valuesCo2.hum);
         } else if (displayValChart == DISPLAY_VAL_C____HPA) {
@@ -651,8 +641,4 @@ String ModuleDisplay::formatString(String value, char const* format) {
     char padBuffer[16];
     sprintf(padBuffer, format, value);
     return padBuffer;
-}
-
-float ModuleDisplay::celsiusToFahrenheit(float celsius) {
-    return celsius * 9.0f / 5.0f + 32.0f;
 }

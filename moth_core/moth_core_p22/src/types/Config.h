@@ -73,8 +73,8 @@ typedef enum : uint8_t {
 } display_val_e_e;
 
 typedef enum : uint8_t {
-    DISPLAY_DEG__FAHRENH,
-    DISPLAY_DEG__CELSIUS
+    DISPLAY_VAL_D______F,
+    DISPLAY_VAL_D______C
 } display_val_d_e;
 
 typedef enum : uint8_t {
@@ -117,8 +117,14 @@ typedef struct {
     char timezone[64];
 } time____all___t;
 
+typedef enum : uint8_t {
+    SCO2___VAL_M_CYCLED,  // to be turned on and off
+    SCO2___VAL_M___IDLE   // idle mode between measurements
+} sco2____val_m_e;
+
 typedef struct {
     float temperatureOffset;
+    sco2____val_m_e sensorMode;
 } sco2____all___t;
 
 typedef enum : uint8_t {
