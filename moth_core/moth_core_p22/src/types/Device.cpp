@@ -98,6 +98,10 @@ device_action_e Device::handleActionInvalid(config_t& config, device_action_e ma
 
 device_action_e Device::handleActionMeasure(config_t& config, device_action_e maxDeviceAction) {
 
+#ifdef USE___SERIAL
+    Serial.println("measure A");
+#endif
+
     Values::values->nextMeasureIndex++;
 
     uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
@@ -105,7 +109,15 @@ device_action_e Device::handleActionMeasure(config_t& config, device_action_e ma
 
     bool isExtendedCycle = currMeasureIndex % 5 == 0;
 
+#ifdef USE___SERIAL
+    Serial.println("measure B");
+#endif
+
     SensorScd041::powerup(config);
+
+#ifdef USE___SERIAL
+    Serial.println("measure C");
+#endif
 
     // battery measurement and pressure compensation are done in lower intervals
     if (isExtendedCycle) {
@@ -119,12 +131,24 @@ device_action_e Device::handleActionMeasure(config_t& config, device_action_e ma
         }
     }
 
+#ifdef USE___SERIAL
+    Serial.println("measure D");
+#endif
+
     SensorScd041::measure();
     SensorBme280::measure();
+
+#ifdef USE___SERIAL
+    Serial.println("measure E");
+#endif
 
     if (isExtendedCycle) {
         SensorEnergy::measure();
     }
+
+#ifdef USE___SERIAL
+    Serial.println("measure F");
+#endif
 
     return DEVICE_ACTION_READVAL;  // read values after measuring
 }
@@ -248,17 +272,17 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         }
     }
 
-    if (ModuleServer::requestedCo2Ref > 400) {
+    if (config.sco2.requestedCo2Ref > 400) {
         SensorScd041::powerup(config);
-        Device::calibrationResult = SensorScd041::forceCalibration(ModuleServer::requestedCo2Ref);  // calibrate and store result
-        config.disp.displayValSetng = DISPLAY_VAL_S____CO2;                                         // next display should show the calibration result
-        ModuleServer::requestedCo2Ref = 0;                                                          // reset requested calibration value
+        Device::calibrationResult = SensorScd041::forceCalibration(config.sco2.requestedCo2Ref);  // calibrate and store result
+        config.disp.displayValSetng = DISPLAY_VAL_S____CO2;                                       // next display should show the calibration result
+        config.sco2.requestedCo2Ref = 0;                                                          // reset requested calibration value
         SensorScd041::depower(config);
-    } else if (ModuleServer::requestedCo2Rst) {
+    } else if (config.sco2.requestedCo2Rst) {
         SensorScd041::powerup(config);
         Device::calibrationResult = SensorScd041::forceReset();  // reset and store result
         config.disp.displayValSetng = DISPLAY_VAL_S____CO2;      // next display should show the calibration result
-        ModuleServer::requestedCo2Rst = false;
+        config.sco2.requestedCo2Rst = false;
         SensorScd041::depower(config);
     }
 

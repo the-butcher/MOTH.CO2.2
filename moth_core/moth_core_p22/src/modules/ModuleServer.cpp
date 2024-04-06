@@ -14,8 +14,8 @@
 
 AsyncWebServer ModuleServer::server(80);
 bool ModuleServer::hasBegun = false;
-uint16_t ModuleServer::requestedCo2Ref = 0;
-bool ModuleServer::requestedCo2Rst = false;
+// uint16_t ModuleServer::requestedCo2Ref = 0;
+// bool ModuleServer::requestedCo2Rst = false;
 std::function<void(config_t &config)> ModuleServer::requestedReconfiguration = nullptr;
 int ModuleServer::updateCode = -1;
 int ModuleServer::uploadCode = -1;
@@ -413,8 +413,9 @@ void ModuleServer::handleApiCo2Cal(AsyncWebServerRequest *request) {
             int ref = refRaw.toInt();
             if (ref >= 400) {
 
-                // TODO :: move this to some config attribute
-                ModuleServer::requestedCo2Ref = ref;
+                ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+                    config.sco2.requestedCo2Ref = ref;
+                };
 
                 AsyncResponseStream *response = request->beginResponseStream("application/json");
                 DynamicJsonBuffer jsonBuffer;
@@ -450,8 +451,9 @@ void ModuleServer::handleApiCo2Rst(AsyncWebServerRequest *request) {
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 200;
 
-    // TODO :: move this to some config attribute
-    ModuleServer::requestedCo2Rst = true;
+    ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+        config.sco2.requestedCo2Rst = true;
+    };
 
     root.printTo(*response);
     request->send(response);

@@ -26,8 +26,6 @@ class ModuleServer {
     static int uploadCode;
 
    public:
-    static uint16_t requestedCo2Ref;
-    static bool requestedCo2Rst;
     static std::function<void(config_t &config)> requestedReconfiguration;
     static void begin();
     static void handleApiLatest(AsyncWebServerRequest *request);

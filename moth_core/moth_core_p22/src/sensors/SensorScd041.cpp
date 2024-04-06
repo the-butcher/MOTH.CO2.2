@@ -10,7 +10,15 @@ void SensorScd041::begin() {
     SensorScd041::baseSensor.begin(Wire);
 }
 
+/**
+ * called once when the device boots
+ */
 bool SensorScd041::configure(config_t& config) {
+
+#ifdef USE___SERIAL
+    Serial.println("configuring scd41");
+#endif
+
     // check current setting first
     float temperatureOffsetV = 0;
     float& temperatureOffsetR = temperatureOffsetV;
@@ -18,19 +26,19 @@ bool SensorScd041::configure(config_t& config) {
     // whats about to be set
     float temperatureOffsetC = config.sco2.temperatureOffset;
     // apply, only if there is a real change
+    bool temperatureApplied = false;
     if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
         SensorScd041::baseSensor.setTemperatureOffset(temperatureOffsetC);
         SensorScd041::baseSensor.setAutomaticSelfCalibration(0);
         SensorScd041::baseSensor.persistSettings();
-        return true;
-    } else {
-        return false;
+        temperatureApplied = true;
     }
+    // SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
+    return temperatureApplied;
 }
 
 bool SensorScd041::setCompensationAltitude(uint16_t compensationAltitude) {
-    uint16_t success = SensorScd041::baseSensor.setSensorAltitude(compensationAltitude);
-    return success == 0;
+    return SensorScd041::baseSensor.setSensorAltitude(compensationAltitude);
 }
 
 calibration_t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
@@ -79,6 +87,9 @@ calibration_t SensorScd041::forceReset() {
 }
 
 bool SensorScd041::measure() {
+#ifdef USE___SERIAL
+    Serial.println("measuring scd41");
+#endif
     return SensorScd041::baseSensor.measureSingleShotNoDelay();
 }
 
@@ -93,6 +104,7 @@ bool SensorScd041::powerup(config_t& config) {
     //     // nothing to do (was already in IDLE)
     //     return true;
     // }
+    return true;
 }
 
 bool SensorScd041::depower(config_t& config) {
@@ -109,6 +121,7 @@ bool SensorScd041::depower(config_t& config) {
     //     // nothing to do (the configured IDLE mode forbids depowering)
     //     return true;
     // }
+    return true;
 }
 
 values_co2_t SensorScd041::readval() {

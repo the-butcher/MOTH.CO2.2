@@ -125,6 +125,8 @@ typedef enum : uint8_t {
 typedef struct {
     float temperatureOffset;
     sco2____val_m_e sensorMode;
+    uint16_t requestedCo2Ref;  // only to hold a value if calibration should be performed
+    bool requestedCo2Rst;      // only to be true when a reset should be performed
 } sco2____all___t;
 
 typedef enum : uint8_t {

@@ -44,8 +44,10 @@ config_t Config::load() {
             // [static timezone char array [64]]
         },
         {
-            1.5,                 // temperature offset
-            SCO2___VAL_M___IDLE  // sensor mode (power cycled, against recommendations, idle, when turning off i2c which may be a hidden power cylce, the sensor calibrates, which it does not when power cycled)
+            1.5,                  // temperature offset
+            SCO2___VAL_M___IDLE,  // sensor mode (power cycled, against recommendations, idle, when turning off i2c which may be a hidden power cylce, the sensor calibrates, which it does not when power cycled)
+            0,                    // no calibration
+            false                 // no reset
         },
         {
             SIGNAL__VAL_____OFF  // warn signal

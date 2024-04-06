@@ -45,10 +45,10 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  *       OK full set of functions, upload, update
  * -- restore full configuration
  * OK calibration of SCD41
- *    -- must run 3 minutes in idle before calibrating or it will fail (not turning off i2c power and not powering off scd41 basicall means idle)
+ *    -- must run 3 minutes in idle before calibrating or it will fail (not turning off i2c power and not powering off scd41 basically means idle)
  * OK factory reset of SCD41, TODO :: test
  * OK reimplement OTA, TODO :: test
- * -- co2 cal and rst could be handled through requested configuration
+ * OK co2 cal and rst could be handled through requested configuration, TODO :: test
  * -- configurable mode for scd41
  * -- possible issue where only the last 30 minutes of data render in chart
  * -- update server files (again)
@@ -56,7 +56,6 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 
 // schedule setting and display
 void scheduleDeviceActionSetting() {
-    // schedule a display action
     device.actionIndexMax = DEVICE_ACTION_DEPOWER;  // allow actions display and depower by index
     uint32_t secondstime = SensorTime::getSecondstime();
     uint32_t secondswait = 60 - secondstime % 60;
@@ -193,8 +192,8 @@ void secondsSleep(uint32_t seconds, wakeup_action_e wakeupType) {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
     ModuleSignal::prepareSleep();             // this may hold the neopixel power, depending on color debug setting
-    ButtonAction::prepareSleep(wakeupType);   // establishes gpio holds, ...
-    SensorTime::prepareSleep(wakeupType);     // establishes gpio holds, ...
+    ButtonAction::prepareSleep(wakeupType);   // establishes gpio holds for the button pins, ...
+    SensorTime::prepareSleep(wakeupType);     // establishes gpio hold for the RTC_SQW pin, ...
     ModuleDisplay::prepareSleep(wakeupType);  // adds ext0Wakeup (wait for busy pin high)
 
     if (wakeupType == WAKEUP_ACTION_BUTN) {
@@ -202,18 +201,19 @@ void secondsSleep(uint32_t seconds, wakeup_action_e wakeupType) {
     }
 
     // 1) depending on action establish timer wakeup or not
-    // 2) depending on action AND co2 sensor mode (TODO :: configurable and/or by user interaction or wifi call) depower i2c or not
-    // 2a) co2 sensor powerup and depower depending on co2 sensor mode
+    if (device.actionIndexCur != DEVICE_ACTION_MEASURE) {  // any action other than measure pending -> timer wakeup
+        esp_sleep_enable_timer_wakeup(sleepMicros);
+    }
 
-    if (device.actionIndexCur == DEVICE_ACTION_MEASURE) {  // next action is DEVICE_ACTION_MEASURE, no timer wakeup, RTC pulse will wake the device up to the full minute
-        // no timer wakeup for measure, the RTC will send a pin low signal every full minute
+    // 2) depending on action AND co2 sensor mode depower i2c or not
+    if (device.actionIndexCur == DEVICE_ACTION_MEASURE && config.sco2.sensorMode == SCO2___VAL_M_CYCLED) {  // next action is DEVICE_ACTION_MEASURE, no timer wakeup, RTC pulse will wake the device up to the full minute
         pinMode(I2C_POWER, OUTPUT);
         digitalWrite(I2C_POWER, LOW);
         gpio_hold_dis((gpio_num_t)I2C_POWER);
-    } else {  // any action other than measure pending -> I2C on and defined sleep time
-        esp_sleep_enable_timer_wakeup(sleepMicros);
+    } else {
         gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
     }
+    // 2a) co2 sensor powerup and depower depending on co2 sensor mode
 
     Wire.end();
     // https://github.com/espressif/arduino-esp32/issues/3363
@@ -235,6 +235,7 @@ void secondsSleep(uint32_t seconds, wakeup_action_e wakeupType) {
  * - actionNumEntry has changed (some button action may have completed)
  */
 void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
+
     uint32_t millisEntry = millis();
     uint32_t millisBreak = millisEntry + seconds * MILLISECONDS_PER______SECOND;
     uint16_t actionNumEntry = actionNum;
@@ -265,35 +266,19 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
         uint32_t secondstime = SensorTime::getSecondstime();
         uint32_t secondswait = secondsdest > secondstime ? secondsdest - secondstime : WAITTIME________________NONE;
         if (secondswait == WAITTIME________________NONE && config.wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {
-            // #ifdef USE___SERIAL
-            //             Serial.printf("secondsdest: %d, secondstime: %d\n", secondsdest, secondstime);
-            // #endif
             ModuleSignal::beep();
             config.wifi.wifiValPower = WIFI____VAL_P_PND_N;  // set flag to pending off
             scheduleDeviceActionSetting();
             break;
         }
 
-        if (ModuleServer::requestedReconfiguration != nullptr) {  // display properties
+        // anything ModuleServer wants to configure (display aspects, co2 calibration, co2 reset, co2 power mode)
+        if (ModuleServer::requestedReconfiguration != nullptr) {
             ModuleSignal::beep();
             ModuleServer::requestedReconfiguration(config);
             ButtonAction::adapt(config);
             scheduleDeviceActionSetting();
             ModuleServer::requestedReconfiguration = nullptr;
-            break;
-        } else if (ModuleServer::requestedCo2Ref > 400) {
-#ifdef USE___SERIAL
-            Serial.println("break for co2cal");
-#endif
-            // TODO :: beep, implemented in a proper place
-            scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
-            break;
-        } else if (ModuleServer::requestedCo2Rst) {
-#ifdef USE___SERIAL
-            Serial.println("break for co2rst");
-#endif
-            // TODO :: beep, implemented in a proper place
-            scheduleDeviceActionSetting();  // TODO :: does not work for unknown reasons, wifi however is turned of
             break;
         }
     }
