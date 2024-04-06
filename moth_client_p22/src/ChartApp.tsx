@@ -150,8 +150,8 @@ const propertyLookup: { [K in string]: IChartProperty } = {
 
 const ChartApp = () => {
 
-  const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  // const boxUrl = `http://192.168.0.73/api`; // when running directly from device
+  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  const boxUrl = `http://192.168.0.73/api`; // when running directly from device
 
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartMinX, setChartMinX] = useState<number>();
@@ -213,7 +213,7 @@ const ChartApp = () => {
     new CsvToJsonLoader().load(`${boxUrl}/datcsv?file=${file}`).then(dataset1 => {
       updateDataset(dataset1);
       if (toLocalDate(Date.now()) === toLocalDate(_datePick.getTime())) {
-        new CsvToJsonLoader().load(`${boxUrl}/data`).then(dataset2 => {
+        new CsvToJsonLoader().load(`${boxUrl}/valcsv`).then(dataset2 => {
           const extraData = dataset2.filter(data => data.instant > dataset1[dataset1.length - 1].instant);
           updateDataset([
             ...dataset1,

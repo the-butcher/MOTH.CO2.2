@@ -14,10 +14,12 @@ class DatCsvResponse : public AsyncAbstractResponse {
     File32 _content;
     String _path;
     bool firstFill;
+    String lastModified;
 
    public:
     DatCsvResponse(String path);
     ~DatCsvResponse();
+    bool wasModifiedSince(String ifModifiedSince);
     bool _sourceValid() const {
         return !!(_content);
     }

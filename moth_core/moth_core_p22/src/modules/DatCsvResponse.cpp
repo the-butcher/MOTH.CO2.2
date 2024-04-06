@@ -21,11 +21,23 @@ DatCsvResponse::DatCsvResponse(String path) : AsyncAbstractResponse() {
     _contentLength = CSV_HEAD.length() + _content.size() * CSV_LINE_LENGTH / sizeof(values_all_t);
     _contentType = "text/csv";
 
+    // // download name
+    // char dispositionBuffer[64];
+    // sprintf(dispositionBuffer, "attachment; filename=\"%s.csv\"", path.substring(9, 17));
+    // addHeader("Content-Disposition", dispositionBuffer);
+    // download name
+    char nameBuf[16];
+    _content.getName(nameBuf, 16);
     char dispositionBuffer[64];
-    sprintf(dispositionBuffer, "attachment; filename=\"%s.csv\"", path.substring(9, 17));
-
+    sprintf(dispositionBuffer, "attachment; filename=\"%s\"", nameBuf);
     addHeader("Content-Disposition", dispositionBuffer);
-    addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT");  // TODO :: proper date formatting
+
+    lastModified = SensorTime::getDateTimeLastModString(_content);
+    addHeader("Last-Modified", SensorTime::getDateTimeLastModString(_content));
+}
+
+bool DatCsvResponse::wasModifiedSince(String ifModifiedSince) {
+    return ifModifiedSince != lastModified;
 }
 
 size_t DatCsvResponse::_fillBuffer(uint8_t *data, size_t maxLen) {

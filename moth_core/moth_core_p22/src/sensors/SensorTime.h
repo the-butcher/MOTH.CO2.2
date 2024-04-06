@@ -2,6 +2,7 @@
 #define SensorTime_h
 
 #include <RTClib.h>
+#include <SdFat.h>
 
 #include "types/Action.h"
 #include "types/Config.h"
@@ -42,6 +43,7 @@ class SensorTime {
     static bool isNtpWait();
     static uint32_t getSecondstime();
     static String getDateTimeLastModString(uint32_t secondstime);
+    static String getDateTimeLastModString(File32 file);
     static String getDateTimeSecondsString(uint32_t secondstime);
     static String getDateTimeDisplayString(uint32_t secondstime);
     static file32_def_t getFile32Def(uint32_t secondstime, String fileFormat);

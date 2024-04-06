@@ -12,10 +12,12 @@ class File32Response : public AsyncAbstractResponse {
    private:
     File32 _content;
     String _path;
+    String lastModified;
 
    public:
     File32Response(String path, String contentType);
     ~File32Response();
+    bool wasModifiedSince(String ifModifiedSince);
     bool _sourceValid() const {
         return !!(_content);
     }

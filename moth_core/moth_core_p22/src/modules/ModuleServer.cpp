@@ -86,6 +86,14 @@ void ModuleServer::handleApiDatCsv(AsyncWebServerRequest *request) {
         String csvLine;
         if (ModuleSdcard::existsPath(datFileName)) {
             DatCsvResponse *response = new DatCsvResponse(datFileName);  // cache headers in ValuesResponse
+            if (request->hasHeader("If-Modified-Since")) {
+                String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
+                if (!response->wasModifiedSince(ifModifiedSince)) {
+                    response->~DatCsvResponse();
+                    request->send(304);  // not-modified
+                    return;
+                }
+            }
             request->send(response);
         } else {
             serve404Json(request, datFileName);
@@ -468,11 +476,15 @@ void ModuleServer::serveFile32(AsyncWebServerRequest *request, String file) {
         } else if (fileType == ".ttf") {
             fileType = "font/ttf";
         }
-#ifdef USE___SERIAL
-        Serial.printf("url: %s, method: %d\n", file, request->method());
-#endif
         File32Response *response = new File32Response(file, fileType);
-        // response->addHeader("Last-Modified", "Mon, 22 May 2023 00:00:00 GMT");
+        if (request->hasHeader("If-Modified-Since")) {
+            String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
+            if (!response->wasModifiedSince(ifModifiedSince)) {
+                response->~File32Response();
+                request->send(304);  // not-modified
+                return;
+            }
+        }
         request->send(response);
 
     } else {

@@ -83,29 +83,32 @@ bool SensorScd041::measure() {
 }
 
 bool SensorScd041::powerup(config_t& config) {
-    if (SensorScd041::mode = SCO2___VAL_M_CYCLED) {  // currently depowered
-        bool success = SensorScd041::baseSensor.wakeUp();
-        if (success) {
-            SensorScd041::mode = SCO2___VAL_M___IDLE;  // could be powered and is now IDLE
-        }
-        return success;
-    } else {
-        // nothing to do (was already in IDLE)
-        return true;
-    }
+    // if (SensorScd041::mode = SCO2___VAL_M_CYCLED) {  // currently depowered
+    //     bool success = SensorScd041::baseSensor.wakeUp();
+    //     if (success) {
+    //         SensorScd041::mode = SCO2___VAL_M___IDLE;  // could be powered and is now IDLE
+    //     }
+    //     return success;
+    // } else {
+    //     // nothing to do (was already in IDLE)
+    //     return true;
+    // }
 }
 
 bool SensorScd041::depower(config_t& config) {
-    if (config.sco2.sensorMode == SCO2___VAL_M_CYCLED) {  // aloowed to toggle to cycled
-        bool success = SensorScd041::baseSensor.powerDown();
-        if (success) {
-            SensorScd041::mode = SCO2___VAL_M_CYCLED;
-        }
-        return success;
-    } else {
-        // nothing to do (the configured IDLE mode forbids depowering)
-        return true;
-    }
+
+    // TODO :: find out if powerup and depower are needed with the i2c power cycle
+
+    // if (config.sco2.sensorMode == SCO2___VAL_M_CYCLED) {  // aloowed to toggle to cycled
+    //     bool success = SensorScd041::baseSensor.powerDown();
+    //     if (success) {
+    //         SensorScd041::mode = SCO2___VAL_M_CYCLED;
+    //     }
+    //     return success;
+    // } else {
+    //     // nothing to do (the configured IDLE mode forbids depowering)
+    //     return true;
+    // }
 }
 
 values_co2_t SensorScd041::readval() {

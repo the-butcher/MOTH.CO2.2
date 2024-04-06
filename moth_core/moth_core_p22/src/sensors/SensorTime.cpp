@@ -1,6 +1,5 @@
 #include "SensorTime.h"
 
-#include <SdFat.h>
 #include <sntp.h>
 #include <time.h>
 
@@ -128,8 +127,16 @@ String SensorTime::getDateTimeDisplayString(uint32_t secondstime) {
     return timeBuffer;
 }
 
+String SensorTime::getDateTimeLastModString(File32 file) {
+    uint16_t pdate;
+    uint16_t ptime;
+    file.getModifyDateTime(&pdate, &ptime);
+    DateTime modifyDate(FS_YEAR(pdate), FS_MONTH(pdate), FS_DAY(pdate), FS_HOUR(ptime), FS_MINUTE(ptime), FS_SECOND(ptime));
+    return SensorTime::getDateTimeLastModString(modifyDate.secondstime());
+}
+
 String SensorTime::getDateTimeLastModString(uint32_t secondstime) {
-    DateTime dateUtc = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime + SensorTime::secondstimeOffsetUtc);
+    DateTime dateUtc = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime - SensorTime::secondstimeOffsetUtc);
     char timeBuffer[32];
     sprintf(timeBuffer, "%s, %02d %s %04d %02d:%02d:%02d GMT", SensorTime::getNameOfDay(dateUtc), dateUtc.day(), SensorTime::getNameOfMonth(dateUtc), dateUtc.year(), dateUtc.hour(), dateUtc.minute(), dateUtc.second());
     return timeBuffer;

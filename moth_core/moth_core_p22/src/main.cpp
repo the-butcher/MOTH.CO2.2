@@ -50,7 +50,8 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  * OK reimplement OTA, TODO :: test
  * -- co2 cal and rst could be handled through requested configuration
  * -- configurable mode for scd41
- * -- cache of server and chart seems to be broken, introduce proper Last-Modified header and If-Modified since logic
+ * -- possible issue where only the last 30 minutes of data render in chart
+ * -- update server files (again)
  */
 
 // schedule setting and display
