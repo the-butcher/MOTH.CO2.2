@@ -10,8 +10,9 @@ values_t Values::load() {
         0,  // nextMeasureIndex
         0,  // nextDisplayIndex
         0,  // lastDisplayIndex
-        0   // nextAutoConIndex
-        // measurement buffer
+        0,  // nextAutoNtpIndex
+        0   // nextAutoPubIndex (there will be at least one call to mttt, which in case on non- or misconfiguration can set this value to 0xFFFFFF)
+        // <-- implicit measurement buffer
     };
     for (uint8_t i = 0; i < MEASUREMENT_BUFFER_SIZE; i++) {
         values.measurements[i] = Values::emptyMeasurement(0);

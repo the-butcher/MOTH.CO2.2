@@ -1,6 +1,7 @@
 #ifndef SensorTime_h
 #define SensorTime_h
 
+#include <Arduino.h>
 #include <RTClib.h>
 #include <SdFat.h>
 
@@ -35,7 +36,7 @@ class SensorTime {
 
    public:
     static void begin();
-    static void configure();
+    static void configure(config_t& config);
     static void setupNtpUpdate(config_t& config);
     static void prepareSleep(wakeup_action_e wakeupType);
     static void attachWakeup(wakeup_action_e wakeupType);

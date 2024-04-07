@@ -13,7 +13,7 @@ int32_t SensorTime::secondstimeOffsetUtc;
 /**
  * called once when the device boots
  */
-void SensorTime::configure() {
+void SensorTime::configure(config_t& config) {
     SensorTime::baseSensor.deconfigureAllTimers();
     SensorTime::baseSensor.enableCountdownTimer(PCF8523_FrequencyMinute, 1);
 }

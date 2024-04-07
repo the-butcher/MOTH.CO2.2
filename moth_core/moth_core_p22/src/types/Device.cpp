@@ -1,9 +1,8 @@
 #include "types/Device.h"
 
-#include <Arduino.h>
-
 #include "buttons/ButtonAction.h"
 #include "modules/ModuleDisplay.h"
+#include "modules/ModuleMqtt.h"
 #include "modules/ModuleSdcard.h"
 #include "modules/ModuleServer.h"
 #include "modules/ModuleSignal.h"
@@ -21,6 +20,12 @@ device_t Device::load() {
 
     uint32_t secondstime = SensorTime::getSecondstime();
     device_t device;
+    device.deviceActions[DEVICE_ACTION_POWERUP] = {
+        DEVICE_ACTION_POWERUP,  // trigger measurements
+        COLOR____GREEN,         // grenn to indicate powerup
+        WAKEUP_ACTION_BUTN,     // allow wakeup while measurement is active
+        3                       // 5 seconds delay until measurement
+    };
     device.deviceActions[DEVICE_ACTION_MEASURE] = {
         DEVICE_ACTION_MEASURE,  // trigger measurements
         COLOR__MAGENTA,         // magenta while measuring
@@ -42,14 +47,14 @@ device_t Device::load() {
     device.deviceActions[DEVICE_ACTION_DISPLAY] = {
         DEVICE_ACTION_DISPLAY,  // display refresh
         COLOR______RED,         // red while refreshing display
-        WAKEUP_ACTION_BUSY,     // do NOT allow wakeup while display is redrawing
+        WAKEUP_ACTION_BUTN,     // do NOT allow wakeup while display is redrawing
         3,                      // 3 seconds delay which is a rather long and conservative estimation (buut the busy wakeup should take care of things at the best possible moment)
         secondstime             // initially set, so the entry screen will render right after start
     };
     device.deviceActions[DEVICE_ACTION_DEPOWER] = {
         DEVICE_ACTION_DEPOWER,  // depower display
-        COLOR______RED,         // red while depowering
-        WAKEUP_ACTION_BUTN,     // allow wakeup after depower, while waiting for a new measurement
+        COLOR___ORANGE,         // red while depowering
+        WAKEUP_ACTION_BUSY,     // when waiting for this action, the display's busy pin must become high
         0                       // no delay required after this action
     };
     device.actionIndexCur = DEVICE_ACTION_DISPLAY;  // start with DEVICE_ACTION_DISPLAY for entry screen
@@ -76,7 +81,9 @@ void Device::begin(uint32_t secondstimeBoot) {
 }
 
 std::function<device_action_e(config_t& config, device_action_e maxDeviceAction)> Device::getFunctionByAction(device_action_e action) {
-    if (action == DEVICE_ACTION_MEASURE) {
+    if (action == DEVICE_ACTION_POWERUP) {
+        return handleActionPowerup;
+    } else if (action == DEVICE_ACTION_MEASURE) {
         return handleActionMeasure;
     } else if (action == DEVICE_ACTION_READVAL) {
         return handleActionReadval;
@@ -93,62 +100,33 @@ std::function<device_action_e(config_t& config, device_action_e maxDeviceAction)
 
 device_action_e Device::handleActionInvalid(config_t& config, device_action_e maxDeviceAction) {
     // TODO :: should not be called, handle this condition
-    return DEVICE_ACTION_MEASURE;
+    return DEVICE_ACTION_POWERUP;
+}
+
+/**
+ * check if this cycle should be used to take a battery measurement
+ */
+bool Device::isEnergyCycle() {
+    return (Values::values->nextMeasureIndex) % 5 == 0;
+}
+
+device_action_e Device::handleActionPowerup(config_t& config, device_action_e maxDeviceAction) {
+
+    SensorScd041::powerup(config);
+    if (Device::isEnergyCycle()) {
+        SensorEnergy::powerup();
+    }
+
+    return DEVICE_ACTION_MEASURE;  // measure after powering up
 }
 
 device_action_e Device::handleActionMeasure(config_t& config, device_action_e maxDeviceAction) {
 
-#ifdef USE___SERIAL
-    Serial.println("measure A");
-#endif
-
-    Values::values->nextMeasureIndex++;
-
-    uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
-    uint32_t currMeasureIndex = nextMeasureIndex - 1;
-
-    bool isExtendedCycle = currMeasureIndex % 5 == 0;
-
-#ifdef USE___SERIAL
-    Serial.println("measure B");
-#endif
-
-    SensorScd041::powerup(config);
-
-#ifdef USE___SERIAL
-    Serial.println("measure C");
-#endif
-
-    // battery measurement and pressure compensation are done in lower intervals
-    if (isExtendedCycle) {
-
-        SensorEnergy::powerup();
-
-        float pressure = SensorBme280::readval().pressure;
-        if (pressure > 0) {
-            uint16_t compensationAltitude = (uint16_t)round(SensorBme280::getAltitude(PRESSURE_ZERO, pressure));
-            SensorScd041::setCompensationAltitude(compensationAltitude);
-        }
-    }
-
-#ifdef USE___SERIAL
-    Serial.println("measure D");
-#endif
-
     SensorScd041::measure();
     SensorBme280::measure();
-
-#ifdef USE___SERIAL
-    Serial.println("measure E");
-#endif
-
-    if (isExtendedCycle) {
+    if (Device::isEnergyCycle()) {
         SensorEnergy::measure();
     }
-
-#ifdef USE___SERIAL
-    Serial.println("measure F");
-#endif
 
     return DEVICE_ACTION_READVAL;  // read values after measuring
 }
@@ -161,8 +139,9 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     values_nrg_t measurementNrg = SensorEnergy::readval();
 
     // store values
-    uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
-    uint32_t currMeasureIndex = nextMeasureIndex - 1;
+    uint32_t currMeasureIndex = Values::values->nextMeasureIndex;  // not yet incremented
+    uint32_t nextMeasureIndex = currMeasureIndex + 1;
+    uint32_t currStorageIndex = currMeasureIndex % MEASUREMENT_BUFFER_SIZE;  // the index of this measurement in the data
 
     if (currMeasureIndex == 0) {
         // when pressureZerolevel == 0.0 pressure at sealevel needs to be recalculated (should only happen once at startup)
@@ -174,8 +153,14 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
             Values::values->measurements[i].valuesCo2.co2Raw = measurementCo2.co2Raw;
         }
     }
+    Values::values->nextMeasureIndex = nextMeasureIndex;
 
-    uint32_t currStorageIndex = currMeasureIndex % MEASUREMENT_BUFFER_SIZE;
+    float pressure = measurementBme.pressure;
+    if (pressure > 0) {
+        uint16_t compensationAltitude = (uint16_t)round(SensorBme280::getAltitude(PRESSURE_ZERO, pressure));
+        SensorScd041::setCompensationAltitude(compensationAltitude);
+    }
+
     // #ifdef USE___SERIAL
     //     Serial.printf("currStorageIndex: %d\n", currStorageIndex);
     // #endif
@@ -187,7 +172,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
         true                           // publishable
     };
 
-    // power down sensors
+    // power down early sensors (will save around 2 sensor power seconds while the display is redrawing)
     SensorScd041::depower(config);
     SensorEnergy::depower();
 
@@ -236,13 +221,14 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
                 return DEVICE_ACTION_DISPLAY;  // skip settings and advance directly to display
             }
         }
-        return DEVICE_ACTION_MEASURE;  // meant to measure AND no displayable, significant change
+        return DEVICE_ACTION_POWERUP;  // meant to measure AND not displayable, NO significant change
     } else {
         return DEVICE_ACTION_SETTING;  // setting will trigger a redraw, therefore no need to check for significant change
     }
 }
 
 device_action_e Device::handleActionSetting(config_t& config, device_action_e maxDeviceAction) {
+    uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
 
     // turn on wifi, if required and adapt display modus
     if (config.wifi.wifiValPower == WIFI____VAL_P_PND_Y && !ModuleWifi::isPowered()) {  // to be turned on, but currently off
@@ -253,15 +239,23 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         ModuleWifi::depower(config);
     }
 
-    bool autoConnect = Values::values->nextAutoConIndex <= Values::values->nextMeasureIndex;
-    bool autoShutoff = false;
-    if (autoConnect) {
-        if (!ModuleWifi::isPowered()) {
-            autoShutoff = ModuleWifi::powerup(config, false);  // if the connection was successful, it also needs to be autoShutoff
+    bool autoNtpConn = Values::values->nextAutoNtpIndex <= Values::values->nextMeasureIndex;
+    bool autoPubConn = Values::values->nextAutoPubIndex <= Values::values->nextMeasureIndex;
+    bool autoDepower = false;
+    if (autoNtpConn || autoPubConn) {
+        if (!ModuleWifi::isPowered()) {                        // is not on already
+            autoDepower = ModuleWifi::powerup(config, false);  // if the connection was successful, it also needs to be autoShutoff
         }
-        SensorTime::setupNtpUpdate(config);                                                                      // apply timezone
-        Values::values->nextAutoConIndex = Values::values->nextMeasureIndex - 1 + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
-        if (autoShutoff) {
+        if (autoNtpConn) {
+            SensorTime::setupNtpUpdate(config);                                                  // apply timezone
+            Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
+        }
+        if (autoPubConn) {
+            // try to publish (call with config, so mqtt gets the opportunity to )
+            ModuleMqtt::publish(config);
+            Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
+        }
+        if (autoDepower) {
             for (int i = 0; i < 25; i++) {
                 if (!SensorTime::isNtpWait()) {
                     break;
@@ -320,5 +314,5 @@ device_action_e Device::handleActionDisplay(config_t& config, device_action_e ma
 device_action_e Device::handleActionDepower(config_t& config, device_action_e maxDeviceAction) {
     ModuleDisplay::depower();
     SensorEnergy::depower();       // redundant, but battery monitor does not seem to depower properly after display cycles
-    return DEVICE_ACTION_MEASURE;  // after redrawing pause, then measure
+    return DEVICE_ACTION_POWERUP;  // after redrawing pause, then measure
 }

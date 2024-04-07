@@ -7,8 +7,8 @@
 #include "types/Config.h"
 
 typedef enum : uint8_t {
-    WAKEUP_ACTION_BUTN,
-    WAKEUP_ACTION_BUSY
+    WAKEUP_ACTION_BUTN,  // ext1 wakeup from button pins or RTC_SQW pin
+    WAKEUP_ACTION_BUSY   // ext0 wakeup from busy pin HIGH
 } wakeup_action_e;
 
 typedef enum : uint8_t {

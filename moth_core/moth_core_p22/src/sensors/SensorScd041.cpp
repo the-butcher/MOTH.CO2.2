@@ -4,7 +4,6 @@
 
 SensorScd041Base SensorScd041::baseSensor;
 values_co2_t SensorScd041::values = {0, 0, 0};
-sco2____val_m_e SensorScd041::mode = SCO2___VAL_M___IDLE;
 
 void SensorScd041::begin() {
     SensorScd041::baseSensor.begin(Wire);
@@ -14,10 +13,6 @@ void SensorScd041::begin() {
  * called once when the device boots
  */
 bool SensorScd041::configure(config_t& config) {
-
-#ifdef USE___SERIAL
-    Serial.println("configuring scd41");
-#endif
 
     // check current setting first
     float temperatureOffsetV = 0;
@@ -87,9 +82,6 @@ calibration_t SensorScd041::forceReset() {
 }
 
 bool SensorScd041::measure() {
-#ifdef USE___SERIAL
-    Serial.println("measuring scd41");
-#endif
     return SensorScd041::baseSensor.measureSingleShotNoDelay();
 }
 

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "modules/ModuleMqtt.h"
 #include "sensors/SensorTime.h"
 
 config_t Config::load() {
@@ -41,16 +42,19 @@ config_t Config::load() {
         },
         {
             360  // ntp update interval, 6 hours
-            // [static timezone char array [64]]
+            // [timezone char array [64]]
         },
         {
-            1.5,                  // temperature offset
-            SCO2___VAL_M___IDLE,  // sensor mode (power cycled, against recommendations, idle, when turning off i2c which may be a hidden power cylce, the sensor calibrates, which it does not when power cycled)
-            0,                    // no calibration
-            false                 // no reset
+            1.5,   // temperature offset
+            0,     // no calibration
+            false  // no reset
         },
         {
             SIGNAL__VAL_____OFF  // warn signal
+        },
+        {
+            MQTT_PUBLISH___NEVER,  // mqtt publish minutes
+            MQTT_________UNKNOWN   // mqtt status
         },
         0.0,  // calculated sealevel pressure, 0.0 = needs recalculation
         153   // the altitude that the sensor was configured to (or set to by the user)

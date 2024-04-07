@@ -2,6 +2,7 @@
 #define SensorBme280_h
 
 #include <Adafruit_Sensor.h>
+#include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
 

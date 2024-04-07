@@ -44,7 +44,8 @@ typedef struct {
     uint32_t nextMeasureIndex;
     uint32_t nextDisplayIndex;  // next index for a regular display refresh
     uint32_t lastDisplayIndex;  // the last index rendered in either table or chart
-    uint32_t nextAutoConIndex;  // next index at which an autoconnect should be attempted
+    uint32_t nextAutoNtpIndex;  // next index at which an ntp should be updated
+    uint32_t nextAutoPubIndex;  // next index at which mqtt should be published
     values_all_t measurements[MEASUREMENT_BUFFER_SIZE];
 } values_t;
 

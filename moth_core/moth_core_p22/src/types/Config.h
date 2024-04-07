@@ -3,6 +3,17 @@
 
 #include <Arduino.h>
 
+const String JSON_KEY____SERVER = "srv";
+const String JSON_KEY______PORT = "prt";
+const String JSON_KEY______USER = "usr";
+const String JSON_KEY_______PWD = "pwd";
+const String JSON_KEY____CLIENT = "cli";
+const String JSON_KEY______CERT = "crt";
+const String JSON_KEY_____TOPIC = "top";
+const String JSON_KEY___MINUTES = "min";
+const String JSON_KEY__NETWORKS = "ntw";
+const String JSON_KEY_______KEY = "key";
+
 typedef struct {
     uint16_t wHi;  // upper warn level
     uint16_t rHi;  // upper risk level
@@ -112,19 +123,36 @@ typedef struct {
     int8_t networkConnIndexLast;   // the index of the last network a connection was established to
 } wifi____all___t;
 
+typedef enum : uint8_t {
+    MQTT______________OK = 10,
+    MQTT_FAIL____PUBLISH = 11,
+    MQTT_FAIL_______CONN = 12,
+    MQTT_TIMEOUT____CONN = 13,
+    MQTT_LOST_______CONN = 14,
+    MQTT_NO_________CONN = 15,
+    MQTT_INV____PROTOCOL = 16,
+    MQTT_INV____CLIENTID = 17,
+    MQTT_INV_CREDENTIALS = 18,
+    MQTT_INV_____NO_AUTH = 19,
+    MQTT_INV___WIFI_MODE = 20,
+    MQTT_INV_WIFI_STATUS = 21,
+    MQTT_INV________ADDR = 22,
+    MQTT_INV________PORT = 23,
+    MQTT_________UNKNOWN = 24,
+} mqtt____stat__e;
+
+typedef struct {
+    uint32_t mqttPublishMinutes;  // minute interval for publishing mqtt messages, 0xFFFFFF when mqtt is not configured or misconfigured
+    mqtt____stat__e mqttStatus;
+} mqtt____all___t;
+
 typedef struct {
     uint16_t ntpUpdateMinutes;
     char timezone[64];
 } time____all___t;
 
-typedef enum : uint8_t {
-    SCO2___VAL_M_CYCLED,  // to be turned on and off
-    SCO2___VAL_M___IDLE   // idle mode between measurements
-} sco2____val_m_e;
-
 typedef struct {
     float temperatureOffset;
-    sco2____val_m_e sensorMode;
     uint16_t requestedCo2Ref;  // only to hold a value if calibration should be performed
     bool requestedCo2Rst;      // only to be true when a reset should be performed
 } sco2____all___t;
@@ -144,6 +172,7 @@ typedef struct {
     time____all___t time;
     sco2____all___t sco2;
     signal__all___t sign;
+    mqtt____all___t mqtt;
     float pressureZerolevel;  // calculated sealevel pressure
     float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)
 } config_t;

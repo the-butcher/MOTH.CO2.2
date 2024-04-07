@@ -12,7 +12,7 @@ uint32_t ModuleWifi::secondstimeExpiry = 0;
 uint8_t ModuleWifi::expiryMinutes = 5;  // default
 network_t ModuleWifi::discoveredNetworks[NETWORKS_BUFFER_SIZE];
 
-void ModuleWifi::begin() {
+void ModuleWifi::configure(config_t& config) {
     ModuleSdcard::begin();
     File32 wifiFileDat;
     if (!ModuleSdcard::existsPath(FILE_WIFI_CONFIG__DAT)) {
@@ -35,11 +35,7 @@ void ModuleWifi::begin() {
                     pwd.toCharArray(network.pwd, 64);
                     wifiFileDat.write((byte*)&network, sizeof(network));
                 }
-                if (wifiFileDat) {
-                    // wifiFileDat.flush();
-                    wifiFileDat.close();
-                }
-
+                wifiFileDat.close();
             } else {
                 // TODO :: handle this condition
             }

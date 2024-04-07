@@ -2,6 +2,7 @@
 #define SensorEnergy_h
 
 #include <Adafruit_LC709203F.h>
+#include <Arduino.h>
 
 #include "types/Define.h"
 #include "types/Values.h"

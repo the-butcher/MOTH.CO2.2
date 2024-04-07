@@ -1,16 +1,12 @@
 #ifndef ModuleWifi_h
 #define ModuleWifi_h
 
+#include <Arduino.h>
 #include <WiFi.h>
 
 #include "modules/ModuleServer.h"
 #include "types/Config.h"
 #include "types/Define.h"
-
-const String JSON_KEY___MINUTES = "min";
-const String JSON_KEY__NETWORKS = "ntw";
-const String JSON_KEY_______KEY = "key";
-const String JSON_KEY_______PWD = "pwd";
 
 const String FILE_WIFI_CONFIG_JSON = "/config/wifi.json";
 const String FILE_WIFI_CONFIG__DAT = "/config/wifi.dat";
@@ -37,7 +33,7 @@ class ModuleWifi {
 
    public:
     static network_t discoveredNetworks[NETWORKS_BUFFER_SIZE];
-    static void begin();  // loads json configuration and creates a dat version for faster future accessibility
+    static void configure(config_t& config);  // loads json configuration and creates a dat version for faster future accessibility
     static bool powerup(config_t& config, bool allowApMode);
     static bool isPowered();
     static void depower(config_t& config);

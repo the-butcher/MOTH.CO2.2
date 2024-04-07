@@ -5,6 +5,7 @@
 
 #include "buttons/ButtonAction.h"
 #include "modules/ModuleDisplay.h"
+#include "modules/ModuleMqtt.h"
 #include "modules/ModuleSdcard.h"
 #include "modules/ModuleSignal.h"
 #include "modules/ModuleWifi.h"
@@ -44,14 +45,11 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  *    OK async server
  *       OK full set of functions, upload, update
  * -- restore full configuration
- * OK calibration of SCD41
- *    -- must run 3 minutes in idle before calibrating or it will fail (not turning off i2c power and not powering off scd41 basically means idle)
  * OK factory reset of SCD41, TODO :: test
  * OK reimplement OTA, TODO :: test
- * OK co2 cal and rst could be handled through requested configuration, TODO :: test
- * -- configurable mode for scd41
  * -- possible issue where only the last 30 minutes of data render in chart
  * -- update server files (again)
+ * OK nextMeasurementIndex is incremented in warmup -> requests to data before readval then point to invalid data
  */
 
 // schedule setting and display
@@ -59,16 +57,16 @@ void scheduleDeviceActionSetting() {
     device.actionIndexMax = DEVICE_ACTION_DEPOWER;  // allow actions display and depower by index
     uint32_t secondstime = SensorTime::getSecondstime();
     uint32_t secondswait = 60 - secondstime % 60;
-    if (device.actionIndexCur == DEVICE_ACTION_MEASURE && secondswait > WAITTIME_DISPLAY_AND_DEPOWER) {
+    if (device.actionIndexCur == DEVICE_ACTION_POWERUP && secondswait > WAITTIME_DISPLAY_AND_DEPOWER) {
         device.actionIndexCur = DEVICE_ACTION_SETTING;
         device.deviceActions[DEVICE_ACTION_SETTING].secondsNext = SensorTime::getSecondstime();  // assign current time as due time
     }
 }
 
-void scheduleDeviceActionMeasure() {
+void scheduleDeviceActionPowerup() {
     // TODO :: only if nothing else (calibration, ... ) is pending
-    device.actionIndexCur = DEVICE_ACTION_MEASURE;
-    device.deviceActions[DEVICE_ACTION_MEASURE].secondsNext = SensorTime::getSecondstime();
+    device.actionIndexCur = DEVICE_ACTION_POWERUP;
+    device.deviceActions[DEVICE_ACTION_POWERUP].secondsNext = SensorTime::getSecondstime();
 }
 
 /**
@@ -87,6 +85,21 @@ void scheduleDeviceActionDepower() {
     device.actionIndexCur = DEVICE_ACTION_DEPOWER;
     device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = SensorTime::getSecondstime();  // need to reset, or it will start waiting for DEPOWER again due to secondsNext
     actionNum++;                                                                             // interrupt delay loop
+}
+
+void handleWakeupCause() {
+    esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
+    if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
+        scheduleDeviceActionDepower();
+    } else if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
+        uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
+        gpio_num_t wakeupPin = (gpio_num_t)(log(wakeupStatus) / log(2));
+        if (wakeupPin == PIN_RTC_SQW) {  // wakeup from pin other than the rtc pulse, must be a button press
+            scheduleDeviceActionPowerup();
+        } else {
+            ButtonAction::createButtonAction(wakeupPin);
+        }
+    }
 }
 
 void setup() {
@@ -124,10 +137,6 @@ void setup() {
 
         delay(1000);  // SensorTime appears to take some time to initialize, especially on boot
 
-        SensorTime::configure();
-
-        ModuleWifi::begin();  // only to check if the networks data file is present, this will also call the initial ModuleSdCard begin
-
         device = Device::load();
         config = Config::load();
         values = Values::load();
@@ -135,7 +144,11 @@ void setup() {
             ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (involving a write to the scd41's eeprom)
         }
 
-        // have a battery reading for the entry screen
+        SensorTime::configure(config);  // enables the 1 minute timer
+        ModuleWifi::configure(config);  // check if the wifi data file is present, this will also call the initial ModuleSdCard begin
+        ModuleMqtt::configure(config);  // check if the mqtt data file is present
+
+        // have a battery measurement for the entry screen
         SensorEnergy::powerup();
         SensorEnergy::measure();
         SensorEnergy::depower();
@@ -155,19 +168,22 @@ void setup() {
     // only sets the callback, but does not powerup anything
     ModuleDisplay::begin();
 
-    // did it wake up from a button press?
-    esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
-    if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
-        scheduleDeviceActionDepower();
-    } else if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
-        uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
-        gpio_num_t wakeupPin = (gpio_num_t)(log(wakeupStatus) / log(2));
-        if (wakeupPin == PIN_RTC_SQW) {  // wakeup from pin other than the rtc pulse, must be a button press
-            scheduleDeviceActionMeasure();
-        } else {
-            ButtonAction::createButtonAction(wakeupPin);
-        }
-    }
+    // there can be multiple causes for wakeup, RTC_SQW pin, BUSY pin, Button Pins
+    handleWakeupCause();
+
+    // // did it wake up from a button press?
+    // esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
+    // if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
+    //     scheduleDeviceActionDepower();
+    // } else if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
+    //     uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
+    //     gpio_num_t wakeupPin = (gpio_num_t)(log(wakeupStatus) / log(2));
+    //     if (wakeupPin == PIN_RTC_SQW) {  // wakeup from pin other than the rtc pulse, must be a button press
+    //         scheduleDeviceActionPowerup();
+    //     } else {
+    //         ButtonAction::createButtonAction(wakeupPin);
+    //     }
+    // }
 }
 
 /**
@@ -184,48 +200,46 @@ bool isDelayRequired() {
     return ButtonAction::getActionPin() > 0 || ButtonAction::getPressedPin() > 0 || ModuleWifi::isPowered();
 }
 
-void secondsSleep(uint32_t seconds, wakeup_action_e wakeupType) {
+void secondsSleep(uint32_t seconds) {
     // convert to microseconds
     uint64_t sleepMicros = seconds * MICROSECONDS_PER______SECOND;
 
     esp_deep_sleep_disable_rom_logging();  // seems to have no effect
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 
+    wakeup_action_e wakeupType = device.deviceActions[device.actionIndexCur].wakeupType;
+
     ModuleSignal::prepareSleep();             // this may hold the neopixel power, depending on color debug setting
     ButtonAction::prepareSleep(wakeupType);   // establishes gpio holds for the button pins, ...
     SensorTime::prepareSleep(wakeupType);     // establishes gpio hold for the RTC_SQW pin, ...
     ModuleDisplay::prepareSleep(wakeupType);  // adds ext0Wakeup (wait for busy pin high)
 
+    // needed for both deep and sleep
     if (wakeupType == WAKEUP_ACTION_BUTN) {
         esp_sleep_enable_ext1_wakeup(device.ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
     }
 
-    // 1) depending on action establish timer wakeup or not
-    if (device.actionIndexCur != DEVICE_ACTION_MEASURE) {  // any action other than measure pending -> timer wakeup
-        esp_sleep_enable_timer_wakeup(sleepMicros);
-    }
-
-    // 2) depending on action AND co2 sensor mode depower i2c or not
-    if (device.actionIndexCur == DEVICE_ACTION_MEASURE && config.sco2.sensorMode == SCO2___VAL_M_CYCLED) {  // next action is DEVICE_ACTION_MEASURE, no timer wakeup, RTC pulse will wake the device up to the full minute
+    if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {  // next action is DEVICE_ACTION_POWERUP, therfore no timer wakeup, RTC pulse will take care of wakeup
         pinMode(I2C_POWER, OUTPUT);
         digitalWrite(I2C_POWER, LOW);
         gpio_hold_dis((gpio_num_t)I2C_POWER);
     } else {
+        esp_sleep_enable_timer_wakeup(sleepMicros);
         gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
     }
-    // 2a) co2 sensor powerup and depower depending on co2 sensor mode
 
     Wire.end();
+    digitalWrite(PIN_PKK2_A, LOW);
+
     // https://github.com/espressif/arduino-esp32/issues/3363
     // pinMode(SDA, INPUT);  // needed because Wire.end() enables pullups, power Saving
     // pinMode(SCL, INPUT);
 
-    digitalWrite(PIN_PKK2_A, LOW);
-
     // adc_power_release();
     // esp_wifi_stop();
-    ModuleSignal::setPixelColor(COLOR_____BLUE);
-    esp_deep_sleep_start();  // go to sleep
+
+    ModuleSignal::setPixelColor(COLOR____OCEAN);
+    esp_deep_sleep_start();  // waiting for powerup (up to ~50 seconds) -> deep sleep
 }
 
 /**
@@ -234,11 +248,13 @@ void secondsSleep(uint32_t seconds, wakeup_action_e wakeupType) {
  * - isDelayRequired() becomes false
  * - actionNumEntry has changed (some button action may have completed)
  */
-void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
+void secondsDelay(uint32_t seconds) {
 
     uint32_t millisEntry = millis();
     uint32_t millisBreak = millisEntry + seconds * MILLISECONDS_PER______SECOND;
     uint16_t actionNumEntry = actionNum;
+
+    wakeup_action_e wakeupType = device.deviceActions[device.actionIndexCur].wakeupType;
 
     ButtonAction::attachWakeup(wakeupType);   // button interrupts
     ModuleDisplay::attachWakeup(wakeupType);  // wait for busy pin
@@ -251,7 +267,7 @@ void secondsDelay(uint32_t seconds, wakeup_action_e wakeupType) {
 
         // the 1 minute measure pin
         if (SensorTime::isInterrupted()) {
-            scheduleDeviceActionMeasure();
+            scheduleDeviceActionPowerup();
             break;
         }
 
@@ -292,10 +308,16 @@ void loop() {
     device_action_t action = device.deviceActions[device.actionIndexCur];
     if (SensorTime::getSecondsUntil(action.secondsNext) == WAITTIME________________NONE) {  // action is due
         ModuleSignal::setPixelColor(action.color);
+#ifdef USE___SERIAL
+        Serial.printf("device.actionIndexCur (A): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
+#endif
         device.actionIndexCur = Device::getFunctionByAction(action.type)(config, device.actionIndexMax);  // execute the action and see whats coming next
-        if (device.actionIndexCur == DEVICE_ACTION_MEASURE) {
+#ifdef USE___SERIAL
+        Serial.printf("device.actionIndexCur (B): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
+#endif
+        if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {
             device.actionIndexMax = values.nextMeasureIndex == values.nextDisplayIndex ? DEVICE_ACTION_DEPOWER : DEVICE_ACTION_READVAL;
-            device.deviceActions[DEVICE_ACTION_MEASURE].secondsNext = SensorTime::getSecondstime() + SECONDS_PER_____________HOUR;
+            device.deviceActions[DEVICE_ACTION_POWERUP].secondsNext = SensorTime::getSecondstime() + SECONDS_PER_____________HOUR;
         } else {
             device.deviceActions[device.actionIndexCur].secondsNext = SensorTime::getSecondstime() + action.secondsWait;
         }
@@ -304,9 +326,9 @@ void loop() {
     uint32_t secondsWait = SensorTime::getSecondsUntil(device.deviceActions[device.actionIndexCur].secondsNext);
     if (secondsWait > WAITTIME________________NONE) {
         if (isDelayRequired()) {
-            secondsDelay(secondsWait, action.wakeupType);
+            secondsDelay(secondsWait);
         } else {
-            secondsSleep(secondsWait, action.wakeupType);
+            secondsSleep(secondsWait);
         }
     }
 }

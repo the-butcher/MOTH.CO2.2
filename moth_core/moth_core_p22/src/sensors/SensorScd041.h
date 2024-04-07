@@ -24,7 +24,6 @@ class SensorScd041 {
    private:
     static SensorScd041Base baseSensor;
     static values_co2_t values;
-    static sco2____val_m_e mode;
 
    public:
     static void begin();

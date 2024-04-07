@@ -1,6 +1,7 @@
 #ifndef ModuleServer_h
 #define ModuleServer_h
 
+#include <Arduino.h>
 #include <ESPAsyncWebServer.h>
 
 #include "types/Config.h"

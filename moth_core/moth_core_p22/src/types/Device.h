@@ -1,6 +1,8 @@
 #ifndef Device_h
 #define Device_h
 
+#include <Arduino.h>
+
 #include "sensors/SensorScd041.h"
 #include "types/Action.h"
 #include "types/Config.h"
@@ -13,9 +15,11 @@ typedef enum : uint8_t {
 
 /**
  * ONLY CHANGE WITH CARE :: INDICES OF ACTIONS MUST REMAIN CONSTANT
+ * !!! when adding an action, the deviceAction array size must be adapted
  */
 typedef enum : uint8_t {
-    DEVICE_ACTION_MEASURE,  // i2c on, measure
+    DEVICE_ACTION_POWERUP,  // i2c on,
+    DEVICE_ACTION_MEASURE,  // measure
     DEVICE_ACTION_READVAL,  // read values
     DEVICE_ACTION_SETTING,  // any settings to be applied, i.e. after button press, or wifi request
     DEVICE_ACTION_DISPLAY,  // display on, render values
@@ -31,7 +35,7 @@ typedef struct {
 } device_action_t;
 
 typedef struct {
-    device_action_t deviceActions[5];
+    device_action_t deviceActions[6];
     device_action_e actionIndexCur;
     device_action_e actionIndexMax;
     uint64_t ext1Bitmask;
@@ -41,12 +45,14 @@ class Device {
    private:
     static int cmpfunc(const void* a, const void* b);
     static calibration_t calibrationResult;
+    static device_action_e handleActionPowerup(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionMeasure(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionReadval(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionSetting(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionDisplay(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionDepower(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionInvalid(config_t& config, device_action_e maxDeviceAction);
+    static bool isEnergyCycle();
 
    public:
     static uint32_t secondstimeBoot;
