@@ -308,13 +308,13 @@ void loop() {
     device_action_t action = device.deviceActions[device.actionIndexCur];
     if (SensorTime::getSecondsUntil(action.secondsNext) == WAITTIME________________NONE) {  // action is due
         ModuleSignal::setPixelColor(action.color);
-#ifdef USE___SERIAL
-        Serial.printf("device.actionIndexCur (A): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
-#endif
+        // #ifdef USE___SERIAL
+        //         Serial.printf("device.actionIndexCur (A): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
+        // #endif
         device.actionIndexCur = Device::getFunctionByAction(action.type)(config, device.actionIndexMax);  // execute the action and see whats coming next
-#ifdef USE___SERIAL
-        Serial.printf("device.actionIndexCur (B): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
-#endif
+                                                                                                          // #ifdef USE___SERIAL
+                                                                                                          //         Serial.printf("device.actionIndexCur (B): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
+                                                                                                          // #endif
         if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {
             device.actionIndexMax = values.nextMeasureIndex == values.nextDisplayIndex ? DEVICE_ACTION_DEPOWER : DEVICE_ACTION_READVAL;
             device.deviceActions[DEVICE_ACTION_POWERUP].secondsNext = SensorTime::getSecondstime() + SECONDS_PER_____________HOUR;

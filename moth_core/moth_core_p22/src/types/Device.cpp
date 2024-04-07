@@ -142,6 +142,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex;  // not yet incremented
     uint32_t nextMeasureIndex = currMeasureIndex + 1;
     uint32_t currStorageIndex = currMeasureIndex % MEASUREMENT_BUFFER_SIZE;  // the index of this measurement in the data
+    uint32_t prevStorageIndex = currMeasureIndex > 0 ? (currMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE : 0;
 
     if (currMeasureIndex == 0) {
         // when pressureZerolevel == 0.0 pressure at sealevel needs to be recalculated (should only happen once at startup)
@@ -176,24 +177,21 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     SensorScd041::depower(config);
     SensorEnergy::depower();
 
-    // apply low pass filtering to co2 values
-    // https://github.com/LinnesLab/KickFilters/blob/master/KickFilters.h
+    // some filtering (see excel in nonrepo folder)
+    uint16_t co2LpfPrev = Values::values->measurements[prevStorageIndex].valuesCo2.co2Lpf;
+    uint16_t co2RawCurr = measurementCo2.co2Raw;
 
-    float lowpass[LOWPASS_____BUFFER_SIZE];
-    uint8_t indexY = (nextMeasureIndex - LOWPASS_____BUFFER_SIZE + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE;
-    lowpass[0] = Values::values->measurements[indexY].valuesCo2.co2Raw * LOWPASS___________ALPHA;
-    for (uint8_t i = 1; i < LOWPASS_____BUFFER_SIZE; i++) {
-        indexY = (nextMeasureIndex - LOWPASS_____BUFFER_SIZE + i + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE;
-        lowpass[i] = lowpass[i - 1] + (Values::values->measurements[indexY].valuesCo2.co2Raw - lowpass[i - 1]) * LOWPASS___________ALPHA;
-    }
+    float EXP = 3.0f;
+    float co2CurrRatio = 1 / EXP * pow(1 + abs(co2RawCurr - co2LpfPrev) * 1.0f / co2LpfPrev, EXP);
+    float co2PrevRatio = 1 - co2CurrRatio;
 
-    uint16_t co2Lpf = (uint16_t)round(lowpass[LOWPASS_____BUFFER_SIZE - 1]);
+    uint16_t co2LpfCurr = (uint16_t)round(co2LpfPrev * co2PrevRatio + co2RawCurr * co2CurrRatio);
 
     // replace with a measurement containing the low pass value
     Values::values->measurements[currStorageIndex] = {
         SensorTime::getSecondstime(),  // secondstime as of RTC
         {
-            co2Lpf,                // lowpass
+            co2LpfCurr,            // lowpass
             measurementCo2.deg,    // temperature
             measurementCo2.hum,    // humidity
             measurementCo2.co2Raw  // original co2 value
@@ -203,7 +201,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
         true             // publishable
     };
 
-    if (config.sign.signalValSound == SIGNAL__VAL______ON && co2Lpf >= config.disp.thresholdsCo2.rHi) {
+    if (config.sign.signalValSound == SIGNAL__VAL______ON && co2LpfCurr >= config.disp.thresholdsCo2.rHi) {
         ModuleSignal::beep();
     }
 
