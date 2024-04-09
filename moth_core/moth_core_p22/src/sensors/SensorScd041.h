@@ -40,9 +40,9 @@ class SensorScd041 {
     static uint16_t toShortHum(float floatValue);
     static float toFloatHum(uint16_t shortValue);
     static float toFahrenheit(float celsius);
-    // static float getTemperatureOffset();
-    // static uint16_t getCompensationAltitude();
-    // static bool isAutomaticSelfCalibration();
+    static float getTemperatureOffset();
+    static uint16_t getCompensationAltitude();
+    static bool isAutomaticSelfCalibration();
 };
 
 #endif

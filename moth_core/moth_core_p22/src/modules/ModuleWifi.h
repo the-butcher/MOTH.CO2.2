@@ -34,6 +34,7 @@ class ModuleWifi {
    public:
     static network_t discoveredNetworks[NETWORKS_BUFFER_SIZE];
     static void configure(config_t& config);  // loads json configuration and creates a dat version for faster future accessibility
+    static void createDat(config_t& config);
     static bool powerup(config_t& config, bool allowApMode);
     static bool isPowered();
     static void depower(config_t& config);

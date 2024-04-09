@@ -120,11 +120,6 @@ void ModuleSdcard::historyValues(config_t& config, values_all_t history[HISTORY_
 }
 
 void ModuleSdcard::persistValues() {
-
-#ifdef USE___SERIAL
-    Serial.println("persisting values ... ");
-#endif
-
     file32_def_t fileDef32;
     String datFileNameLast = "";
     String datFilePathLast = "";

@@ -39,17 +39,13 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 // uint16_t sc = sizeof(values);
 
 /**
+ * -- restore full configuration
  * OK wifi
  *    OK clock sync, proper interval
- *    -- mqtt (+autoconnect for mqtt)
- *    OK async server
- *       OK full set of functions, upload, update
- * -- restore full configuration
- * OK factory reset of SCD41, TODO :: test
- * OK reimplement OTA, TODO :: test
+ * -- mqtt (+autoconnect for mqtt)
+ * OK reimplement OTA update, TODO :: test
  * -- possible issue where only the last 30 minutes of data render in chart
- * -- update server files (again)
- * OK nextMeasurementIndex is incremented in warmup -> requests to data before readval then point to invalid data
+ * OK implement pattern similar to mqtt for wifi, where the dat file is removed upon upload of new wifi.json, TODO :: test
  */
 
 // schedule setting and display
@@ -137,9 +133,9 @@ void setup() {
 
         delay(1000);  // SensorTime appears to take some time to initialize, especially on boot
 
-        device = Device::load();
         config = Config::load();
         values = Values::load();
+        device = Device::load();
         if (SensorScd041::configure(config)) {
             ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (involving a write to the scd41's eeprom)
         }
@@ -158,6 +154,7 @@ void setup() {
     }
 
     // enable global access to values
+    Config::begin(&config);
     Values::begin(&values);
     Device::begin(secondstimeBoot);
 
@@ -308,13 +305,7 @@ void loop() {
     device_action_t action = device.deviceActions[device.actionIndexCur];
     if (SensorTime::getSecondsUntil(action.secondsNext) == WAITTIME________________NONE) {  // action is due
         ModuleSignal::setPixelColor(action.color);
-        // #ifdef USE___SERIAL
-        //         Serial.printf("device.actionIndexCur (A): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
-        // #endif
         device.actionIndexCur = Device::getFunctionByAction(action.type)(config, device.actionIndexMax);  // execute the action and see whats coming next
-                                                                                                          // #ifdef USE___SERIAL
-                                                                                                          //         Serial.printf("device.actionIndexCur (B): %d, values.nextMeasureIndex: %d, values.nextDisplayIndex: %d\n", device.actionIndexCur, values.nextMeasureIndex, values.nextDisplayIndex);
-                                                                                                          // #endif
         if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {
             device.actionIndexMax = values.nextMeasureIndex == values.nextDisplayIndex ? DEVICE_ACTION_DEPOWER : DEVICE_ACTION_READVAL;
             device.deviceActions[DEVICE_ACTION_POWERUP].secondsNext = SensorTime::getSecondstime() + SECONDS_PER_____________HOUR;

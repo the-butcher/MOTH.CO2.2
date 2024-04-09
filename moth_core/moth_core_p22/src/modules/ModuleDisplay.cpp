@@ -102,10 +102,6 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
         float staleWarn = max(0.0, min(10.0, (thresholdsCo2.wHi - thresholdsCo2.ref) / 380.0));
         float staleRisk = max(0.0, min(10.0, (thresholdsCo2.rHi - thresholdsCo2.ref) / 380.0));
 
-        // #ifdef USE___SERIAL
-        //         Serial.printf("co2Lpf %d, thresholdsCo2.ref: %d, stale: %f\n", co2Lpf, thresholdsCo2.ref, stale);
-        // #endif
-
         float staleMax = 2.5;
         if (stale > 4) {
             staleMax = 10;
@@ -196,9 +192,7 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
         ModuleDisplay::drawAntialiasedText36(formatString(String(altitude, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     } else {
-#ifdef USE___SERIAL
-        Serial.printf("unhandled displayValTable: %d\n", config.disp.displayValTable);
-#endif
+        // TODO :: handle this (unknown display value)
     }
     ModuleDisplay::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
 

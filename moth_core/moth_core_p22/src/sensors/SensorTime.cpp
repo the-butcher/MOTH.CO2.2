@@ -82,9 +82,6 @@ void SensorTime::handleNtpUpdate(struct timeval* t) {
     DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
     SensorTime::baseSensor.adjust(now);
     SensorTime::secondstimeOffsetUtc = SECONDS_FROM_1970_TO_2000 + now.secondstime() - t->tv_sec;
-    // #ifdef USE___SERIAL
-    //     Serial.printf("secondstimeOffsetUtc: %d\n", secondstimeOffsetUtc);
-    // #endif
     SensorTime::ntpWait = false;
 }
 

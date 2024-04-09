@@ -119,10 +119,11 @@ void ModuleServer::handleApiStatus(AsyncWebServerRequest *request) {
     root["freq"] = ESP.getCpuFreqMHz();
 
     JsonObject &scd041Jo = root.createNestedObject("scd041");
-    // scd041Jo["co2r"] = SensorScd041::getCo2Reference(); // TODO :: decide whether and how to expose config to ModuleServer
-    // scd041Jo["toff"] = SensorScd041::getTemperatureOffset();
-    // scd041Jo["iasc"] = SensorScd041::isAutomaticSelfCalibration();
-    // scd041Jo["calt"] = SensorScd041::getCompensationAltitude();
+    scd041Jo["toff"] = SensorScd041::getTemperatureOffset();
+    scd041Jo["iasc"] = SensorScd041::isAutomaticSelfCalibration();
+    scd041Jo["calt"] = SensorScd041::getCompensationAltitude();
+
+    // mqtt attaches status to config. either config or just the status should be available here
 
     // JsonObject &wifiJo = root.createNestedObject("wifi");
     // wifiJo["config"] = BoxConn::formatConfigStatus(BoxConn::configStatus);
@@ -130,9 +131,9 @@ void ModuleServer::handleApiStatus(AsyncWebServerRequest *request) {
     // JsonObject &dispJo = root.createNestedObject("disp");
     // dispJo["config"] = BoxConn::formatConfigStatus(BoxDisplay::configStatus);
 
-    // JsonObject &mqttJo = root.createNestedObject("mqtt");
+    JsonObject &mqttJo = root.createNestedObject("mqtt");
+    mqttJo["stat"] = Config::getMqttStatus();
     // mqttJo["config"] = BoxConn::formatConfigStatus(BoxMqtt::configStatus);
-    // mqttJo["status"] = BoxMqtt::status;
     // mqttJo["active"] = BoxMqtt::isConfiguredToBeActive();
     // mqttJo["pcount"] = Measurements::getPublishableCount();
 
@@ -261,10 +262,6 @@ void ModuleServer::handleApiDirOut(AsyncWebServerRequest *request) {
             uint16_t pdate;
             uint16_t ptime;
             file.getModifyDateTime(&pdate, &ptime);
-
-#ifdef USE___SERIAL
-            Serial.printf("listing file or folder, name %s, pdate: %d, ptime: %d\n", name, pdate, ptime);
-#endif
 
             char lastModifiedBuffer[32];
             sprintf(lastModifiedBuffer, "%d-%02d-%02d %02d:%02d:%02d", FS_YEAR(pdate), FS_MONTH(pdate), FS_DAY(pdate), FS_HOUR(ptime), FS_MINUTE(ptime), FS_SECOND(ptime));
@@ -579,20 +576,17 @@ void ModuleServer::handleUpload(AsyncWebServerRequest *request, String filename,
         if (dataFileName == MQTT_CONFIG_JSON) {
             ModuleSdcard::removeFile32(MQTT_CONFIG__DAT);
             ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                values.nextAutoPubIndex = 0;  // force republish attempt
+                values.nextAutoPubIndex = 0;  // resetting this value will trigger a republish attempt (and this rebuilds the mqtt dat)
+                // TODO :: clear definition of what condition leads to another autoPub attempt
             };
+        } else if (dataFileName == WIFI_CONFIG_JSON) {
+            ModuleSdcard::removeFile32(WIFI_CONFIG__DAT);
+            // TODO :: any changes to config or values required?
+            // mabe a simple reconnect
         }
 
-        // if (dataFileName == BoxEncr::CONFIG_PATH) {
-        //     BoxEncr::updateConfiguration();
-        //     BoxConn::updateConfiguration();  // may have changed encryption
-        //     BoxMqtt::updateConfiguration();  // may have changed encryption
-        // } else if (dataFileName == BoxDisplay::CONFIG_PATH) {
+        //  if (dataFileName == BoxDisplay::CONFIG_PATH) {
         //     BoxDisplay::updateConfiguration();
-        // } else if (dataFileName == BoxConn::CONFIG_PATH) {
-        //     BoxConn::updateConfiguration();
-        // } else if (dataFileName == BoxMqtt::CONFIG_PATH) {
-        //     BoxMqtt::updateConfiguration();
         // }
 
         if (final) {

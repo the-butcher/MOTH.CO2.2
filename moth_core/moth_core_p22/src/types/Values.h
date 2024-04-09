@@ -14,9 +14,6 @@ const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
  */
 const uint8_t HISTORY_____BUFFER_SIZE = 60;
 
-const uint8_t LOWPASS_____BUFFER_SIZE = 16;  // arbitrary size
-const float LOWPASS___________ALPHA = 0.33;  // higher: faster reaction
-
 typedef struct {
     uint16_t co2Lpf;
     uint16_t deg;  // convention needed for fraction

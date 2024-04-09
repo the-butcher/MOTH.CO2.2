@@ -162,9 +162,6 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
         SensorScd041::setCompensationAltitude(compensationAltitude);
     }
 
-    // #ifdef USE___SERIAL
-    //     Serial.printf("currStorageIndex: %d\n", currStorageIndex);
-    // #endif
     Values::values->measurements[currStorageIndex] = {
         SensorTime::getSecondstime(),  // secondstime as of RTC
         measurementCo2,                // sensorScd041 values

@@ -5,6 +5,8 @@
 #include "modules/ModuleMqtt.h"
 #include "sensors/SensorTime.h"
 
+config_t* Config::config = nullptr;
+
 config_t Config::load() {
     config_t config = {
         {
@@ -62,4 +64,12 @@ config_t Config::load() {
     String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
     timezone.toCharArray(config.time.timezone, 64);
     return config;
+}
+
+void Config::begin(config_t* config) {
+    Config::config = config;
+}
+
+mqtt____stat__e Config::getMqttStatus() {
+    return Config::config->mqtt.mqttStatus;
 }

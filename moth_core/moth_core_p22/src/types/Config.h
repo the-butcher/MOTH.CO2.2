@@ -125,20 +125,25 @@ typedef struct {
 
 typedef enum : uint8_t {
     MQTT______________OK = 10,
-    MQTT_FAIL____PUBLISH = 11,
-    MQTT_FAIL_______CONN = 12,
-    MQTT_TIMEOUT____CONN = 13,
-    MQTT_LOST_______CONN = 14,
-    MQTT_NO_________CONN = 15,
-    MQTT_INV____PROTOCOL = 16,
-    MQTT_INV____CLIENTID = 17,
-    MQTT_INV_CREDENTIALS = 18,
-    MQTT_INV_____NO_AUTH = 19,
-    MQTT_INV___WIFI_MODE = 20,
-    MQTT_INV_WIFI_STATUS = 21,
-    MQTT_INV________ADDR = 22,
-    MQTT_INV________PORT = 23,
-    MQTT_________UNKNOWN = 24,
+    // connection issues, associated with states of the mqtt client after a connection attempt
+    MQTT_TIMEOUT____CONN = 20,
+    MQTT_LOST_______CONN = 21,  // connection was lost
+    MQTT_FAIL_______CONN = 22,  // connect failed
+    MQTT_BAD____PROTOCOL = 23,
+    MQTT_BAD_________CLI = 24,
+    MQTT_UNAVAIL____CONN = 25,
+    MQTT_BAD_CREDENTIALS = 26,
+    MQTT_NO_________AUTH = 27,
+    MQTT_FAIL____PUBLISH = 30,  // failure during publishing
+    // configuration issues
+    MQTT_CNF_________SRV = 50,
+    MQTT_CNF_________PRT = 51,
+    MQTT_CNF_________CLI = 52,
+    MQTT_FAIL________DAT = 53,
+    MQTT_NO__________DAT = 54,
+    // unknown issues
+    MQTT_________UNKNOWN = 99,
+
 } mqtt____stat__e;
 
 typedef struct {
@@ -179,8 +184,12 @@ typedef struct {
 
 class Config {
    private:
+    static config_t* config;
+
    public:
     static config_t load();
+    static void begin(config_t* config);
+    static mqtt____stat__e getMqttStatus();
 };
 
 #endif

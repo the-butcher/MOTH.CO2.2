@@ -14,31 +14,33 @@ network_t ModuleWifi::discoveredNetworks[NETWORKS_BUFFER_SIZE];
 
 void ModuleWifi::configure(config_t& config) {
     ModuleSdcard::begin();
-    File32 wifiFileDat;
     if (!ModuleSdcard::existsPath(WIFI_CONFIG__DAT)) {
-        File32 wifiFileJson;
-        bool jsonSuccess = wifiFileJson.open(WIFI_CONFIG_JSON.c_str(), O_RDONLY);
-        if (jsonSuccess) {
-            StaticJsonBuffer<512> jsonBuffer;
-            JsonObject& root = jsonBuffer.parseObject(wifiFileJson);
-            if (root.success()) {
-                wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
-                int jsonNetworkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
-                String key;
-                String pwd;
-                network_t network;
-                for (uint8_t jsonNetworkIndex = 0; jsonNetworkIndex < jsonNetworkCount; jsonNetworkIndex++) {
-                    key = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______KEY] | "";
-                    pwd = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______PWD] | "";
-                    network = {0};
-                    key.toCharArray(network.key, 64);
-                    pwd.toCharArray(network.pwd, 64);
-                    wifiFileDat.write((byte*)&network, sizeof(network));
-                }
-                wifiFileDat.close();
-            } else {
-                // TODO :: handle this condition
+        ModuleWifi::createDat(config);
+    }
+}
+
+void ModuleWifi::createDat(config_t& config) {
+    File32 wifiFileJson;
+    bool jsonSuccess = wifiFileJson.open(WIFI_CONFIG_JSON.c_str(), O_RDONLY);
+    if (jsonSuccess) {
+        StaticJsonBuffer<512> jsonBuffer;
+        JsonObject& root = jsonBuffer.parseObject(wifiFileJson);
+        if (root.success()) {
+            File32 wifiFileDat;
+            wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
+            int jsonNetworkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
+            String key;
+            String pwd;
+            network_t network;
+            for (uint8_t jsonNetworkIndex = 0; jsonNetworkIndex < jsonNetworkCount; jsonNetworkIndex++) {
+                key = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______KEY] | "";
+                pwd = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______PWD] | "";
+                network = {0};
+                key.toCharArray(network.key, 64);
+                pwd.toCharArray(network.pwd, 64);
+                wifiFileDat.write((byte*)&network, sizeof(network));
             }
+            wifiFileDat.close();
         } else {
             // TODO :: handle this condition
         }
@@ -49,6 +51,10 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     // adc_power_on();
 
     ModuleSdcard::begin();
+    // recreate, when necessary
+    if (!ModuleSdcard::existsPath(WIFI_CONFIG__DAT)) {
+        ModuleWifi::createDat(config);
+    }
 
     ModuleWifi::expiryMinutes = config.wifi.networkExpiryMinutes;
 
@@ -104,9 +110,6 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
 
     // no connection through any of the configured networks, start in ap mode
     if (!powerupSuccess && allowApMode) {
-        // #ifdef USE___SERIAL
-        //         Serial.println("turning wifi off (powerup1)");
-        // #endif
         ModuleWifi::depower(config);  // sets valPower to WIFI____VAL_P_CUR_N
         delay(500);
         powerupSuccess = ModuleWifi::enableSoftAP(config);
@@ -116,9 +119,6 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         ModuleServer::begin();
         ModuleWifi::access();
     } else {
-        // #ifdef USE___SERIAL
-        //         Serial.println("turning wifi off (powerup2)");
-        // #endif
         ModuleWifi::depower(config);  // if no connection could be established, set valPower to WIFI____VAL_P_CUR_N
         ModuleWifi::expire();
     }
@@ -211,9 +211,6 @@ void ModuleWifi::access() {
 
 void ModuleWifi::expire() {
     ModuleWifi::secondstimeExpiry = SensorTime::getSecondstime() + 1;
-    // #ifdef USE___SERIAL
-    //     Serial.println("setting wifi expiry to 0");
-    // #endif
 }
 
 uint32_t ModuleWifi::getSecondstimeExpiry() {
