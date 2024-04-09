@@ -15,14 +15,14 @@ network_t ModuleWifi::discoveredNetworks[NETWORKS_BUFFER_SIZE];
 void ModuleWifi::configure(config_t& config) {
     ModuleSdcard::begin();
     File32 wifiFileDat;
-    if (!ModuleSdcard::existsPath(FILE_WIFI_CONFIG__DAT)) {
+    if (!ModuleSdcard::existsPath(WIFI_CONFIG__DAT)) {
         File32 wifiFileJson;
-        bool jsonSuccess = wifiFileJson.open(FILE_WIFI_CONFIG_JSON.c_str(), O_RDONLY);
+        bool jsonSuccess = wifiFileJson.open(WIFI_CONFIG_JSON.c_str(), O_RDONLY);
         if (jsonSuccess) {
             StaticJsonBuffer<512> jsonBuffer;
             JsonObject& root = jsonBuffer.parseObject(wifiFileJson);
             if (root.success()) {
-                wifiFileDat.open(FILE_WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
+                wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
                 int jsonNetworkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
                 String key;
                 String pwd;
@@ -56,7 +56,7 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     uint8_t configuredNetworkCount = 0;
     // access the dat-file whether it existed or was just created
     File32 wifiFileDat;
-    bool datSuccess = wifiFileDat.open(FILE_WIFI_CONFIG__DAT.c_str(), O_RDONLY);
+    bool datSuccess = wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDONLY);
     if (datSuccess) {
         network_t readValue;
         while (wifiFileDat.available()) {

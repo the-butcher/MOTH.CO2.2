@@ -291,7 +291,7 @@ void secondsDelay(uint32_t seconds) {
         // anything ModuleServer wants to configure (display aspects, co2 calibration, co2 reset, co2 power mode)
         if (ModuleServer::requestedReconfiguration != nullptr) {
             ModuleSignal::beep();
-            ModuleServer::requestedReconfiguration(config);
+            ModuleServer::requestedReconfiguration(config, values);
             ButtonAction::adapt(config);
             scheduleDeviceActionSetting();
             ModuleServer::requestedReconfiguration = nullptr;

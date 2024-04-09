@@ -6,6 +6,7 @@
 #include "DatCsvResponse.h"
 #include "File32Response.h"
 #include "ValuesResponse.h"
+#include "modules/ModuleMqtt.h"
 #include "modules/ModuleSdcard.h"
 #include "modules/ModuleWifi.h"
 #include "types/Define.h"
@@ -16,7 +17,7 @@ AsyncWebServer ModuleServer::server(80);
 bool ModuleServer::hasBegun = false;
 // uint16_t ModuleServer::requestedCo2Ref = 0;
 // bool ModuleServer::requestedCo2Rst = false;
-std::function<void(config_t &config)> ModuleServer::requestedReconfiguration = nullptr;
+std::function<void(config_t &config, values_t &values)> ModuleServer::requestedReconfiguration = nullptr;
 int ModuleServer::updateCode = -1;
 int ModuleServer::uploadCode = -1;
 
@@ -150,7 +151,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                 uint8_t v = vRaw.toInt();
                 if (p == 0) {
                     if (v >= DISPLAY_VAL_M__TABLE && v <= DISPLAY_VAL_M__CHART) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValModus = (display_val_m_e)v;
                         };
                         serve200Json(request, p, v);
@@ -161,7 +162,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 1) {
                     if (v >= DISPLAY_THM____LIGHT && v <= DISPLAY_THM_____DARK) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValTheme = (display_val_e_e)v;
                         };
                         serve200Json(request, p, v);
@@ -172,7 +173,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 2) {
                     if (v >= DISPLAY_VAL_T____CO2 && v <= DISPLAY_VAL_T____ALT) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValTable = (display_val_t_e)v;
                         };
                         serve200Json(request, p, v);
@@ -183,7 +184,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 3) {
                     if (v >= DISPLAY_VAL_C____CO2 && v <= DISPLAY_VAL_C____NRG) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValChart = (display_val_c_e)v;
                         };
                         serve200Json(request, p, v);
@@ -194,7 +195,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 4) {
                     if (v == DISPLAY_HRS_C_____01 || v == DISPLAY_HRS_C_____03 || v == DISPLAY_HRS_C_____06 || v == DISPLAY_HRS_C_____12 || v == DISPLAY_HRS_C_____24) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayHrsChart = (display_val_h_e)v;
                         };
                         serve200Json(request, p, v);
@@ -413,7 +414,7 @@ void ModuleServer::handleApiCo2Cal(AsyncWebServerRequest *request) {
             int ref = refRaw.toInt();
             if (ref >= 400) {
 
-                ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+                ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                     config.sco2.requestedCo2Ref = ref;
                 };
 
@@ -451,7 +452,7 @@ void ModuleServer::handleApiCo2Rst(AsyncWebServerRequest *request) {
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 200;
 
-    ModuleServer::requestedReconfiguration = [=](config_t &config) -> void {
+    ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
         config.sco2.requestedCo2Rst = true;
     };
 
@@ -574,7 +575,13 @@ void ModuleServer::handleUpload(AsyncWebServerRequest *request, String filename,
         targetFile.sync();
         targetFile.close();
 
-        // TODO :: if a configuration file was uploaded, config needs to be updated
+        // if MQTT json was uploaded, the dat file is deleted to force rebuild
+        if (dataFileName == MQTT_CONFIG_JSON) {
+            ModuleSdcard::removeFile32(MQTT_CONFIG__DAT);
+            ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                values.nextAutoPubIndex = 0;  // force republish attempt
+            };
+        }
 
         // if (dataFileName == BoxEncr::CONFIG_PATH) {
         //     BoxEncr::updateConfiguration();

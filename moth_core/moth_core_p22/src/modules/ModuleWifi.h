@@ -8,8 +8,8 @@
 #include "types/Config.h"
 #include "types/Define.h"
 
-const String FILE_WIFI_CONFIG_JSON = "/config/wifi.json";
-const String FILE_WIFI_CONFIG__DAT = "/config/wifi.dat";
+const String WIFI_CONFIG_JSON = "/config/wifi.json";
+const String WIFI_CONFIG__DAT = "/config/wifi.dat";
 const String WIFI_AP_KEY = "mothbox";
 const String WIFI_AP_PWD = "CO2@420PPM";
 

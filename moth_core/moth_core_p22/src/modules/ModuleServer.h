@@ -27,7 +27,7 @@ class ModuleServer {
     static int uploadCode;
 
    public:
-    static std::function<void(config_t &config)> requestedReconfiguration;
+    static std::function<void(config_t &config, values_t &values)> requestedReconfiguration;
     static void begin();
     static void handleApiLatest(AsyncWebServerRequest *request);
     static void handleApiValCsv(AsyncWebServerRequest *request);
