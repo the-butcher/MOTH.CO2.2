@@ -1,6 +1,6 @@
 #include "ButtonAction.h"
 
-#include "modules/ModuleDisplay.h"
+#include "modules/ModuleDisp.h"
 #include "modules/ModuleSignal.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorTime.h"
@@ -217,10 +217,10 @@ void ButtonAction::toggleDisplayValHBw(config_t& config) {
  * button action :: toggle wifi on or off
  */
 void ButtonAction::toggleWifi(config_t& config) {
-    if (config.wifi.wifiValPower == WIFI____VAL_P_CUR_N) {  // if it is actually off -> set to pending on
-        config.wifi.wifiValPower = WIFI____VAL_P_PND_Y;
-    } else if (config.wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {  // if it is actually on -> set to pending off
-        config.wifi.wifiValPower = WIFI____VAL_P_PND_Y;
+    if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_N) {  // if it is actually off -> set to pending on
+        config.wifi.wifiValPower = WIFI____VAL_P__PND_Y;
+    } else if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_Y) {  // if it is actually on -> set to pending off
+        config.wifi.wifiValPower = WIFI____VAL_P__PND_Y;
     } else {
         // already in one of the pending states, do nothing
     }

@@ -18,7 +18,6 @@ typedef struct {
     char pwd[64];
     char cli[16];
     char crt[16];
-    char top[16];
 } mqtt____t;
 
 class ModuleMqtt {

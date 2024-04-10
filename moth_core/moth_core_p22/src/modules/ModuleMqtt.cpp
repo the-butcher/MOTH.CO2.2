@@ -4,14 +4,14 @@
 #include <SdFat.h>
 #include <WiFiClientSecure.h>
 
-#include "modules/ModuleSdcard.h"
+#include "modules/ModuleCard.h"
 #include "types/Define.h"
 
 void ModuleMqtt::configure(config_t& config) {
-    ModuleSdcard::begin();
-    if (!ModuleSdcard::existsPath(MQTT_CONFIG__DAT)) {
-        ModuleMqtt::createDat(config);
-    }
+    ModuleCard::begin();
+    // be sure the dat file is recreated from most current config
+    ModuleCard::removeFile32(MQTT_CONFIG__DAT);
+    ModuleMqtt::createDat(config);
 }
 
 void ModuleMqtt::createDat(config_t& config) {
@@ -24,6 +24,8 @@ void ModuleMqtt::createDat(config_t& config) {
         StaticJsonBuffer<512> jsonBuffer;
         JsonObject& root = jsonBuffer.parseObject(mqttFileJson);
         if (root.success()) {
+
+            config.mqtt.configStatus = CONFIG_STAT__APPLIED;
 
 #ifdef USE___SERIAL
             Serial.println("got json config ...");
@@ -38,7 +40,6 @@ void ModuleMqtt::createDat(config_t& config) {
             String pwd = root[JSON_KEY_______PWD] | "";
             String cli = root[JSON_KEY____CLIENT] | "";
             String crt = root[JSON_KEY______CERT] | "";
-            String top = root[JSON_KEY_____TOPIC] | "";
             uint8_t min = root[JSON_KEY___MINUTES] | 15;
 
             mqtt____t mqtt;
@@ -49,7 +50,6 @@ void ModuleMqtt::createDat(config_t& config) {
             pwd.toCharArray(mqtt.pwd, 64);
             cli.toCharArray(mqtt.cli, 16);
             crt.toCharArray(mqtt.crt, 16);
-            top.toCharArray(mqtt.top, 16);
 
             mqttFileDat.write((byte*)&mqtt, sizeof(mqtt));
             mqttFileDat.close();
@@ -59,6 +59,9 @@ void ModuleMqtt::createDat(config_t& config) {
         }
     } else {
         // TODO :: handle this condition
+    }
+    if (mqttFileJson) {
+        mqttFileJson.close();
     }
 }
 
@@ -107,7 +110,7 @@ mqtt____stat__e ModuleMqtt::checkCliStat(PubSubClient* mqttClient) {
 
 void ModuleMqtt::publish(config_t& config) {
 
-    if (!ModuleSdcard::existsPath(MQTT_CONFIG__DAT)) {
+    if (!ModuleCard::existsPath(MQTT_CONFIG__DAT)) {
         ModuleMqtt::createDat(config);
     }
 
@@ -121,7 +124,7 @@ void ModuleMqtt::publish(config_t& config) {
             if (datStat == MQTT______________OK) {  // a set of config worth trying
 
                 WiFiClient* wifiClient;
-                if (mqtt.crt != "" && ModuleSdcard::existsPath(mqtt.crt)) {
+                if (mqtt.crt != "" && ModuleCard::existsPath(mqtt.crt)) {
 #ifdef USE___SERIAL
                     Serial.println("creating secure wifi client ...");
 #endif
@@ -145,13 +148,67 @@ void ModuleMqtt::publish(config_t& config) {
                     mqttClient->connect(mqtt.cli);  // connect without credentials
                 }
                 if (mqttClient->connected()) {
-                    config.mqtt.mqttStatus = MQTT______________OK;
+
 #ifdef USE___SERIAL
-                    Serial.println("connected!");
+                    Serial.printf("connected, mqtt.min: %d\n", mqtt.min);
 #endif
-                    // TODO :: find a way to know then the lass publication time was, open and read all files from there and publish
+                    // max publishable features
+                    uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
+                    values_all_t datValue;
+                    uint32_t dataIndex;
+                    for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {  // similar code in ValuesResponse
+                        dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
+                        datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
+                        if (datValue.publishable) {
+
+                            // replace with non-publishable version
+                            Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE] = {
+                                datValue.secondstime,  // secondstime
+                                datValue.valuesCo2,    // co2-sensor values
+                                datValue.valuesBme,    // bme-sensor values
+                                datValue.valuesNrg,    // bat-sensor values
+                                false                  // publishable
+                            };
+
+                            // char mqttClidCO2[mqttClid.length() + 5];
+                            // sprintf(mqttClidCO2, "%s/%s", mqttClid, "CO2");
+
+                            DynamicJsonBuffer jsonBuffer;
+                            JsonObject& root = jsonBuffer.createObject();
+                            root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(datValue.secondstime);
+                            root[FIELD_NAME_CO2_LPF] = datValue.valuesCo2.co2Lpf;
+                            root[FIELD_NAME_CO2_RAW] = datValue.valuesCo2.co2Raw;
+                            root[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(datValue.valuesCo2.deg) * 10) / 10.0;
+                            root[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(datValue.valuesCo2.hum) * 10) / 10.0;
+                            root[FIELD_NAME_____HPA] = datValue.valuesBme.pressure;
+                            root[FIELD_NAME_____BAT] = SensorEnergy::toFloatPercent(datValue.valuesNrg.percent);
+
+                            // print json to string
+                            String outputStr;
+                            root.printTo(outputStr);
+                            int outputLen = outputStr.length() + 1;
+
+                            char outputBuf[outputLen];
+                            outputStr.toCharArray(outputBuf, outputLen);
+
+                            mqttClient->publish(mqtt.cli, (uint8_t const*)outputBuf, outputLen);
+
+#ifdef USE___SERIAL
+                            Serial.printf("found publishable, dataIndex: %d\n", dataIndex);
+#endif
+                        }
+                    }
+
+                    config.mqtt.mqttStatus = MQTT______________OK;
+                    config.mqtt.mqttPublishMinutes = mqtt.min;  // no update
+
+                    // TODO :: find a way to know then the last publication time was, open and read all files from there and publish
                     // finally publish anything currently in measurement buffer
                     // publishable cant be older than mqtt config time (boot time?)
+                    // if publishing measurements already stored in file, those files would have to be rewritten with publishable = false flags
+                    // how could the file be tagged as completely published
+
+                    mqttClient->disconnect();
 
                 } else {
                     config.mqtt.mqttStatus = ModuleMqtt::checkCliStat(mqttClient);
@@ -169,8 +226,15 @@ void ModuleMqtt::publish(config_t& config) {
         config.mqtt.mqttStatus = MQTT_FAIL________DAT;
     }
 
+    // TODO :: appropriate config and values for status
+    if (config.mqtt.mqttStatus != MQTT______________OK) {
 #ifdef USE___SERIAL
-    Serial.printf("before returning infinite publish interval, stat: %d\n", config.mqtt.mqttStatus);
+        Serial.printf("before returning infinite publish interval, stat: %d\n", config.mqtt.mqttStatus);
 #endif
-    config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // no update
+        config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // no update
+    } else {
+#ifdef USE___SERIAL
+        Serial.println("before returning from mqtt success");
+#endif
+    }
 }

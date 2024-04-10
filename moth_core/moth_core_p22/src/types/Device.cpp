@@ -1,10 +1,10 @@
 #include "types/Device.h"
 
 #include "buttons/ButtonAction.h"
-#include "modules/ModuleDisplay.h"
+#include "modules/ModuleCard.h"
+#include "modules/ModuleDisp.h"
+#include "modules/ModuleHttp.h"
 #include "modules/ModuleMqtt.h"
-#include "modules/ModuleSdcard.h"
-#include "modules/ModuleServer.h"
 #include "modules/ModuleSignal.h"
 #include "modules/ModuleWifi.h"
 #include "sensors/SensorBme280.h"
@@ -204,8 +204,8 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
 
     // upon rollover, write measurements to SD card
     if (Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE == 0) {  // when the next measurement index is dividable by MEASUREMENT_BUFFER_SIZE, measurements need to be written to sd
-        ModuleSdcard::begin();
-        ModuleSdcard::persistValues();
+        ModuleCard::begin();
+        ModuleCard::persistValues();
     }
 
     if (maxDeviceAction == DEVICE_ACTION_READVAL) {
@@ -226,11 +226,11 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
 
     // turn on wifi, if required and adapt display modus
-    if (config.wifi.wifiValPower == WIFI____VAL_P_PND_Y && !ModuleWifi::isPowered()) {  // to be turned on, but currently off
+    if (config.wifi.wifiValPower == WIFI____VAL_P__PND_Y && !ModuleWifi::isPowered()) {  // to be turned on, but currently off
         if (ModuleWifi::powerup(config, true)) {
             config.disp.displayValSetng = DISPLAY_VAL_S_____QR;
         }
-    } else if (config.wifi.wifiValPower == WIFI____VAL_P_PND_N && ModuleWifi::isPowered()) {  // to be turned off, but current on
+    } else if (config.wifi.wifiValPower == WIFI____VAL_P__PND_N && ModuleWifi::isPowered()) {  // to be turned off, but current on
         ModuleWifi::depower(config);
     }
 
@@ -281,22 +281,22 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
 device_action_e Device::handleActionDisplay(config_t& config, device_action_e maxDeviceAction) {
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
     if (config.disp.displayValSetng == DISPLAY_VAL_S__ENTRY) {
-        ModuleDisplay::renderEntry(config);  // splash screen
+        ModuleDisp::renderEntry(config);  // splash screen
     } else if (config.disp.displayValSetng == DISPLAY_VAL_S_____QR) {
-        ModuleDisplay::renderQRCodes(config);
+        ModuleDisp::renderQRCodes(config);
         Values::values->nextDisplayIndex = currMeasureIndex + 1;  // wait a minute before next update
     } else if (config.disp.displayValSetng == DISPLAY_VAL_S____CO2) {
-        ModuleDisplay::renderCo2(config, calibrationResult);
+        ModuleDisp::renderCo2(config, calibrationResult);
         Values::values->nextDisplayIndex = currMeasureIndex + 1;  // wait a minute before next update
     } else if (config.disp.displayValModus == DISPLAY_VAL_M__TABLE) {
         values_all_t measurement = Values::values->measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
-        ModuleDisplay::renderTable(measurement, config);
+        ModuleDisp::renderTable(measurement, config);
         Values::values->lastDisplayIndex = currMeasureIndex;
         Values::values->nextDisplayIndex = currMeasureIndex + config.disp.displayUpdateMinutes;
     } else if (config.disp.displayValModus == DISPLAY_VAL_M__CHART) {
         values_all_t history[HISTORY_____BUFFER_SIZE];
-        ModuleSdcard::historyValues(config, history);  // will fill history with values from file or current measurements
-        ModuleDisplay::renderChart(history, config);
+        ModuleCard::historyValues(config, history);  // will fill history with values from file or current measurements
+        ModuleDisp::renderChart(history, config);
         Values::values->lastDisplayIndex = currMeasureIndex;
         Values::values->nextDisplayIndex = currMeasureIndex + config.disp.displayUpdateMinutes;
     } else {
@@ -307,7 +307,7 @@ device_action_e Device::handleActionDisplay(config_t& config, device_action_e ma
 }
 
 device_action_e Device::handleActionDepower(config_t& config, device_action_e maxDeviceAction) {
-    ModuleDisplay::depower();
+    ModuleDisp::depower();
     SensorEnergy::depower();       // redundant, but battery monitor does not seem to depower properly after display cycles
     return DEVICE_ACTION_POWERUP;  // after redrawing pause, then measure
 }

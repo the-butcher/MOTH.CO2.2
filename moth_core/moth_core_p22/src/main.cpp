@@ -4,9 +4,9 @@
 #include <esp_wifi.h>
 
 #include "buttons/ButtonAction.h"
-#include "modules/ModuleDisplay.h"
+#include "modules/ModuleCard.h"
+#include "modules/ModuleDisp.h"
 #include "modules/ModuleMqtt.h"
-#include "modules/ModuleSdcard.h"
 #include "modules/ModuleSignal.h"
 #include "modules/ModuleWifi.h"
 #include "sensors/SensorBme280.h"
@@ -39,13 +39,16 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 // uint16_t sc = sizeof(values);
 
 /**
- * -- restore full configuration
- * OK wifi
- *    OK clock sync, proper interval
- * -- mqtt (+autoconnect for mqtt)
+ * -- restore full configuration :: display
+ *    -- uploading a new display config must reconfigure display and also depending things (SCD41 temperature offset, ...)
+ *    -- test changes to various properties, with restart and/or on the fly
+ * OK mqtt (+autoconnect for mqtt) :: TODO :: generally and specifically usr/pwd and secure
  * OK reimplement OTA update, TODO :: test
  * -- possible issue where only the last 30 minutes of data render in chart
  * OK implement pattern similar to mqtt for wifi, where the dat file is removed upon upload of new wifi.json, TODO :: test
+ * -- in chart mode have a numeric value
+ *
+ * -- create series with 10min, 5min, 3min, 0min warmup
  */
 
 // schedule setting and display
@@ -136,13 +139,14 @@ void setup() {
         config = Config::load();
         values = Values::load();
         device = Device::load();
+
+        SensorTime::configure(config);  // enables the 1 minute timer
+        ModuleWifi::configure(config);  // recreate the wifi data file, this will also call the initial ModuleSdCard begin
+        ModuleMqtt::configure(config);  // recreate the mqtt data file
+        ModuleDisp::configure(config);  // load display config and apply to config, must be configured prior to SensorScd041 to have correct temperature offset
         if (SensorScd041::configure(config)) {
             ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (involving a write to the scd41's eeprom)
         }
-
-        SensorTime::configure(config);  // enables the 1 minute timer
-        ModuleWifi::configure(config);  // check if the wifi data file is present, this will also call the initial ModuleSdCard begin
-        ModuleMqtt::configure(config);  // check if the mqtt data file is present
 
         // have a battery measurement for the entry screen
         SensorEnergy::powerup();
@@ -163,7 +167,7 @@ void setup() {
     ButtonAction::adapt(config);
 
     // only sets the callback, but does not powerup anything
-    ModuleDisplay::begin();
+    ModuleDisp::begin();
 
     // there can be multiple causes for wakeup, RTC_SQW pin, BUSY pin, Button Pins
     handleWakeupCause();
@@ -206,10 +210,10 @@ void secondsSleep(uint32_t seconds) {
 
     wakeup_action_e wakeupType = device.deviceActions[device.actionIndexCur].wakeupType;
 
-    ModuleSignal::prepareSleep();             // this may hold the neopixel power, depending on color debug setting
-    ButtonAction::prepareSleep(wakeupType);   // establishes gpio holds for the button pins, ...
-    SensorTime::prepareSleep(wakeupType);     // establishes gpio hold for the RTC_SQW pin, ...
-    ModuleDisplay::prepareSleep(wakeupType);  // adds ext0Wakeup (wait for busy pin high)
+    ModuleSignal::prepareSleep();            // this may hold the neopixel power, depending on color debug setting
+    ButtonAction::prepareSleep(wakeupType);  // establishes gpio holds for the button pins, ...
+    SensorTime::prepareSleep(wakeupType);    // establishes gpio hold for the RTC_SQW pin, ...
+    ModuleDisp::prepareSleep(wakeupType);    // adds ext0Wakeup (wait for busy pin high)
 
     // needed for both deep and sleep
     if (wakeupType == WAKEUP_ACTION_BUTN) {
@@ -253,9 +257,9 @@ void secondsDelay(uint32_t seconds) {
 
     wakeup_action_e wakeupType = device.deviceActions[device.actionIndexCur].wakeupType;
 
-    ButtonAction::attachWakeup(wakeupType);   // button interrupts
-    ModuleDisplay::attachWakeup(wakeupType);  // wait for busy pin
-    SensorTime::attachWakeup(wakeupType);     // SQW interrupt
+    ButtonAction::attachWakeup(wakeupType);  // button interrupts
+    ModuleDisp::attachWakeup(wakeupType);    // wait for busy pin
+    SensorTime::attachWakeup(wakeupType);    // SQW interrupt
 
     ModuleSignal::setPixelColor(COLOR_____CYAN);
     while (isDelayRequired() && millis() < millisBreak && actionNumEntry == actionNum) {
@@ -269,7 +273,7 @@ void secondsDelay(uint32_t seconds) {
         }
 
         // the display's busy pin
-        if (ModuleDisplay::isInterrupted()) {
+        if (ModuleDisp::isInterrupted()) {
             scheduleDeviceActionDepower();
             break;
         }
@@ -278,26 +282,26 @@ void secondsDelay(uint32_t seconds) {
         uint32_t secondsdest = ModuleWifi::getSecondstimeExpiry();
         uint32_t secondstime = SensorTime::getSecondstime();
         uint32_t secondswait = secondsdest > secondstime ? secondsdest - secondstime : WAITTIME________________NONE;
-        if (secondswait == WAITTIME________________NONE && config.wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {
+        if (secondswait == WAITTIME________________NONE && config.wifi.wifiValPower == WIFI____VAL_P__CUR_Y) {
             ModuleSignal::beep();
-            config.wifi.wifiValPower = WIFI____VAL_P_PND_N;  // set flag to pending off
+            config.wifi.wifiValPower = WIFI____VAL_P__PND_N;  // set flag to pending off
             scheduleDeviceActionSetting();
             break;
         }
 
-        // anything ModuleServer wants to configure (display aspects, co2 calibration, co2 reset, co2 power mode)
-        if (ModuleServer::requestedReconfiguration != nullptr) {
+        // anything ModuleHttp wants to configure (display aspects, co2 calibration, co2 reset, co2 power mode)
+        if (ModuleHttp::requestedReconfiguration != nullptr) {
             ModuleSignal::beep();
-            ModuleServer::requestedReconfiguration(config, values);
+            ModuleHttp::requestedReconfiguration(config, values);
             ButtonAction::adapt(config);
             scheduleDeviceActionSetting();
-            ModuleServer::requestedReconfiguration = nullptr;
+            ModuleHttp::requestedReconfiguration = nullptr;
             break;
         }
     }
 
     ButtonAction::detachWakeup(wakeupType);
-    ModuleDisplay::detachWakeup(wakeupType);
+    ModuleDisp::detachWakeup(wakeupType);
     SensorTime::detachWakeup(wakeupType);
 }
 

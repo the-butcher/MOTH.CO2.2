@@ -1,7 +1,7 @@
 #include "DatCsvResponse.h"
 
-#include "ModuleSdcard.h"
-#include "ModuleServer.h"
+#include "ModuleCard.h"
+#include "ModuleHttp.h"
 
 DatCsvResponse::~DatCsvResponse() {
     if (_content) {
@@ -11,7 +11,7 @@ DatCsvResponse::~DatCsvResponse() {
 
 DatCsvResponse::DatCsvResponse(String path) : AsyncAbstractResponse() {
 
-    ModuleSdcard::begin();
+    ModuleCard::begin();
 
     firstFill = true;
 
@@ -55,7 +55,7 @@ size_t DatCsvResponse::_fillBuffer(uint8_t *data, size_t maxLen) {
             offset = lineIndex * CSV_LINE_LENGTH;
             if (_content.available() >= sizeof(values_all_t)) {
                 _content.read((byte *)&datValue, sizeof(datValue));
-                ModuleServer::fillBufferWithCsv(&datValue, data, offset);
+                ModuleHttp::fillBufferWithCsv(&datValue, data, offset);
             }
         }
         return CSV_LINE_LENGTH * lineLimit;

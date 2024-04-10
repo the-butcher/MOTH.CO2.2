@@ -8,8 +8,10 @@
 config_t* Config::config = nullptr;
 
 config_t Config::load() {
+
     config_t config = {
         {
+            CONFIG_STAT__DEFAULT,
             {
                 800,   // co2 wHi
                 1000,  // co2 rHi
@@ -38,9 +40,10 @@ config_t Config::load() {
             3  // display update minutes
         },
         {
-            WIFI____VAL_P_CUR_N,  // initial wifi state off
-            10,                   // network expiry minutes
-            0                     // last successful connection index
+            CONFIG_STAT__DEFAULT,
+            WIFI____VAL_P__CUR_N,  // initial wifi state off
+            10,                    // network expiry minutes
+            0                      // last successful connection index
         },
         {
             360  // ntp update interval, 6 hours
@@ -55,6 +58,7 @@ config_t Config::load() {
             SIGNAL__VAL_____OFF  // warn signal
         },
         {
+            CONFIG_STAT__DEFAULT,
             MQTT_PUBLISH___NEVER,  // mqtt publish minutes
             MQTT_________UNKNOWN   // mqtt status
         },

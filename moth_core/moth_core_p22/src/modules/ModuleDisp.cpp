@@ -1,8 +1,10 @@
-#include "ModuleDisplay.h"
+#include "ModuleDisp.h"
 
+#include <ArduinoJson.h>
 #include <qrcode.h>
 
 #include "buttons/ButtonAction.h"
+#include "modules/ModuleCard.h"
 #include "sensors/SensorBme280.h"
 #include "sensors/SensorEnergy.h"
 #include "sensors/SensorScd041.h"
@@ -27,58 +29,117 @@ const char FORMAT_6_DIGIT[] = "%6s";
 const char FORMAT_CELL_PERCENT[] = "%5s%%";
 const char FORMAT_STALE[] = "%3s%% stale";
 
-ModuleDisplayBase ModuleDisplay::baseDisplay;
-bool ModuleDisplay::interrupted = false;
+ModuleDispBase ModuleDisp::baseDisplay;
+bool ModuleDisp::interrupted = false;
 
-void ModuleDisplay::begin() {
+void ModuleDisp::configure(config_t& config) {
+    ModuleCard::begin();
+    File32 dispFileJson;
+    bool dispSuccess = dispFileJson.open(DISP_CONFIG_JSON.c_str(), O_RDONLY);
+    if (dispSuccess) {
+        StaticJsonBuffer<1024> jsonBuffer;
+        JsonObject& root = jsonBuffer.parseObject(dispFileJson);
+        if (root.success()) {
+
+            config.disp.configStatus = CONFIG_STAT__APPLIED;
+
+            // display minutes
+            config.disp.displayUpdateMinutes = root[JSON_KEY___MINUTES] | config.disp.displayUpdateMinutes;  // apply network expiry (independant from networks)
+
+            // show significant scale
+            bool isShowSignificant = root[JSON_KEY_______SSC] | config.disp.displayValCycle == DISPLAY_VAL_Y____SIG;
+            config.disp.displayValCycle = isShowSignificant ? DISPLAY_VAL_Y____SIG : DISPLAY_VAL_Y____FIX;
+
+            // display co2 threshold and reference
+            config.disp.thresholdsCo2.wHi = root[JSON_KEY_______CO2][JSON_KEY_WARN_HIGH] | config.disp.thresholdsCo2.wHi;
+            config.disp.thresholdsCo2.rHi = root[JSON_KEY_______CO2][JSON_KEY_RISK_HIGH] | config.disp.thresholdsCo2.rHi;
+            config.disp.thresholdsCo2.ref = root[JSON_KEY_______CO2][JSON_KEY_REFERENCE] | config.disp.thresholdsCo2.ref;
+
+            // display deg thresholds
+            config.disp.thresholdsDeg.rLo = root[JSON_KEY_______DEG][JSON_KEY_RISK__LOW] | config.disp.thresholdsDeg.rLo;
+            config.disp.thresholdsDeg.wLo = root[JSON_KEY_______DEG][JSON_KEY_WARN__LOW] | config.disp.thresholdsDeg.wLo;
+            config.disp.thresholdsDeg.wHi = root[JSON_KEY_______DEG][JSON_KEY_WARN_HIGH] | config.disp.thresholdsDeg.wHi;
+            config.disp.thresholdsDeg.rHi = root[JSON_KEY_______DEG][JSON_KEY_RISK_HIGH] | config.disp.thresholdsDeg.rHi;
+
+            // display deg scale (unit)
+            bool isFahrenheit = root[JSON_KEY_______DEG][JSON_KEY_______C2F] | config.disp.displayDegScale == DISPLAY_VAL_D______F;
+            config.disp.displayDegScale = isFahrenheit ? DISPLAY_VAL_D______F : DISPLAY_VAL_D______C;
+
+            // display deg offset
+            config.sco2.temperatureOffset = root[JSON_KEY_______DEG][JSON_KEY____OFFSET][0] | config.sco2.temperatureOffset;
+
+            // display hum thresholds
+            config.disp.thresholdsHum.rLo = root[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | config.disp.thresholdsHum.rLo;
+            config.disp.thresholdsHum.wLo = root[JSON_KEY_______HUM][JSON_KEY_WARN__LOW] | config.disp.thresholdsHum.wLo;
+            config.disp.thresholdsHum.wHi = root[JSON_KEY_______HUM][JSON_KEY_WARN_HIGH] | config.disp.thresholdsHum.wHi;
+            config.disp.thresholdsHum.rHi = root[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | config.disp.thresholdsHum.rHi;
+
+            // altitude base level (home altitude of sensor)
+            config.altitudeBaselevel = root[JSON_KEY__ALTITUDE] | config.altitudeBaselevel;
+
+            String timezone = root[JSON_KEY__TIMEZONE] | "";
+            if (timezone != "") {
+                timezone.toCharArray(config.time.timezone, 64);
+            }
+
+        } else {
+            // TODO :: handle this condition
+        }
+    }
+    if (dispFileJson) {
+        dispFileJson.close();
+    }
+}
+
+void ModuleDisp::begin() {
     // do nothing
 }
 
-void ModuleDisplay::prepareSleep(wakeup_action_e wakeupType) {
+void ModuleDisp::prepareSleep(wakeup_action_e wakeupType) {
     if (wakeupType == WAKEUP_ACTION_BUSY) {
         esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_EPD_BUSY, HIGH);
     }
 }
 
-void ModuleDisplay::attachWakeup(wakeup_action_e wakeupType) {
+void ModuleDisp::attachWakeup(wakeup_action_e wakeupType) {
     if (wakeupType == WAKEUP_ACTION_BUSY) {
-        attachInterrupt(digitalPinToInterrupt(PIN_EPD_BUSY), ModuleDisplay::handleInterrupt, FALLING);
-        ModuleDisplay::interrupted = false;
+        attachInterrupt(digitalPinToInterrupt(PIN_EPD_BUSY), ModuleDisp::handleInterrupt, FALLING);
+        ModuleDisp::interrupted = false;
     }
 }
-void ModuleDisplay::detachWakeup(wakeup_action_e wakeupType) {
+void ModuleDisp::detachWakeup(wakeup_action_e wakeupType) {
     if (wakeupType == WAKEUP_ACTION_BUSY) {
         detachInterrupt(digitalPinToInterrupt(PIN_EPD_BUSY));
-        ModuleDisplay::interrupted = false;
+        ModuleDisp::interrupted = false;
     }
 }
 
-void ModuleDisplay::handleInterrupt() {
-    ModuleDisplay::interrupted = true;
+void ModuleDisp::handleInterrupt() {
+    ModuleDisp::interrupted = true;
 }
 
-bool ModuleDisplay::isInterrupted() {
-    return ModuleDisplay::interrupted;
+bool ModuleDisp::isInterrupted() {
+    return ModuleDisp::interrupted;
 }
 
-void ModuleDisplay::flushBuffer() {
-    ModuleDisplay::baseDisplay.writeFrameBuffers();
+void ModuleDisp::flushBuffer() {
+    ModuleDisp::baseDisplay.writeFrameBuffers();
 }
 
-void ModuleDisplay::depower() {
-    ModuleDisplay::baseDisplay.begin(THINKINK_GRAYSCALE4, true);
-    ModuleDisplay::baseDisplay.depower();
+void ModuleDisp::depower() {
+    ModuleDisp::baseDisplay.begin(THINKINK_GRAYSCALE4, true);
+    ModuleDisp::baseDisplay.depower();
 }
 
-void ModuleDisplay::clearBuffer(config_t& config) {
-    ModuleDisplay::baseDisplay.begin(THINKINK_GRAYSCALE4, config.disp.displayValTheme == DISPLAY_THM____LIGHT);
-    ModuleDisplay::baseDisplay.clearBuffer();
+void ModuleDisp::clearBuffer(config_t& config) {
+    ModuleDisp::baseDisplay.begin(THINKINK_GRAYSCALE4, config.disp.displayValTheme == DISPLAY_THM____LIGHT);
+    ModuleDisp::baseDisplay.clearBuffer();
 }
 
-void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
-    ModuleDisplay::clearBuffer(config);
-    ModuleDisplay::drawOuterBorders(EPD_LIGHT);
-    ModuleDisplay::drawInnerBorders(EPD_LIGHT);
+void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
+    ModuleDisp::clearBuffer(config);
+    ModuleDisp::drawOuterBorders(EPD_LIGHT);
+    ModuleDisp::drawInnerBorders(EPD_LIGHT);
 
     // values for temperature and humidity
     float deg = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);
@@ -115,12 +176,12 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
         vertColor = getVertColor(co2Lpf, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi);
 
         if (fillColor != EPD_WHITE) {
-            ModuleDisplay::fillRectangle(RECT_CO2, fillColor);
+            ModuleDisp::fillRectangle(RECT_CO2, fillColor);
         }
 
         title = "CO² ppm";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * 7;
-        ModuleDisplay::drawAntialiasedText36(formatString(String(co2Lpf), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+        ModuleDisp::drawAntialiasedText36(formatString(String(co2Lpf), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
 
         uint8_t yMax = RECT_CO2.ymax - 7;  // bottom limit of rebreathe indicator
         uint8_t yDim = round(stale * staleDif);
@@ -131,19 +192,19 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
         uint8_t xBarMin = 8;
         uint8_t xBarMax = 13;
         for (uint8_t i = xBarMin; i <= xBarMax; i++) {
-            ModuleDisplay::baseDisplay.drawFastVLine(i, yMax - yDimWarn, yDimWarn, EPD_WHITE);             // good
-            ModuleDisplay::baseDisplay.drawFastVLine(i, yMax - yDimRisk, yDimRisk - yDimWarn, vertColor);  // warn
-            ModuleDisplay::baseDisplay.drawFastVLine(i, yMax - yDimMax, yDimMax - yDimRisk, EPD_BLACK);    // risk
+            ModuleDisp::baseDisplay.drawFastVLine(i, yMax - yDimWarn, yDimWarn, EPD_WHITE);             // good
+            ModuleDisp::baseDisplay.drawFastVLine(i, yMax - yDimRisk, yDimRisk - yDimWarn, vertColor);  // warn
+            ModuleDisp::baseDisplay.drawFastVLine(i, yMax - yDimMax, yDimMax - yDimRisk, EPD_BLACK);    // risk
         }
 
-        if (ModuleDisplay::isRisk(co2Lpf, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when in risk, the risk area needs to be outlined
-            ModuleDisplay::baseDisplay.drawFastVLine(xBarMin, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
-            ModuleDisplay::baseDisplay.drawFastVLine(xBarMax, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
-            ModuleDisplay::baseDisplay.drawFastHLine(xBarMin, yMax - yDimMax, xBarMax - xBarMin + 1, vertColor);
-        } else if (!ModuleDisplay::isWarn(co2Lpf, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when not warn and not risk, the good area needs to be outlined
-            ModuleDisplay::baseDisplay.drawFastVLine(xBarMin, yMax - yDimWarn, yDimWarn, vertColor);
-            ModuleDisplay::baseDisplay.drawFastVLine(xBarMax, yMax - yDimWarn, yDimWarn, vertColor);
-            ModuleDisplay::baseDisplay.drawFastHLine(xBarMin, yMax, xBarMax - xBarMin + 1, vertColor);
+        if (ModuleDisp::isRisk(co2Lpf, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when in risk, the risk area needs to be outlined
+            ModuleDisp::baseDisplay.drawFastVLine(xBarMin, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
+            ModuleDisp::baseDisplay.drawFastVLine(xBarMax, yMax - yDimMax, yDimMax - yDimRisk, vertColor);
+            ModuleDisp::baseDisplay.drawFastHLine(xBarMin, yMax - yDimMax, xBarMax - xBarMin + 1, vertColor);
+        } else if (!ModuleDisp::isWarn(co2Lpf, 0, 0, thresholdsCo2.wHi, thresholdsCo2.rHi)) {  // when not warn and not risk, the good area needs to be outlined
+            ModuleDisp::baseDisplay.drawFastVLine(xBarMin, yMax - yDimWarn, yDimWarn, vertColor);
+            ModuleDisp::baseDisplay.drawFastVLine(xBarMax, yMax - yDimWarn, yDimWarn, vertColor);
+            ModuleDisp::baseDisplay.drawFastHLine(xBarMin, yMax, xBarMax - xBarMin + 1, vertColor);
         }
 
         uint8_t yTxt = RECT_CO2.ymax - RECT_CO2.ymin - yDim - 10;
@@ -165,36 +226,36 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
         }
 
         // draw a narrowed percentage number
-        ModuleDisplay::baseDisplay.drawFastHLine(xBarMax + 3, yMax - yDim, xLin, textColor);
-        ModuleDisplay::drawAntialiasedText06(String(staleFix), RECT_CO2, xBarMax + 2, yTxt, textColor);
+        ModuleDisp::baseDisplay.drawFastHLine(xBarMax + 3, yMax - yDim, xLin, textColor);
+        ModuleDisp::drawAntialiasedText06(String(staleFix), RECT_CO2, xBarMax + 2, yTxt, textColor);
         if (stale < 10) {
-            ModuleDisplay::drawAntialiasedText06(".", RECT_CO2, xBarMax + 7, yTxt, textColor);
-            ModuleDisplay::drawAntialiasedText06(String(staleFrc), RECT_CO2, xBarMax + 12, yTxt, textColor);
+            ModuleDisp::drawAntialiasedText06(".", RECT_CO2, xBarMax + 7, yTxt, textColor);
+            ModuleDisp::drawAntialiasedText06(String(staleFrc), RECT_CO2, xBarMax + 12, yTxt, textColor);
         }
-        ModuleDisplay::drawAntialiasedText06("%", RECT_CO2, xPrc, yPrc, textColor);
+        ModuleDisp::drawAntialiasedText06("%", RECT_CO2, xPrc, yPrc, textColor);
 
     } else if (config.disp.displayValTable == DISPLAY_VAL_T____HPA) {
         float pressure = measurement.valuesBme.pressure;
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
-        ModuleDisplay::fillRectangle(RECT_CO2, fillColor);
+        ModuleDisp::fillRectangle(RECT_CO2, fillColor);
         title = "pressure hPa";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
-        ModuleDisplay::drawAntialiasedText36(formatString(String(pressure, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+        ModuleDisp::drawAntialiasedText36(formatString(String(pressure, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     } else if (config.disp.displayValTable == DISPLAY_VAL_T____ALT) {
         float altitude = SensorBme280::getAltitude(config.pressureZerolevel, measurement.valuesBme.pressure);
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
-        ModuleDisplay::fillRectangle(RECT_CO2, fillColor);
+        ModuleDisp::fillRectangle(RECT_CO2, fillColor);
         title = "altitude m";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
-        ModuleDisplay::drawAntialiasedText36(formatString(String(altitude, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+        ModuleDisp::drawAntialiasedText36(formatString(String(altitude, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     } else {
         // TODO :: handle this (unknown display value)
     }
-    ModuleDisplay::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
+    ModuleDisp::drawAntialiasedText06(title, RECT_CO2, charPosFinalX, TEXT_OFFSET_Y, textColor);
 
     thresholds_deg_t thresholdsDeg = config.disp.thresholdsDeg;
     textColor = getTextColor(deg, thresholdsDeg.rLo, thresholdsDeg.wLo, thresholdsDeg.wHi, thresholdsDeg.rHi);
@@ -206,12 +267,12 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
     int temperatureFix = floor(temperature10 / 10.0);
     int temperatureFrc = abs(temperature10 % 10);
     if (fillColor != EPD_WHITE) {
-        ModuleDisplay::fillRectangle(RECT_DEG, fillColor);
+        ModuleDisp::fillRectangle(RECT_DEG, fillColor);
     }
-    ModuleDisplay::drawAntialiasedText18(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 0, 35, textColor);
-    ModuleDisplay::drawAntialiasedText06(config.disp.displayDegScale == DISPLAY_VAL_D______F ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
-    ModuleDisplay::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
-    ModuleDisplay::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
+    ModuleDisp::drawAntialiasedText18(formatString(String(temperatureFix), FORMAT_3_DIGIT), RECT_DEG, 0, 35, textColor);
+    ModuleDisp::drawAntialiasedText06(config.disp.displayDegScale == DISPLAY_VAL_D______F ? "°F" : "°C", RECT_DEG, 80 - CHAR_DIM_X6 * 2, TEXT_OFFSET_Y + 2, textColor);
+    ModuleDisp::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
+    ModuleDisp::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
 
     thresholds_hum_t thresholdsHum = config.disp.thresholdsHum;
     textColor = getTextColor(hum, thresholdsHum.rLo, thresholdsHum.wLo, thresholdsHum.wHi, thresholdsHum.rHi);
@@ -220,25 +281,25 @@ void ModuleDisplay::renderTable(values_all_t& measurement, config_t& config) {
     int humidityFix = floor(humidity10 / 10.0);
     int humidityFrc = abs(humidity10 % 10);
     if (fillColor != EPD_WHITE) {
-        ModuleDisplay::fillRectangle(RECT_HUM, fillColor);
+        ModuleDisp::fillRectangle(RECT_HUM, fillColor);
     }
-    ModuleDisplay::drawAntialiasedText18(formatString(String(humidityFix), FORMAT_3_DIGIT), RECT_HUM, 0, 35, textColor);
-    ModuleDisplay::drawAntialiasedText06("%", RECT_HUM, 80 - CHAR_DIM_X6 * 1, TEXT_OFFSET_Y + 2, textColor);
-    ModuleDisplay::drawAntialiasedText08(".", RECT_HUM, 63, 35, textColor);
-    ModuleDisplay::drawAntialiasedText08(String(humidityFrc), RECT_HUM, 72, 35, textColor);
+    ModuleDisp::drawAntialiasedText18(formatString(String(humidityFix), FORMAT_3_DIGIT), RECT_HUM, 0, 35, textColor);
+    ModuleDisp::drawAntialiasedText06("%", RECT_HUM, 80 - CHAR_DIM_X6 * 1, TEXT_OFFSET_Y + 2, textColor);
+    ModuleDisp::drawAntialiasedText08(".", RECT_HUM, 63, 35, textColor);
+    ModuleDisp::drawAntialiasedText08(String(humidityFrc), RECT_HUM, 72, 35, textColor);
 
-    ModuleDisplay::renderHeader();
-    ModuleDisplay::renderFooter(config);
+    ModuleDisp::renderHeader();
+    ModuleDisp::renderFooter(config);
 
-    ModuleDisplay::flushBuffer();
+    ModuleDisp::flushBuffer();
 }
 
 /**
  * measurement is reference for building the measurement table backwards
  */
-void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
-    ModuleDisplay::clearBuffer(config);
-    ModuleDisplay::drawOuterBorders(EPD_LIGHT);
+void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
+    ModuleDisp::clearBuffer(config);
+    ModuleDisp::drawOuterBorders(EPD_LIGHT);
 
     display_val_c_e displayValChart = config.disp.displayValChart;
 
@@ -310,11 +371,11 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
     uint8_t charPosValueX = 41;
     uint8_t charPosLabelY = 12;
 
-    ModuleDisplay::drawAntialiasedText06(label2, RECT_CO2, charPosValueX - CHAR_DIM_X6 * label2.length(), 24, EPD_BLACK);
-    ModuleDisplay::baseDisplay.drawFastHLine(1, 49, 296, EPD_LIGHT);
-    ModuleDisplay::drawAntialiasedText06(label1, RECT_CO2, charPosValueX - CHAR_DIM_X6 * label1.length(), 52, EPD_BLACK);
-    ModuleDisplay::baseDisplay.drawFastHLine(1, 77, 296, EPD_LIGHT);
-    ModuleDisplay::drawAntialiasedText06(label0, RECT_CO2, charPosValueX - CHAR_DIM_X6 * label0.length(), 80, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(label2, RECT_CO2, charPosValueX - CHAR_DIM_X6 * label2.length(), 24, EPD_BLACK);
+    ModuleDisp::baseDisplay.drawFastHLine(1, 49, 296, EPD_LIGHT);
+    ModuleDisp::drawAntialiasedText06(label1, RECT_CO2, charPosValueX - CHAR_DIM_X6 * label1.length(), 52, EPD_BLACK);
+    ModuleDisp::baseDisplay.drawFastHLine(1, 77, 296, EPD_LIGHT);
+    ModuleDisp::drawAntialiasedText06(label0, RECT_CO2, charPosValueX - CHAR_DIM_X6 * label0.length(), 80, EPD_BLACK);
 
     String title;
 
@@ -331,7 +392,7 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
     } else if (displayValChart == DISPLAY_VAL_C____NRG) {
         title = "battery %," + String(config.disp.displayHrsChart) + "h";
     }
-    ModuleDisplay::drawAntialiasedText06(title, RECT_CO2, LIMIT_POS_X - title.length() * CHAR_DIM_X6 + 3, charPosLabelY, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(title, RECT_CO2, LIMIT_POS_X - title.length() * CHAR_DIM_X6 + 3, charPosLabelY, EPD_BLACK);
 
     uint16_t minX;
     uint8_t minY;
@@ -380,73 +441,73 @@ void ModuleDisplay::renderChart(values_all_t history[60], config_t& config) {
         }
     }
 
-    ModuleDisplay::renderHeader();
-    ModuleDisplay::renderFooter(config);
+    ModuleDisp::renderHeader();
+    ModuleDisp::renderFooter(config);
 
-    ModuleDisplay::flushBuffer();
+    ModuleDisp::flushBuffer();
 }
 
-void ModuleDisplay::renderHeader() {
+void ModuleDisp::renderHeader() {
     renderButton(ButtonAction::A.buttonAction, 6);
     renderButton(ButtonAction::B.buttonAction, 135);
     renderButton(ButtonAction::C.buttonAction, 264);
 }
 
-void ModuleDisplay::renderButton(button_action_t buttonAction, uint16_t x) {
-    ModuleDisplay::drawAntialiasedText08(buttonAction.symbolSlow, RECT_TOP, x, TEXT_OFFSET_Y, EPD_BLACK);
-    ModuleDisplay::drawAntialiasedText08(buttonAction.symbolFast, RECT_TOP, x + CHAR_DIM_X6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
-    ModuleDisplay::drawAntialiasedText06(buttonAction.extraLabel, RECT_TOP, x + CHAR_DIM_X6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
+void ModuleDisp::renderButton(button_action_t buttonAction, uint16_t x) {
+    ModuleDisp::drawAntialiasedText08(buttonAction.symbolSlow, RECT_TOP, x, TEXT_OFFSET_Y, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText08(buttonAction.symbolFast, RECT_TOP, x + CHAR_DIM_X6 * 2, TEXT_OFFSET_Y, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(buttonAction.extraLabel, RECT_TOP, x + CHAR_DIM_X6 * 4, TEXT_OFFSET_Y - 2, EPD_BLACK);
 }
 
-void ModuleDisplay::renderFooter(config_t& config) {
+void ModuleDisp::renderFooter(config_t& config) {
     float percent = SensorEnergy::toFloatPercent(SensorEnergy::readval().percent);
 
     String cellPercentFormatted = formatString(String(percent, 0), FORMAT_CELL_PERCENT);
-    ModuleDisplay::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, LIMIT_POS_X - 14 - CHAR_DIM_X6 * cellPercentFormatted.length(), TEXT_OFFSET_Y, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, LIMIT_POS_X - 14 - CHAR_DIM_X6 * cellPercentFormatted.length(), TEXT_OFFSET_Y, EPD_BLACK);
 
     // main battery frame
-    ModuleDisplay::fillRectangle(RECT_NRG, EPD_LIGHT);
+    ModuleDisp::fillRectangle(RECT_NRG, EPD_LIGHT);
 
     // percentage
     uint8_t yMin = RECT_NRG.ymax - 3 - (uint8_t)round((RECT_NRG.ymax - RECT_NRG.ymin - 3) * percent * 0.01f);
     fillRectangle({RECT_NRG.xmin, yMin, RECT_NRG.xmax, RECT_NRG.ymax}, EPD_BLACK);
 
     // battery contact clip
-    ModuleDisplay::baseDisplay.drawFastHLine(RECT_NRG.xmin + 1, RECT_NRG.ymin + 1, 2, EPD_WHITE);
-    ModuleDisplay::baseDisplay.drawFastHLine(RECT_NRG.xmax - 3, RECT_NRG.ymin + 1, 2, EPD_WHITE);
+    ModuleDisp::baseDisplay.drawFastHLine(RECT_NRG.xmin + 1, RECT_NRG.ymin + 1, 2, EPD_WHITE);
+    ModuleDisp::baseDisplay.drawFastHLine(RECT_NRG.xmax - 3, RECT_NRG.ymin + 1, 2, EPD_WHITE);
 
     int charPosFooter = 7;
     if (config.sign.signalValSound == SIGNAL__VAL______ON) {
-        ModuleDisplay::drawAntialiasedText08(SYMBOL_YBEEP, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
+        ModuleDisp::drawAntialiasedText08(SYMBOL_YBEEP, RECT_BOT, 6, TEXT_OFFSET_Y + 1, EPD_BLACK);
         charPosFooter += 13;
     }
 
-    if (config.wifi.wifiValPower == WIFI____VAL_P_CUR_Y) {
+    if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_Y) {
         String address = ModuleWifi::getAddress();
-        ModuleDisplay::drawAntialiasedText06(address, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
-        ModuleDisplay::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * CHAR_DIM_X6, TEXT_OFFSET_Y, EPD_BLACK);
+        ModuleDisp::drawAntialiasedText06(address, RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
+        ModuleDisp::drawAntialiasedText06(",", RECT_BOT, charPosFooter + address.length() * CHAR_DIM_X6, TEXT_OFFSET_Y, EPD_BLACK);
         charPosFooter += (address.length() + 1) * CHAR_DIM_X6;
     }
-    ModuleDisplay::drawAntialiasedText06(SensorTime::getDateTimeDisplayString(SensorTime::getSecondstime()), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(SensorTime::getDateTimeDisplayString(SensorTime::getSecondstime()), RECT_BOT, charPosFooter, TEXT_OFFSET_Y, EPD_BLACK);
 }
 
-void ModuleDisplay::renderEntry(config_t& config) {
-    ModuleDisplay::clearBuffer(config);
-    ModuleDisplay::drawOuterBorders(EPD_LIGHT);
+void ModuleDisp::renderEntry(config_t& config) {
+    ModuleDisp::clearBuffer(config);
+    ModuleDisp::drawOuterBorders(EPD_LIGHT);
 
     drawAntialiasedText18("moth", RECT_TOP, 8, 98, EPD_BLACK);
     drawAntialiasedText06(VNUM, RECT_TOP, 105, 98, EPD_BLACK);
 
     // skip header for clean screen
-    ModuleDisplay::renderFooter(config);
+    ModuleDisp::renderFooter(config);
 
-    ModuleDisplay::flushBuffer();
+    ModuleDisp::flushBuffer();
 }
 
-void ModuleDisplay::renderCo2(config_t& config, calibration_t calibration) {
+void ModuleDisp::renderCo2(config_t& config, calibration_t calibration) {
 
-    ModuleDisplay::clearBuffer(config);
-    ModuleDisplay::drawOuterBorders(EPD_LIGHT);
+    ModuleDisp::clearBuffer(config);
+    ModuleDisp::drawOuterBorders(EPD_LIGHT);
 
     char titleBuf[32];
     sprintf(titleBuf, "%s (%s)", calibration.action == ACTION___CALIBRATION ? "CALIBRATION" : "RESET", calibration.success ? "success" : "failure");
@@ -461,15 +522,15 @@ void ModuleDisplay::renderCo2(config_t& config, calibration_t calibration) {
         drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
     }
 
-    ModuleDisplay::renderHeader();
-    ModuleDisplay::renderFooter(config);
+    ModuleDisp::renderHeader();
+    ModuleDisp::renderFooter(config);
 
-    ModuleDisplay::flushBuffer();
+    ModuleDisp::flushBuffer();
 }
 
-void ModuleDisplay::renderQRCodes(config_t& config) {
-    ModuleDisplay::clearBuffer(config);
-    ModuleDisplay::drawOuterBorders(EPD_LIGHT);
+void ModuleDisp::renderQRCodes(config_t& config) {
+    ModuleDisp::clearBuffer(config);
+    ModuleDisp::drawOuterBorders(EPD_LIGHT);
 
     // either http://ap_ip/login or [PREF_A_WIFI] + IP
     String address = ModuleWifi::getRootUrl();
@@ -498,11 +559,11 @@ void ModuleDisplay::renderQRCodes(config_t& config) {
 
         qrCodeX = 228;
 
-        ModuleDisplay::drawAntialiasedText06("wlan", RECT_TOP, 75, 45, EPD_BLACK);
+        ModuleDisp::drawAntialiasedText06("wlan", RECT_TOP, 75, 45, EPD_BLACK);
         if (networkPass != "") {
-            ModuleDisplay::drawAntialiasedText06(ModuleWifi::getNetworkPass(), RECT_TOP, 75, 60, EPD_BLACK);
+            ModuleDisp::drawAntialiasedText06(ModuleWifi::getNetworkPass(), RECT_TOP, 75, 60, EPD_BLACK);
         }
-        ModuleDisplay::drawAntialiasedText06("open", RECT_TOP, 193, 89, EPD_BLACK);
+        ModuleDisp::drawAntialiasedText06("open", RECT_TOP, 193, 89, EPD_BLACK);
     }
 
     char addressBuf[address.length() + 1];
@@ -521,117 +582,117 @@ void ModuleDisplay::renderQRCodes(config_t& config) {
         }
     }
 
-    ModuleDisplay::renderHeader();
-    ModuleDisplay::renderFooter(config);
+    ModuleDisp::renderHeader();
+    ModuleDisp::renderFooter(config);
 
-    ModuleDisplay::flushBuffer();
+    ModuleDisp::flushBuffer();
 }
 
-void ModuleDisplay::drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
+void ModuleDisp::drawAntialiasedText06(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
     drawAntialiasedText(text, rectangle, xRel, yRel, color, &smb06pt_l, &smb06pt_d, &smb06pt_b);
 }
 
-void ModuleDisplay::drawAntialiasedText08(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
+void ModuleDisp::drawAntialiasedText08(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
     drawAntialiasedText(text, rectangle, xRel, yRel, color, &smb08pt_l, &smb08pt_d, &smb08pt_b);
 }
 
-void ModuleDisplay::drawAntialiasedText18(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
+void ModuleDisp::drawAntialiasedText18(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
     drawAntialiasedText(text, rectangle, xRel, yRel, color, &smb18pt_l, &smb18pt_d, &smb18pt_b);
 }
 
-void ModuleDisplay::drawAntialiasedText36(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
+void ModuleDisp::drawAntialiasedText36(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color) {
     drawAntialiasedText(text, rectangle, xRel, yRel, color, &smb36pt_l, &smb36pt_d, &smb36pt_b);
 }
 
 /**
  * when switching fonts, setFont(...) must be called before setCursor(...), or there may be a y-offset on the very first text
  */
-void ModuleDisplay::drawAntialiasedText(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color, const GFXfont* fontL, const GFXfont* fontD, const GFXfont* fontB) {
-    ModuleDisplay::baseDisplay.setFont(fontL);
-    ModuleDisplay::baseDisplay.setCursor(rectangle.xmin + xRel, rectangle.ymin + yRel);
-    ModuleDisplay::baseDisplay.setTextColor(color == EPD_BLACK ? EPD_LIGHT : EPD_DARK);
-    ModuleDisplay::baseDisplay.print(text);
+void ModuleDisp::drawAntialiasedText(String text, rectangle_t rectangle, int xRel, int yRel, uint8_t color, const GFXfont* fontL, const GFXfont* fontD, const GFXfont* fontB) {
+    ModuleDisp::baseDisplay.setFont(fontL);
+    ModuleDisp::baseDisplay.setCursor(rectangle.xmin + xRel, rectangle.ymin + yRel);
+    ModuleDisp::baseDisplay.setTextColor(color == EPD_BLACK ? EPD_LIGHT : EPD_DARK);
+    ModuleDisp::baseDisplay.print(text);
 
-    ModuleDisplay::baseDisplay.setFont(fontD);
-    ModuleDisplay::baseDisplay.setCursor(rectangle.xmin + xRel, rectangle.ymin + yRel);
-    ModuleDisplay::baseDisplay.setTextColor(color == EPD_BLACK ? EPD_DARK : EPD_LIGHT);
-    ModuleDisplay::baseDisplay.print(text);
+    ModuleDisp::baseDisplay.setFont(fontD);
+    ModuleDisp::baseDisplay.setCursor(rectangle.xmin + xRel, rectangle.ymin + yRel);
+    ModuleDisp::baseDisplay.setTextColor(color == EPD_BLACK ? EPD_DARK : EPD_LIGHT);
+    ModuleDisp::baseDisplay.print(text);
 
-    ModuleDisplay::baseDisplay.setFont(fontB);
-    ModuleDisplay::baseDisplay.setCursor(rectangle.xmin + xRel, rectangle.ymin + yRel);
-    ModuleDisplay::baseDisplay.setTextColor(color);
-    ModuleDisplay::baseDisplay.print(text);
+    ModuleDisp::baseDisplay.setFont(fontB);
+    ModuleDisp::baseDisplay.setCursor(rectangle.xmin + xRel, rectangle.ymin + yRel);
+    ModuleDisp::baseDisplay.setTextColor(color);
+    ModuleDisp::baseDisplay.print(text);
 }
 
-void ModuleDisplay::drawOuterBorders(uint16_t color) {
+void ModuleDisp::drawOuterBorders(uint16_t color) {
     // top
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 0, 296, color);
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 1, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 0, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 1, 296, color);
     // header
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 21, 296, color);
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 22, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 21, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 22, 296, color);
     // footer
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 105, 296, color);
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 106, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 105, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 106, 296, color);
     // bottom
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 126, 296, color);
-    ModuleDisplay::baseDisplay.drawFastHLine(0, 127, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 126, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 127, 296, color);
     // left
-    ModuleDisplay::baseDisplay.drawFastVLine(0, 0, 128, color);
-    ModuleDisplay::baseDisplay.drawFastVLine(1, 0, 128, color);
+    ModuleDisp::baseDisplay.drawFastVLine(0, 0, 128, color);
+    ModuleDisp::baseDisplay.drawFastVLine(1, 0, 128, color);
     // right
-    ModuleDisplay::baseDisplay.drawFastVLine(294, 0, 128, color);
-    ModuleDisplay::baseDisplay.drawFastVLine(295, 0, 128, color);
+    ModuleDisp::baseDisplay.drawFastVLine(294, 0, 128, color);
+    ModuleDisp::baseDisplay.drawFastVLine(295, 0, 128, color);
 }
 
-void ModuleDisplay::drawInnerBorders(uint16_t color) {
+void ModuleDisp::drawInnerBorders(uint16_t color) {
     // horizontal center
-    ModuleDisplay::baseDisplay.drawFastHLine(206, 63, 100, color);
-    ModuleDisplay::baseDisplay.drawFastHLine(206, 64, 100, color);
+    ModuleDisp::baseDisplay.drawFastHLine(206, 63, 100, color);
+    ModuleDisp::baseDisplay.drawFastHLine(206, 64, 100, color);
     // vertical center
-    ModuleDisplay::baseDisplay.drawFastVLine(206, 21, 86, color);
-    ModuleDisplay::baseDisplay.drawFastVLine(207, 22, 86, color);
+    ModuleDisp::baseDisplay.drawFastVLine(206, 21, 86, color);
+    ModuleDisp::baseDisplay.drawFastVLine(207, 22, 86, color);
 }
 
-void ModuleDisplay::fillRectangle(rectangle_t rectangle, uint8_t color) {
-    ModuleDisplay::baseDisplay.fillRect(rectangle.xmin + 1, rectangle.ymin + 1, rectangle.xmax - rectangle.xmin - 2, rectangle.ymax - rectangle.ymin - 2, color);
+void ModuleDisp::fillRectangle(rectangle_t rectangle, uint8_t color) {
+    ModuleDisp::baseDisplay.fillRect(rectangle.xmin + 1, rectangle.ymin + 1, rectangle.xmax - rectangle.xmin - 2, rectangle.ymax - rectangle.ymin - 2, color);
 }
 
-bool ModuleDisplay::isWarn(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+bool ModuleDisp::isWarn(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
     return value < warnLo || value >= wHi;
 }
 
-bool ModuleDisplay::isRisk(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+bool ModuleDisp::isRisk(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
     return value < rLo || value >= rHi;
 }
 
-uint8_t ModuleDisplay::getTextColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
-    if (ModuleDisplay::isRisk(value, rLo, warnLo, wHi, rHi)) {
+uint8_t ModuleDisp::getTextColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    if (ModuleDisp::isRisk(value, rLo, warnLo, wHi, rHi)) {
         return EPD_WHITE;
     } else {
         return EPD_BLACK;
     }
 }
 
-uint8_t ModuleDisplay::getFillColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
-    if (ModuleDisplay::isRisk(value, rLo, warnLo, wHi, rHi)) {
+uint8_t ModuleDisp::getFillColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    if (ModuleDisp::isRisk(value, rLo, warnLo, wHi, rHi)) {
         return EPD_BLACK;
-    } else if (ModuleDisplay::isWarn(value, rLo, warnLo, wHi, rHi)) {
+    } else if (ModuleDisp::isWarn(value, rLo, warnLo, wHi, rHi)) {
         return EPD_LIGHT;
     } else {
         return EPD_WHITE;
     }
 }
 
-uint8_t ModuleDisplay::getVertColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
-    if (ModuleDisplay::isRisk(value, rLo, warnLo, wHi, rHi)) {
+uint8_t ModuleDisp::getVertColor(float value, uint16_t rLo, uint16_t warnLo, uint16_t wHi, uint16_t rHi) {
+    if (ModuleDisp::isRisk(value, rLo, warnLo, wHi, rHi)) {
         return EPD_LIGHT;
     } else {
         return EPD_DARK;
     }
 }
 
-String ModuleDisplay::formatString(String value, char const* format) {
+String ModuleDisp::formatString(String value, char const* format) {
     char padBuffer[16];
     sprintf(padBuffer, format, value);
     return padBuffer;

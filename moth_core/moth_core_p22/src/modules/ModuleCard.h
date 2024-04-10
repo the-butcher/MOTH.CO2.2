@@ -1,5 +1,5 @@
-#ifndef ModuleSdcard_h
-#define ModuleSdcard_h
+#ifndef ModuleCard_h
+#define ModuleCard_h
 
 #include <Arduino.h>
 #include <SdFat.h>
@@ -12,7 +12,7 @@
 #include "types/Define.h"
 #include "types/Values.h"
 
-class ModuleSdcard {
+class ModuleCard {
    private:
     static SdFat32 sd32;
     static bool hasBegun;

@@ -1,20 +1,20 @@
-#include "ModuleSdcard.h"
+#include "ModuleCard.h"
 
 #define SD_CS 5  // SD card chip select
 #define SPI_CLOCK SD_SCK_MHZ(10)
 
-SdFat32 ModuleSdcard::sd32;
-bool ModuleSdcard::hasBegun = false;
+SdFat32 ModuleCard::sd32;
+bool ModuleCard::hasBegun = false;
 
-void ModuleSdcard::begin() {
-    if (!ModuleSdcard::hasBegun) {
-        ModuleSdcard::sd32.begin(SD_CS, SPI_CLOCK);
+void ModuleCard::begin() {
+    if (!ModuleCard::hasBegun) {
+        ModuleCard::sd32.begin(SD_CS, SPI_CLOCK);
         FsDateTime::setCallback(SensorTime::dateTimeCallback);
-        ModuleSdcard::hasBegun = true;
+        ModuleCard::hasBegun = true;
     }
 }
 
-void ModuleSdcard::historyValues(config_t& config, values_all_t history[HISTORY_____BUFFER_SIZE]) {
+void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY_____BUFFER_SIZE]) {
     // setup search seconds
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
     uint32_t secondstimeIncr = config.disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
@@ -119,7 +119,7 @@ void ModuleSdcard::historyValues(config_t& config, values_all_t history[HISTORY_
 #endif
 }
 
-void ModuleSdcard::persistValues() {
+void ModuleCard::persistValues() {
     file32_def_t fileDef32;
     String datFileNameLast = "";
     String datFilePathLast = "";
@@ -144,18 +144,18 @@ void ModuleSdcard::persistValues() {
     datFile.close();
 }
 
-bool ModuleSdcard::buildFolders(String folder) {
-    return ModuleSdcard::sd32.mkdir(folder);
+bool ModuleCard::buildFolders(String folder) {
+    return ModuleCard::sd32.mkdir(folder);
 }
 
-bool ModuleSdcard::removeFolder(String folder) {
-    return ModuleSdcard::sd32.rmdir(folder);
+bool ModuleCard::removeFolder(String folder) {
+    return ModuleCard::sd32.rmdir(folder);
 }
 
-bool ModuleSdcard::existsPath(String path) {
-    return ModuleSdcard::sd32.exists(path);
+bool ModuleCard::existsPath(String path) {
+    return ModuleCard::sd32.exists(path);
 }
 
-bool ModuleSdcard::removeFile32(String file) {
-    return ModuleSdcard::sd32.remove(file);
+bool ModuleCard::removeFile32(String file) {
+    return ModuleCard::sd32.remove(file);
 }

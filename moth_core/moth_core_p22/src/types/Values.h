@@ -3,6 +3,14 @@
 
 #include <Arduino.h>
 
+const String FIELD_NAME____TIME = "time";
+const String FIELD_NAME_CO2_LPF = "co2_lpf";
+const String FIELD_NAME_CO2_RAW = "co2_raw";
+const String FIELD_NAME_____DEG = "deg";
+const String FIELD_NAME_____HUM = "hum";
+const String FIELD_NAME_____HPA = "hpa";
+const String FIELD_NAME_____BAT = "bat";
+
 /**
  * size of the measurement buffer
  * with a measurement interval currently hardcoded to one minute it represents the minute interval in which measurements are saved

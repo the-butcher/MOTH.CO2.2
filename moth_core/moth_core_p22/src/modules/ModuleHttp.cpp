@@ -1,28 +1,27 @@
-#include "ModuleServer.h"
-
 #include <ArduinoJson.h>
 #include <Update.h>
 
 #include "DatCsvResponse.h"
 #include "File32Response.h"
+#include "ModuleHttp.h"
 #include "ValuesResponse.h"
+#include "modules/ModuleCard.h"
 #include "modules/ModuleMqtt.h"
-#include "modules/ModuleSdcard.h"
 #include "modules/ModuleWifi.h"
 #include "types/Define.h"
 #include "types/Device.h"
 #include "types/Values.h"
 
-AsyncWebServer ModuleServer::server(80);
-bool ModuleServer::hasBegun = false;
-// uint16_t ModuleServer::requestedCo2Ref = 0;
-// bool ModuleServer::requestedCo2Rst = false;
-std::function<void(config_t &config, values_t &values)> ModuleServer::requestedReconfiguration = nullptr;
-int ModuleServer::updateCode = -1;
-int ModuleServer::uploadCode = -1;
+AsyncWebServer ModuleHttp::server(80);
+bool ModuleHttp::hasBegun = false;
+// uint16_t ModuleHttp::requestedCo2Ref = 0;
+// bool ModuleHttp::requestedCo2Rst = false;
+std::function<void(config_t &config, values_t &values)> ModuleHttp::requestedReconfiguration = nullptr;
+int ModuleHttp::updateCode = -1;
+int ModuleHttp::uploadCode = -1;
 
-void ModuleServer::begin() {
-    if (!ModuleServer::hasBegun) {
+void ModuleHttp::begin() {
+    if (!ModuleHttp::hasBegun) {
         server.on("/api/latest", HTTP_GET, handleApiLatest);
         server.on("/api/valcsv", HTTP_GET, handleApiValCsv);  // get csv from data measured in the last hour
         server.on("/api/datcsv", HTTP_GET, handleApiDatCsv);  // get csv from data stored in dat files
@@ -30,7 +29,7 @@ void ModuleServer::begin() {
         server.on("/api/dspset", HTTP_GET, handleApiDspSet);
         server.on("/api/dirout", HTTP_GET, handleApiDirOut);
         server.on("/api/datout", HTTP_GET, handleApiDatOut);
-        server.on("/api/upload", HTTP_POST, handleApiUpload, ModuleServer::handleUpload);
+        server.on("/api/upload", HTTP_POST, handleApiUpload, ModuleHttp::handleUpload);
         server.on("/api/dirdel", HTTP_GET, handleApiDirDel);
         server.on("/api/datdel", HTTP_GET, handleApiDatDel);
         server.on("/api/netout", HTTP_GET, handleApiNetOut);
@@ -38,15 +37,15 @@ void ModuleServer::begin() {
         server.on("/api/co2cal", HTTP_GET, handleApiCo2Cal);
         server.on("/api/co2rst", HTTP_GET, handleApiCo2Rst);
         server.on("/api/esprst", HTTP_GET, handleApiEspRst);
-        server.on("/api/update", HTTP_POST, handleApiUpdate, ModuleServer::handleUpdate);
+        server.on("/api/update", HTTP_POST, handleApiUpdate, ModuleHttp::handleUpdate);
         server.onNotFound(serveStatic);
         DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
         server.begin();
-        ModuleServer::hasBegun = true;
+        ModuleHttp::hasBegun = true;
     }
 }
 
-void ModuleServer::handleApiLatest(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiLatest(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -57,13 +56,13 @@ void ModuleServer::handleApiLatest(AsyncWebServerRequest *request) {
 
     values_all_t latestValue = Values::values->measurements[(Values::values->nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE];
 
-    root["time"] = SensorTime::getDateTimeSecondsString(latestValue.secondstime);
-    root["co2_lpf"] = latestValue.valuesCo2.co2Lpf;
-    root["co2_raw"] = latestValue.valuesCo2.co2Raw;
-    root["temperature"] = round(SensorScd041::toFloatDeg(latestValue.valuesCo2.deg) * 10) / 10.0;
-    root["humidity"] = round(SensorScd041::toFloatHum(latestValue.valuesCo2.hum) * 10) / 10.0;
-    root["pressure"] = latestValue.valuesBme.pressure;
-    root["battery"] = SensorEnergy::toFloatPercent(latestValue.valuesNrg.percent);
+    root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(latestValue.secondstime);
+    root[FIELD_NAME_CO2_LPF] = latestValue.valuesCo2.co2Lpf;
+    root[FIELD_NAME_CO2_RAW] = latestValue.valuesCo2.co2Raw;
+    root[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(latestValue.valuesCo2.deg) * 10) / 10.0;
+    root[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(latestValue.valuesCo2.hum) * 10) / 10.0;
+    root[FIELD_NAME_____HPA] = latestValue.valuesBme.pressure;
+    root[FIELD_NAME_____BAT] = SensorEnergy::toFloatPercent(latestValue.valuesNrg.percent);
 
     int maxAge = SECONDS_PER___________MINUTE + 10 - SensorTime::getSecondstime() % SECONDS_PER___________MINUTE;  // 10 seconds extra to account for measure time being some seconds behind the full minute
     char maxAgeBuf[16];
@@ -74,18 +73,18 @@ void ModuleServer::handleApiLatest(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleServer::handleApiValCsv(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiValCsv(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     ValuesResponse *response = new ValuesResponse();  // cache headers in ValuesResponse
     request->send(response);
 }
 
-void ModuleServer::handleApiDatCsv(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiDatCsv(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     if (request->hasParam("file")) {
         String datFileName = "/" + request->getParam("file")->value();
         String csvLine;
-        if (ModuleSdcard::existsPath(datFileName)) {
+        if (ModuleCard::existsPath(datFileName)) {
             DatCsvResponse *response = new DatCsvResponse(datFileName);  // cache headers in ValuesResponse
             if (request->hasHeader("If-Modified-Since")) {
                 String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
@@ -104,7 +103,7 @@ void ModuleServer::handleApiDatCsv(AsyncWebServerRequest *request) {
     }
 }
 
-void ModuleServer::handleApiStatus(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -132,7 +131,7 @@ void ModuleServer::handleApiStatus(AsyncWebServerRequest *request) {
     // dispJo["config"] = BoxConn::formatConfigStatus(BoxDisplay::configStatus);
 
     JsonObject &mqttJo = root.createNestedObject("mqtt");
-    mqttJo["stat"] = Config::getMqttStatus();
+    mqttJo["stat"] = (int)Config::getMqttStatus();
     // mqttJo["config"] = BoxConn::formatConfigStatus(BoxMqtt::configStatus);
     // mqttJo["active"] = BoxMqtt::isConfiguredToBeActive();
     // mqttJo["pcount"] = Measurements::getPublishableCount();
@@ -141,18 +140,18 @@ void ModuleServer::handleApiStatus(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiDspSet(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     if (request->hasParam("p") && request->hasParam("v")) {
         String pRaw = request->getParam("p")->value();
         String vRaw = request->getParam("v")->value();
-        if (ModuleServer::isNumeric(pRaw) && ModuleServer::isNumeric(vRaw)) {
+        if (ModuleHttp::isNumeric(pRaw) && ModuleHttp::isNumeric(vRaw)) {
             uint8_t p = pRaw.toInt();
             if (p >= 0 && p <= 5) {
                 uint8_t v = vRaw.toInt();
                 if (p == 0) {
                     if (v >= DISPLAY_VAL_M__TABLE && v <= DISPLAY_VAL_M__CHART) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValModus = (display_val_m_e)v;
                         };
                         serve200Json(request, p, v);
@@ -163,7 +162,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 1) {
                     if (v >= DISPLAY_THM____LIGHT && v <= DISPLAY_THM_____DARK) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValTheme = (display_val_e_e)v;
                         };
                         serve200Json(request, p, v);
@@ -174,7 +173,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 2) {
                     if (v >= DISPLAY_VAL_T____CO2 && v <= DISPLAY_VAL_T____ALT) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValTable = (display_val_t_e)v;
                         };
                         serve200Json(request, p, v);
@@ -185,7 +184,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 3) {
                     if (v >= DISPLAY_VAL_C____CO2 && v <= DISPLAY_VAL_C____NRG) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValChart = (display_val_c_e)v;
                         };
                         serve200Json(request, p, v);
@@ -196,7 +195,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
                     }
                 } else if (p == 4) {
                     if (v == DISPLAY_HRS_C_____01 || v == DISPLAY_HRS_C_____03 || v == DISPLAY_HRS_C_____06 || v == DISPLAY_HRS_C_____12 || v == DISPLAY_HRS_C_____24) {
-                        ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayHrsChart = (display_val_h_e)v;
                         };
                         serve200Json(request, p, v);
@@ -223,7 +222,7 @@ void ModuleServer::handleApiDspSet(AsyncWebServerRequest *request) {
     }
 }
 
-bool ModuleServer::isNumeric(String value) {
+bool ModuleHttp::isNumeric(String value) {
     for (uint8_t i = 0; i < value.length(); i++) {
         if (!isDigit(value.charAt(i))) {
             return false;
@@ -232,7 +231,7 @@ bool ModuleServer::isNumeric(String value) {
     return true;
 }
 
-void ModuleServer::handleApiDirOut(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -286,48 +285,48 @@ void ModuleServer::handleApiDirOut(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleServer::handleApiDatOut(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiDatOut(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     if (request->hasParam("file")) {
-        ModuleServer::serveFile32(request, request->getParam("file")->value());
+        ModuleHttp::serveFile32(request, request->getParam("file")->value());
     } else {
-        ModuleServer::serve400Json(request, "file required");
+        ModuleHttp::serve400Json(request, "file required");
     }
 }
 
-void ModuleServer::handleApiUpload(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiUpload(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
-    root["code"] = ModuleServer::uploadCode;
-    ModuleServer::uploadCode = -1;  // reset for next usage
+    root["code"] = ModuleHttp::uploadCode;
+    ModuleHttp::uploadCode = -1;  // reset for next usage
     root.printTo(*response);
     request->send(response);
 }
 
-void ModuleServer::handleApiEspRst(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiEspRst(AsyncWebServerRequest *request) {
     ESP.restart();
 }
 
-void ModuleServer::handleApiUpdate(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiUpdate(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
-    root["code"] = ModuleServer::updateCode;
-    ModuleServer::updateCode = -1;  // reset for next usage
+    root["code"] = ModuleHttp::updateCode;
+    ModuleHttp::updateCode = -1;  // reset for next usage
     root.printTo(*response);
     request->send(response);
 }
 
-void ModuleServer::handleApiDirDel(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiDirDel(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     if (request->hasParam("folder")) {
         String path = "/" + request->getParam("folder")->value();
-        if (ModuleSdcard::existsPath(path)) {
+        if (ModuleCard::existsPath(path)) {
 
-            bool success = ModuleSdcard::removeFolder(path);
+            bool success = ModuleCard::removeFolder(path);
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
             DynamicJsonBuffer jsonBuffer;
@@ -338,20 +337,20 @@ void ModuleServer::handleApiDirDel(AsyncWebServerRequest *request) {
             request->send(response);
 
         } else {
-            ModuleServer::serve404Json(request, path);
+            ModuleHttp::serve404Json(request, path);
         }
     } else {
-        ModuleServer::serve400Json(request, "folder required");
+        ModuleHttp::serve400Json(request, "folder required");
     }
 }
 
-void ModuleServer::handleApiDatDel(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiDatDel(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     if (request->hasParam("file")) {
         String path = "/" + request->getParam("file")->value();
-        if (ModuleSdcard::existsPath(path)) {
+        if (ModuleCard::existsPath(path)) {
 
-            bool success = ModuleSdcard::removeFile32(path);
+            bool success = ModuleCard::removeFile32(path);
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
             DynamicJsonBuffer jsonBuffer;
@@ -362,14 +361,14 @@ void ModuleServer::handleApiDatDel(AsyncWebServerRequest *request) {
             request->send(response);
 
         } else {
-            ModuleServer::serve404Json(request, path);
+            ModuleHttp::serve404Json(request, path);
         }
     } else {
-        ModuleServer::serve400Json(request, "file required");
+        ModuleHttp::serve400Json(request, "file required");
     }
 }
 
-void ModuleServer::handleApiNetOut(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiNetOut(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     DynamicJsonBuffer jsonBuffer;
@@ -391,7 +390,7 @@ void ModuleServer::handleApiNetOut(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleServer::handleApiNetOff(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiNetOff(AsyncWebServerRequest *request) {
     ModuleWifi::expire();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=10");
@@ -402,16 +401,16 @@ void ModuleServer::handleApiNetOff(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleServer::handleApiCo2Cal(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
     if (request->hasParam("ref")) {
         String refRaw = request->getParam("ref")->value();
-        if (ModuleServer::isNumeric(refRaw)) {
+        if (ModuleHttp::isNumeric(refRaw)) {
             int ref = refRaw.toInt();
             if (ref >= 400) {
 
-                ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                     config.sco2.requestedCo2Ref = ref;
                 };
 
@@ -440,7 +439,7 @@ void ModuleServer::handleApiCo2Cal(AsyncWebServerRequest *request) {
     }
 }
 
-void ModuleServer::handleApiCo2Rst(AsyncWebServerRequest *request) {
+void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=180");
@@ -449,7 +448,7 @@ void ModuleServer::handleApiCo2Rst(AsyncWebServerRequest *request) {
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 200;
 
-    ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+    ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
         config.sco2.requestedCo2Rst = true;
     };
 
@@ -457,14 +456,14 @@ void ModuleServer::handleApiCo2Rst(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleServer::serveStatic(AsyncWebServerRequest *request) {
+void ModuleHttp::serveStatic(AsyncWebServerRequest *request) {
     serveFile32(request, request->url());
 }
 
-void ModuleServer::serveFile32(AsyncWebServerRequest *request, String file) {
+void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String file) {
 
     ModuleWifi::access();
-    if (ModuleSdcard::existsPath(file)) {
+    if (ModuleCard::existsPath(file)) {
 
         String fileType = file.substring(file.indexOf("."));
         if (fileType == ".html") {
@@ -496,7 +495,7 @@ void ModuleServer::serveFile32(AsyncWebServerRequest *request, String file) {
     }
 }
 
-void ModuleServer::serve200Json(AsyncWebServerRequest *request, uint8_t p, uint8_t v) {
+void ModuleHttp::serve200Json(AsyncWebServerRequest *request, uint8_t p, uint8_t v) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=60");
     DynamicJsonBuffer jsonBuffer;
@@ -508,7 +507,7 @@ void ModuleServer::serve200Json(AsyncWebServerRequest *request, uint8_t p, uint8
     request->send(response);
 }
 
-void ModuleServer::serve400Json(AsyncWebServerRequest *request, String description) {
+void ModuleHttp::serve400Json(AsyncWebServerRequest *request, String description) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=60");
     DynamicJsonBuffer jsonBuffer;
@@ -519,7 +518,7 @@ void ModuleServer::serve400Json(AsyncWebServerRequest *request, String descripti
     request->send(response);
 }
 
-void ModuleServer::serve404Json(AsyncWebServerRequest *request, String file) {
+void ModuleHttp::serve404Json(AsyncWebServerRequest *request, String file) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=60");
     DynamicJsonBuffer jsonBuffer;
@@ -531,7 +530,7 @@ void ModuleServer::serve404Json(AsyncWebServerRequest *request, String file) {
     request->send(response);
 }
 
-void ModuleServer::fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_t offset) {
+void ModuleHttp::fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_t offset) {
     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + value->secondstime);
     float deg = SensorScd041::toFloatDeg(value->valuesCo2.deg);
     float hum = SensorScd041::toFloatHum(value->valuesCo2.hum);
@@ -547,19 +546,19 @@ void ModuleServer::fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_
     }
 }
 
-void ModuleServer::handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     if (request->hasParam("file", true)) {
         String dataFileName = "/" + request->getParam("file", true)->value();
 
         // delete file if exists
         if (index == 0) {
-            if (ModuleSdcard::existsPath(dataFileName) && index == 0) {
-                ModuleSdcard::removeFile32(dataFileName);
+            if (ModuleCard::existsPath(dataFileName) && index == 0) {
+                ModuleCard::removeFile32(dataFileName);
             } else {
                 int lastIndexOfSlash = dataFileName.lastIndexOf("/");
                 if (lastIndexOfSlash > 0) {
                     String dataFilePath = dataFileName.substring(0, lastIndexOfSlash);
-                    ModuleSdcard::buildFolders(dataFilePath);
+                    ModuleCard::buildFolders(dataFilePath);
                 }
             }
         }
@@ -574,13 +573,13 @@ void ModuleServer::handleUpload(AsyncWebServerRequest *request, String filename,
 
         // if MQTT json was uploaded, the dat file is deleted to force rebuild
         if (dataFileName == MQTT_CONFIG_JSON) {
-            ModuleSdcard::removeFile32(MQTT_CONFIG__DAT);
-            ModuleServer::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+            ModuleCard::removeFile32(MQTT_CONFIG__DAT);
+            ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                 values.nextAutoPubIndex = 0;  // resetting this value will trigger a republish attempt (and this rebuilds the mqtt dat)
                 // TODO :: clear definition of what condition leads to another autoPub attempt
             };
         } else if (dataFileName == WIFI_CONFIG_JSON) {
-            ModuleSdcard::removeFile32(WIFI_CONFIG__DAT);
+            ModuleCard::removeFile32(WIFI_CONFIG__DAT);
             // TODO :: any changes to config or values required?
             // mabe a simple reconnect
         }
@@ -590,15 +589,15 @@ void ModuleServer::handleUpload(AsyncWebServerRequest *request, String filename,
         // }
 
         if (final) {
-            ModuleServer::uploadCode = 200;
+            ModuleHttp::uploadCode = 200;
         }
 
     } else {
-        ModuleServer::uploadCode = 400;
+        ModuleHttp::uploadCode = 400;
     }
 }
 
-void ModuleServer::handleUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+void ModuleHttp::handleUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
     // delete file if exists
     if (index == 0) {
         Update.begin();
@@ -609,12 +608,12 @@ void ModuleServer::handleUpdate(AsyncWebServerRequest *request, String filename,
     if (final) {
         if (Update.end(true)) {  // true to set the size to the current progress
             if (Update.isFinished()) {
-                ModuleServer::updateCode = 200;  // success
+                ModuleHttp::updateCode = 200;  // success
             } else {
-                ModuleServer::updateCode = 206;  // partial content
+                ModuleHttp::updateCode = 206;  // partial content
             }
         } else {
-            ModuleServer::updateCode = 205;  // reset content
+            ModuleHttp::updateCode = 205;  // reset content
         }
     }
 }

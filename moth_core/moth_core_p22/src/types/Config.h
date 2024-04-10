@@ -9,10 +9,22 @@ const String JSON_KEY______USER = "usr";
 const String JSON_KEY_______PWD = "pwd";
 const String JSON_KEY____CLIENT = "cli";
 const String JSON_KEY______CERT = "crt";
-const String JSON_KEY_____TOPIC = "top";
 const String JSON_KEY___MINUTES = "min";
 const String JSON_KEY__NETWORKS = "ntw";
 const String JSON_KEY_______KEY = "key";
+const String JSON_KEY_______SSC = "ssc";  // show significant change
+const String JSON_KEY__ALTITUDE = "alt";  // base altitude
+const String JSON_KEY____OFFSET = "off";  // temperature offset
+const String JSON_KEY__TIMEZONE = "tzn";
+const String JSON_KEY_______CO2 = "co2";  // co2 thresholds
+const String JSON_KEY_______DEG = "deg";  // temperature thresholds
+const String JSON_KEY_______HUM = "hum";  // humidity thresholds
+const String JSON_KEY_RISK__LOW = "rLo";  //
+const String JSON_KEY_WARN__LOW = "wLo";
+const String JSON_KEY_WARN_HIGH = "wHi";
+const String JSON_KEY_RISK_HIGH = "rHi";
+const String JSON_KEY_REFERENCE = "ref";  // co2 refreence
+const String JSON_KEY_______C2F = "c2f";  //
 
 typedef struct {
     uint16_t wHi;  // upper warn level
@@ -33,6 +45,11 @@ typedef struct {
     uint8_t wHi;  // upper warn level
     uint8_t rHi;  // upper risk level
 } thresholds_hum_t;
+
+typedef enum : uint8_t {
+    CONFIG_STAT__DEFAULT,
+    CONFIG_STAT__APPLIED
+} config___stat__e;
 
 /**
  * render type of display (CHART | TABLE)
@@ -94,6 +111,7 @@ typedef enum : uint8_t {
 } display_val_y_e;
 
 typedef struct {
+    config___stat__e configStatus;  // display config status
     thresholds_co2_t thresholdsCo2;
     thresholds_deg_t thresholdsDeg;
     thresholds_hum_t thresholdsHum;
@@ -111,16 +129,17 @@ typedef struct {
 // uint32_t st = sizeof(display_val_s_e);
 
 typedef enum : uint8_t {
-    WIFI____VAL_P_PND_Y,  // to be turned on
-    WIFI____VAL_P_CUR_Y,  // turned on
-    WIFI____VAL_P_CUR_N,  // turned off
-    WIFI____VAL_P_PND_N   // to be turned off
+    WIFI____VAL_P__PND_Y,  // to be turned on
+    WIFI____VAL_P__CUR_Y,  // turned on
+    WIFI____VAL_P__CUR_N,  // turned off
+    WIFI____VAL_P__PND_N   // to be turned off
 } wifi____val_p_e;
 
 typedef struct {
-    wifi____val_p_e wifiValPower;  // the status that the wifi should have, by button action
-    uint8_t networkExpiryMinutes;  // minutes without activity before the network times out
-    int8_t networkConnIndexLast;   // the index of the last network a connection was established to
+    config___stat__e configStatus;  // wifi config status
+    wifi____val_p_e wifiValPower;   // the status that the wifi should have, by button action
+    uint8_t networkExpiryMinutes;   // minutes without activity before the network times out
+    int8_t networkConnIndexLast;    // the index of the last network a connection was established to
 } wifi____all___t;
 
 typedef enum : uint8_t {
@@ -147,7 +166,8 @@ typedef enum : uint8_t {
 } mqtt____stat__e;
 
 typedef struct {
-    uint32_t mqttPublishMinutes;  // minute interval for publishing mqtt messages, 0xFFFFFF when mqtt is not configured or misconfigured
+    config___stat__e configStatus;  // mqtt config status
+    uint32_t mqttPublishMinutes;    // minute interval for publishing mqtt messages, 0xFFFFFF when mqtt is not configured or misconfigured
     mqtt____stat__e mqttStatus;
 } mqtt____all___t;
 

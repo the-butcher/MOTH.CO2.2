@@ -1,6 +1,6 @@
 #include "File32Response.h"
 
-#include "ModuleSdcard.h"
+#include "ModuleCard.h"
 
 File32Response::~File32Response() {
 
@@ -14,7 +14,7 @@ File32Response::~File32Response() {
  */
 File32Response::File32Response(String path, String contentType) : AsyncAbstractResponse() {
 
-    ModuleSdcard::begin();
+    ModuleCard::begin();
     _code = 200;
     _path = path;
     _content.open(_path.c_str(), O_RDONLY);

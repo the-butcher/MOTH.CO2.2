@@ -1,7 +1,7 @@
 #include "ValuesResponse.h"
 
-#include "ModuleSdcard.h"
-#include "ModuleServer.h"
+#include "ModuleCard.h"
+#include "ModuleHttp.h"
 #include "types/Define.h"
 
 ValuesResponse::~ValuesResponse() {
@@ -10,7 +10,7 @@ ValuesResponse::~ValuesResponse() {
 
 ValuesResponse::ValuesResponse() : AsyncAbstractResponse() {
 
-    ModuleSdcard::begin();
+    ModuleCard::begin();
 
     lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
     firstFill = true;
@@ -43,7 +43,7 @@ size_t ValuesResponse::_fillBuffer(uint8_t *data, size_t maxLen) {
 #endif
             datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
             offset = lineIndex * CSV_LINE_LENGTH;
-            ModuleServer::fillBufferWithCsv(&datValue, data, offset);
+            ModuleHttp::fillBufferWithCsv(&datValue, data, offset);
         }
         return CSV_LINE_LENGTH * lineLimit;
     }

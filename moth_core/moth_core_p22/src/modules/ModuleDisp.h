@@ -1,11 +1,11 @@
-#ifndef ModuleDisplay_h
-#define ModuleDisplay_h
+#ifndef ModuleDisp_h
+#define ModuleDisp_h
 
 #include <Adafruit_EPD.h>
 #include <Adafruit_GFX.h>
 #include <Arduino.h>
 
-#include "ModuleDisplayBase.h"
+#include "ModuleDispBase.h"
 #include "fonts/smb06pt_b.h"
 #include "fonts/smb06pt_d.h"
 #include "fonts/smb06pt_l.h"
@@ -32,6 +32,8 @@ typedef struct {
     uint8_t ymax;
 } rectangle_t;
 
+const String DISP_CONFIG_JSON = "/config/disp.json";
+
 const String SYMBOL__WIFI = "¥";
 const String SYMBOL_THEME = "¤";
 const String SYMBOL_TABLE = "£";
@@ -39,9 +41,9 @@ const String SYMBOL_CHART = "¢";
 const String SYMBOL_YBEEP = "©";
 const String SYMBOL_NBEEP = "ª";
 
-class ModuleDisplay {
+class ModuleDisp {
    private:
-    static ModuleDisplayBase baseDisplay;
+    static ModuleDispBase baseDisplay;
     static bool interrupted;
     static void handleInterrupt();
     static void renderHeader();
@@ -65,6 +67,7 @@ class ModuleDisplay {
     static String formatString(String value, char const* format);
 
    public:
+    static void configure(config_t& config);  // loads json configuration
     static void begin();
     static void prepareSleep(wakeup_action_e wakeupType);
     static void attachWakeup(wakeup_action_e wakeupType);

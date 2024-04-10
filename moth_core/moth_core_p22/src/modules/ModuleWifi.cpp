@@ -4,7 +4,7 @@
 #include <SdFat.h>
 
 #include "driver/adc.h"
-#include "modules/ModuleSdcard.h"
+#include "modules/ModuleCard.h"
 #include "sensors/SensorTime.h"
 
 String ModuleWifi::networkName = "";
@@ -13,10 +13,10 @@ uint8_t ModuleWifi::expiryMinutes = 5;  // default
 network_t ModuleWifi::discoveredNetworks[NETWORKS_BUFFER_SIZE];
 
 void ModuleWifi::configure(config_t& config) {
-    ModuleSdcard::begin();
-    if (!ModuleSdcard::existsPath(WIFI_CONFIG__DAT)) {
-        ModuleWifi::createDat(config);
-    }
+    ModuleCard::begin();
+    // be sure the dat file is recreated from most current config
+    ModuleCard::removeFile32(WIFI_CONFIG__DAT);
+    ModuleWifi::createDat(config);
 }
 
 void ModuleWifi::createDat(config_t& config) {
@@ -26,9 +26,20 @@ void ModuleWifi::createDat(config_t& config) {
         StaticJsonBuffer<512> jsonBuffer;
         JsonObject& root = jsonBuffer.parseObject(wifiFileJson);
         if (root.success()) {
+
+            config.wifi.configStatus = CONFIG_STAT__APPLIED;
+
             File32 wifiFileDat;
             wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
+
             int jsonNetworkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
+
+            // problem: runs only when the dat file loads first
+            config.wifi.networkExpiryMinutes = root[JSON_KEY___MINUTES] | 5;  // apply network expiry (independant from networks)
+#ifdef USE___SERIAL
+            Serial.printf("wifi config loaded, networkExpiryMinutes: %d\n", config.wifi.networkExpiryMinutes);
+#endif
+
             String key;
             String pwd;
             network_t network;
@@ -41,22 +52,26 @@ void ModuleWifi::createDat(config_t& config) {
                 wifiFileDat.write((byte*)&network, sizeof(network));
             }
             wifiFileDat.close();
+
         } else {
             // TODO :: handle this condition
         }
+    }
+    if (wifiFileJson) {
+        wifiFileJson.close();
     }
 }
 
 bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     // adc_power_on();
 
-    ModuleSdcard::begin();
+    ModuleCard::begin();
     // recreate, when necessary
-    if (!ModuleSdcard::existsPath(WIFI_CONFIG__DAT)) {
+    if (!ModuleCard::existsPath(WIFI_CONFIG__DAT)) {
         ModuleWifi::createDat(config);
     }
 
-    ModuleWifi::expiryMinutes = config.wifi.networkExpiryMinutes;
+    ModuleWifi::expiryMinutes = config.wifi.networkExpiryMinutes;  // make expiry minutes available in ModuleWifi
 
     network_t configuredNetworks[NETWORKS_BUFFER_SIZE];
     uint8_t configuredNetworkCount = 0;
@@ -110,16 +125,16 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
 
     // no connection through any of the configured networks, start in ap mode
     if (!powerupSuccess && allowApMode) {
-        ModuleWifi::depower(config);  // sets valPower to WIFI____VAL_P_CUR_N
+        ModuleWifi::depower(config);  // sets valPower to WIFI____VAL_P__CUR_N
         delay(500);
         powerupSuccess = ModuleWifi::enableSoftAP(config);
     }
 
     if (powerupSuccess) {
-        ModuleServer::begin();
+        ModuleHttp::begin();
         ModuleWifi::access();
     } else {
-        ModuleWifi::depower(config);  // if no connection could be established, set valPower to WIFI____VAL_P_CUR_N
+        ModuleWifi::depower(config);  // if no connection could be established, set valPower to WIFI____VAL_P__CUR_N
         ModuleWifi::expire();
     }
 
@@ -160,7 +175,7 @@ bool ModuleWifi::connectToNetwork(config_t& config, network_t& network) {
             char networkNameBuf[64];
             sprintf(networkNameBuf, "%s%s%s", "WIFI:T:WPA;S:", network.key, ";;;");
             ModuleWifi::networkName = String(networkNameBuf);
-            config.wifi.wifiValPower = WIFI____VAL_P_CUR_Y;  // set flat to current on
+            config.wifi.wifiValPower = WIFI____VAL_P__CUR_Y;  // set flat to current on
             return true;
         }
     }
@@ -186,7 +201,7 @@ bool ModuleWifi::enableSoftAP(config_t& config) {
     for (int i = 0; i < 10; i++) {
         delay(200);
         if (ModuleWifi::isPowered()) {
-            config.wifi.wifiValPower = WIFI____VAL_P_CUR_Y;  // set flat to current on
+            config.wifi.wifiValPower = WIFI____VAL_P__CUR_Y;  // set flat to current on
             return true;
         }
     }
@@ -198,7 +213,7 @@ void ModuleWifi::depower(config_t& config) {
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
-    config.wifi.wifiValPower = WIFI____VAL_P_CUR_N;  // set flag to currently off
+    config.wifi.wifiValPower = WIFI____VAL_P__CUR_N;  // set flag to currently off
 }
 
 /**

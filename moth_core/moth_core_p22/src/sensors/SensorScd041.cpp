@@ -23,6 +23,9 @@ bool SensorScd041::configure(config_t& config) {
     // apply, only if there is a real change
     bool temperatureApplied = false;
     if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
+#ifdef USE___SERIAL
+        Serial.println("!!! applying temperature offset !!!");
+#endif
         SensorScd041::baseSensor.setTemperatureOffset(temperatureOffsetC);
         SensorScd041::baseSensor.setAutomaticSelfCalibration(0);
         SensorScd041::baseSensor.persistSettings();
