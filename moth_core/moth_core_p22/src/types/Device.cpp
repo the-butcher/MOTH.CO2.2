@@ -178,11 +178,19 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     uint16_t co2LpfPrev = Values::values->measurements[prevStorageIndex].valuesCo2.co2Lpf;
     uint16_t co2RawCurr = measurementCo2.co2Raw;
 
+    // #ifdef USE___SERIAL
+    //     Serial.printf("co2LpfPrev: %d, co2RawCurr: %d\n", co2LpfPrev, co2RawCurr);
+    // #endif
+
     float EXP = 3.0f;
-    float co2CurrRatio = 1 / EXP * pow(1 + abs(co2RawCurr - co2LpfPrev) * 1.0f / co2LpfPrev, EXP);
+    float co2CurrRatio = min(1.0f, 1 / EXP * pow(1 + abs(co2RawCurr - co2LpfPrev) * 1.0f / co2LpfPrev, EXP));  // when there is a large delta, ratio must be limited
     float co2PrevRatio = 1 - co2CurrRatio;
 
     uint16_t co2LpfCurr = (uint16_t)round(co2LpfPrev * co2PrevRatio + co2RawCurr * co2CurrRatio);
+
+    // #ifdef USE___SERIAL
+    //     Serial.printf("co2LpfCurr: %d\n", co2LpfCurr);
+    // #endif
 
     // replace with a measurement containing the low pass value
     Values::values->measurements[currStorageIndex] = {
@@ -272,6 +280,12 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         Device::calibrationResult = SensorScd041::forceReset();  // reset and store result
         config.disp.displayValSetng = DISPLAY_VAL_S____CO2;      // next display should show the calibration result
         config.sco2.requestedCo2Rst = false;
+        SensorScd041::depower(config);
+    } else if (config.sco2.requestedCo2Tst) {
+        SensorScd041::powerup(config);
+        Device::calibrationResult = SensorScd041::forceSelfTest();  // reset and store result
+        config.disp.displayValSetng = DISPLAY_VAL_S____CO2;         // next display should show the calibration result
+        config.sco2.requestedCo2Tst = false;
         SensorScd041::depower(config);
     }
 

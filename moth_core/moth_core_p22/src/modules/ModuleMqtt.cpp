@@ -15,9 +15,7 @@ void ModuleMqtt::configure(config_t& config) {
 }
 
 void ModuleMqtt::createDat(config_t& config) {
-#ifdef USE___SERIAL
-    Serial.println("createDat ...");
-#endif
+
     File32 mqttFileJson;
     bool jsonSuccess = mqttFileJson.open(MQTT_CONFIG_JSON.c_str(), O_RDONLY);
     if (jsonSuccess) {
@@ -26,10 +24,6 @@ void ModuleMqtt::createDat(config_t& config) {
         if (root.success()) {
 
             config.mqtt.configStatus = CONFIG_STAT__APPLIED;
-
-#ifdef USE___SERIAL
-            Serial.println("got json config ...");
-#endif
 
             File32 mqttFileDat;
             mqttFileDat.open(MQTT_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
@@ -72,9 +66,6 @@ mqtt____stat__e ModuleMqtt::checkDatStat(mqtt____t& mqtt) {
     } else if (mqtt.cli == "") {
         return MQTT_CNF_________CLI;
     } else if (mqtt.prt == 0) {
-#ifdef USE___SERIAL
-        Serial.printf("mqtt, prt: %d\n", mqtt.prt);
-#endif
         return MQTT_CNF_________PRT;
     } else {
         return MQTT______________OK;
@@ -149,8 +140,11 @@ void ModuleMqtt::publish(config_t& config) {
                 }
                 if (mqttClient->connected()) {
 
+                    config.mqtt.mqttStatus = MQTT______________OK;
+                    config.mqtt.mqttPublishMinutes = mqtt.min;  // set to configured interval
+
 #ifdef USE___SERIAL
-                    Serial.printf("connected, mqtt.min: %d\n", mqtt.min);
+                    Serial.printf("mqtt connected, mqtt.min: %d\n", mqtt.min);
 #endif
                     // max publishable features
                     uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
@@ -160,15 +154,6 @@ void ModuleMqtt::publish(config_t& config) {
                         dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
                         datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
                         if (datValue.publishable) {
-
-                            // replace with non-publishable version
-                            Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE] = {
-                                datValue.secondstime,  // secondstime
-                                datValue.valuesCo2,    // co2-sensor values
-                                datValue.valuesBme,    // bme-sensor values
-                                datValue.valuesNrg,    // bat-sensor values
-                                false                  // publishable
-                            };
 
                             // char mqttClidCO2[mqttClid.length() + 5];
                             // sprintf(mqttClidCO2, "%s/%s", mqttClid, "CO2");
@@ -191,16 +176,22 @@ void ModuleMqtt::publish(config_t& config) {
                             char outputBuf[outputLen];
                             outputStr.toCharArray(outputBuf, outputLen);
 
-                            mqttClient->publish(mqtt.cli, (uint8_t const*)outputBuf, outputLen);
-
-#ifdef USE___SERIAL
-                            Serial.printf("found publishable, dataIndex: %d\n", dataIndex);
-#endif
+                            bool success = mqttClient->publish(mqtt.cli, (uint8_t const*)outputBuf, outputLen);
+                            if (success) {
+                                // replace with non-publishable version
+                                Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE] = {
+                                    datValue.secondstime,  // secondstime
+                                    datValue.valuesCo2,    // co2-sensor values
+                                    datValue.valuesBme,    // bme-sensor values
+                                    datValue.valuesNrg,    // bat-sensor values
+                                    false                  // publishable
+                                };
+                            } else {
+                                config.mqtt.mqttStatus = MQTT_FAIL____PUBLISH;
+                                break;
+                            }
                         }
                     }
-
-                    config.mqtt.mqttStatus = MQTT______________OK;
-                    config.mqtt.mqttPublishMinutes = mqtt.min;  // no update
 
                     // TODO :: find a way to know then the last publication time was, open and read all files from there and publish
                     // finally publish anything currently in measurement buffer
@@ -233,6 +224,7 @@ void ModuleMqtt::publish(config_t& config) {
 #endif
         config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // no update
     } else {
+        // do nothing the correct interval must have been set when the status was set to OK
 #ifdef USE___SERIAL
         Serial.println("before returning from mqtt success");
 #endif

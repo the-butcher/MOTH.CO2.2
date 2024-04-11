@@ -51,8 +51,8 @@ config_t Config::load() {
         },
         {
             1.5,   // temperature offset
-            0,     // no calibration
-            false  // no reset
+            0,     // no requested calibration
+            false  // no requested reset
         },
         {
             SIGNAL__VAL_____OFF  // warn signal

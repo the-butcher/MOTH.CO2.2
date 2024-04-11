@@ -14,22 +14,24 @@ void SensorScd041::begin() {
  */
 bool SensorScd041::configure(config_t& config) {
 
-    // check current setting first
-    float temperatureOffsetV = 0;
-    float& temperatureOffsetR = temperatureOffsetV;
-    SensorScd041::baseSensor.getTemperatureOffset(temperatureOffsetR);
+    // whats currently set
+    float temperatureOffsetV = SensorScd041::getTemperatureOffset();
     // whats about to be set
     float temperatureOffsetC = config.sco2.temperatureOffset;
     // apply, only if there is a real change
     bool temperatureApplied = false;
     if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
 #ifdef USE___SERIAL
-        Serial.println("!!! applying temperature offset !!!");
+        Serial.printf("!!! applying temperature offset, %f, %f !!!\n", temperatureOffsetV, temperatureOffsetC);
 #endif
         SensorScd041::baseSensor.setTemperatureOffset(temperatureOffsetC);
         SensorScd041::baseSensor.setAutomaticSelfCalibration(0);
         SensorScd041::baseSensor.persistSettings();
         temperatureApplied = true;
+    } else {
+#ifdef USE___SERIAL
+        Serial.printf("no temperature offset application needed, %f, %f\n", temperatureOffsetV, temperatureOffsetC);
+#endif
     }
     // SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
     return temperatureApplied;
@@ -77,6 +79,20 @@ calibration_t SensorScd041::forceReset() {
         0,  // no requested value
         0,  // no corrected value
         0   // no applied offset
+    };
+}
+
+calibration_t SensorScd041::forceSelfTest() {
+    uint16_t statV = 0;
+    uint16_t& statR = statV;
+    uint16_t success = SensorScd041::baseSensor.performSelfTest(statR);
+    delay(10000);
+    return {
+        success == 0,  // zero indicates success
+        ACTION_____SELF_TEST,
+        0,              // no requested value
+        0,              // no corrected value
+        (int16_t)statV  // self test result
     };
 }
 

@@ -1,11 +1,13 @@
+#include "ModuleHttp.h"
+
 #include <ArduinoJson.h>
 #include <Update.h>
 
 #include "DatCsvResponse.h"
 #include "File32Response.h"
-#include "ModuleHttp.h"
 #include "ValuesResponse.h"
 #include "modules/ModuleCard.h"
+#include "modules/ModuleDisp.h"
 #include "modules/ModuleMqtt.h"
 #include "modules/ModuleWifi.h"
 #include "types/Define.h"
@@ -36,6 +38,7 @@ void ModuleHttp::begin() {
         server.on("/api/netoff", HTTP_GET, handleApiNetOff);
         server.on("/api/co2cal", HTTP_GET, handleApiCo2Cal);
         server.on("/api/co2rst", HTTP_GET, handleApiCo2Rst);
+        server.on("/api/co2tst", HTTP_GET, handleApiCo2Tst);
         server.on("/api/esprst", HTTP_GET, handleApiEspRst);
         server.on("/api/update", HTTP_POST, handleApiUpdate, ModuleHttp::handleUpdate);
         server.onNotFound(serveStatic);
@@ -456,6 +459,23 @@ void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+void ModuleHttp::handleApiCo2Tst(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=180");
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = 200;
+
+    ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+        config.sco2.requestedCo2Tst = true;
+    };
+
+    root.printTo(*response);
+    request->send(response);
+}
+
 void ModuleHttp::serveStatic(AsyncWebServerRequest *request) {
     serveFile32(request, request->url());
 }
@@ -536,7 +556,7 @@ void ModuleHttp::fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_t 
     float hum = SensorScd041::toFloatHum(value->valuesCo2.hum);
     float nrg = SensorEnergy::toFloatPercent(value->valuesNrg.percent);
     char csvBuffer[CSV_LINE_LENGTH + 1];
-    sprintf(csvBuffer, CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), value->valuesCo2.co2Lpf, value->valuesCo2.co2Raw, deg, hum, value->valuesBme.pressure, nrg);
+    sprintf(csvBuffer, CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), min(MAX_4DIGIT_VALUE, value->valuesCo2.co2Lpf), min(MAX_4DIGIT_VALUE, value->valuesCo2.co2Raw), deg, hum, value->valuesBme.pressure, nrg);
     for (uint8_t charIndex = 0; charIndex < CSV_LINE_LENGTH; charIndex++) {
         if (csvBuffer[charIndex] == '.') {
             data[offset + charIndex] = ',';
@@ -571,22 +591,23 @@ void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, s
         targetFile.sync();
         targetFile.close();
 
-        // if MQTT json was uploaded, the dat file is deleted to force rebuild
         if (dataFileName == MQTT_CONFIG_JSON) {
-            ModuleCard::removeFile32(MQTT_CONFIG__DAT);
             ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                values.nextAutoPubIndex = 0;  // resetting this value will trigger a republish attempt (and this rebuilds the mqtt dat)
-                // TODO :: clear definition of what condition leads to another autoPub attempt
+                ModuleMqtt::configure(config);  // deletes and rebuilds the mqtt dat
+                values.nextAutoPubIndex = 0;    // resetting this value will trigger a republish attempt (and this rebuilds the mqtt dat)
             };
         } else if (dataFileName == WIFI_CONFIG_JSON) {
-            ModuleCard::removeFile32(WIFI_CONFIG__DAT);
-            // TODO :: any changes to config or values required?
-            // mabe a simple reconnect
+            ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                ModuleWifi::configure(config);  // deletes and rebuilds the wifi dat
+                // changes become effective upon next reconnect
+            };
+        } else if (dataFileName == DISP_CONFIG_JSON) {
+            ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                ModuleDisp::configure(config);    // reloads json and applies settings to config
+                SensorScd041::configure(config);  // will apply temperature offset (if different from current value)
+                values.nextAutoNtpIndex = 0;      // trigger an ntp update (timezone may have changed)
+            };
         }
-
-        //  if (dataFileName == BoxDisplay::CONFIG_PATH) {
-        //     BoxDisplay::updateConfiguration();
-        // }
 
         if (final) {
             ModuleHttp::uploadCode = 200;

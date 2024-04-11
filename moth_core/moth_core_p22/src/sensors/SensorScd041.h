@@ -9,7 +9,8 @@
 
 typedef enum : uint8_t {
     ACTION___CALIBRATION,
-    ACTION_FACTORY_RESET
+    ACTION_FACTORY_RESET,
+    ACTION_____SELF_TEST
 } calibration_e;
 
 typedef struct {
@@ -31,6 +32,7 @@ class SensorScd041 {
     static bool setCompensationAltitude(uint16_t compensationAltitude);
     static calibration_t forceCalibration(uint16_t requestedCo2Ref);
     static calibration_t forceReset();
+    static calibration_t forceSelfTest();
     static bool measure();
     static values_co2_t readval();
     static bool powerup(config_t& config);

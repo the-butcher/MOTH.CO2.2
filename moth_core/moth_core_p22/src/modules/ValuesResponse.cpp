@@ -38,9 +38,9 @@ size_t ValuesResponse::_fillBuffer(uint8_t *data, size_t maxLen) {
         uint32_t dataIndex;
         for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {
             dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
-#ifdef USE___SERIAL
-            Serial.printf("lineIndex: %d, next: %d, lineLimit: %d, dataIndex: %d\n", lineIndex, Values::values->nextMeasureIndex, lineLimit, dataIndex % MEASUREMENT_BUFFER_SIZE);
-#endif
+            // #ifdef USE___SERIAL
+            //             Serial.printf("lineIndex: %d, next: %d, lineLimit: %d, dataIndex: %d\n", lineIndex, Values::values->nextMeasureIndex, lineLimit, dataIndex % MEASUREMENT_BUFFER_SIZE);
+            // #endif
             datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
             offset = lineIndex * CSV_LINE_LENGTH;
             ModuleHttp::fillBufferWithCsv(&datValue, data, offset);

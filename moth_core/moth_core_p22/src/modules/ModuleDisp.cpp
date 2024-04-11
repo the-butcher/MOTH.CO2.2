@@ -137,6 +137,7 @@ void ModuleDisp::clearBuffer(config_t& config) {
 }
 
 void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
+
     ModuleDisp::clearBuffer(config);
     ModuleDisp::drawOuterBorders(EPD_LIGHT);
     ModuleDisp::drawInnerBorders(EPD_LIGHT);
@@ -298,6 +299,7 @@ void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
  * measurement is reference for building the measurement table backwards
  */
 void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
+
     ModuleDisp::clearBuffer(config);
     ModuleDisp::drawOuterBorders(EPD_LIGHT);
 
@@ -377,22 +379,44 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
     ModuleDisp::baseDisplay.drawFastHLine(1, 77, 296, EPD_LIGHT);
     ModuleDisp::drawAntialiasedText06(label0, RECT_CO2, charPosValueX - CHAR_DIM_X6 * label0.length(), 80, EPD_BLACK);
 
-    String title;
-
+    values_all_t lastMeasurement = history[HISTORY_____BUFFER_SIZE - 1];
+    String label;
+    String value;
+    String vunit;
     if (displayValChart == DISPLAY_VAL_C____CO2) {
-        title = "CO² ppm," + String(config.disp.displayHrsChart) + "h";  // the sup 2 has been modified in the font to display as sub
+        label = "CO²";
+        value = String(lastMeasurement.valuesCo2.co2Lpf);
+        vunit = "ppm";
     } else if (displayValChart == DISPLAY_VAL_C____DEG) {
-        title = config.disp.displayDegScale == DISPLAY_VAL_D______F ? "temperature °F," : "temperature °C," + String(config.disp.displayHrsChart) + "h";
+        label = "temperature";
+        value = String(SensorScd041::toFloatDeg(lastMeasurement.valuesCo2.deg), 1);
+        vunit = config.disp.displayDegScale == DISPLAY_VAL_D______F ? "°F" : "°C";
     } else if (displayValChart == DISPLAY_VAL_C____HUM) {
-        title = "humidity %," + String(config.disp.displayHrsChart) + "h";
+        label = "humidity";
+        value = String(SensorScd041::toFloatHum(lastMeasurement.valuesCo2.hum), 1);
+        vunit = "%";
     } else if (displayValChart == DISPLAY_VAL_C____HPA) {
-        title = "pressure hPa," + String(config.disp.displayHrsChart) + "h";
+        label = "pressure";
+        value = String(lastMeasurement.valuesBme.pressure, 0);
+        vunit = "hPa";
     } else if (displayValChart == DISPLAY_VAL_C____ALT) {
-        title = "altitude m," + String(config.disp.displayHrsChart) + "h";
+        label = "altitude";
+        if (measurement.valuesBme.pressure > 0) {
+            value = String(SensorBme280::getAltitude(config.pressureZerolevel, lastMeasurement.valuesBme.pressure), 0);
+        } else {
+            value = String(0.0f, 0);
+        }
+        vunit = "m";  // TODO :: allow feet (?)
     } else if (displayValChart == DISPLAY_VAL_C____NRG) {
-        title = "battery %," + String(config.disp.displayHrsChart) + "h";
+        label = "battery";
+        value = String(SensorEnergy::toFloatPercent(lastMeasurement.valuesNrg.percent), 0);
+        vunit = "%";
     }
-    ModuleDisp::drawAntialiasedText06(title, RECT_CO2, LIMIT_POS_X - title.length() * CHAR_DIM_X6 + 3, charPosLabelY, EPD_BLACK);
+    char titleBuffer[32];
+    sprintf(titleBuffer, "%s (%s%s),%dh", label, value, vunit, config.disp.displayHrsChart);
+    String title = String(titleBuffer);
+
+    ModuleDisp::drawAntialiasedText06(title, RECT_CO2, LIMIT_POS_X - title.length() * CHAR_DIM_X6 + 1, charPosLabelY, EPD_BLACK);
 
     uint16_t minX;
     uint8_t minY;
@@ -404,6 +428,7 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
     uint8_t displayableBarWidth = 240 / HISTORY_____BUFFER_SIZE;
     uint8_t basX = LIMIT_POS_X - HISTORY_____BUFFER_SIZE * displayableBarWidth;
     for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
+
         measurement = history[i];
 
         if (displayValChart == DISPLAY_VAL_C____CO2) {
@@ -509,8 +534,15 @@ void ModuleDisp::renderCo2(config_t& config, calibration_t calibration) {
     ModuleDisp::clearBuffer(config);
     ModuleDisp::drawOuterBorders(EPD_LIGHT);
 
+    String actionTitle = "CALIBRATION";
+    if (calibration.action == ACTION_FACTORY_RESET) {
+        actionTitle = "RESET";
+    } else if (calibration.action == ACTION_____SELF_TEST) {
+        actionTitle = "SELF TEST";
+    }
+
     char titleBuf[32];
-    sprintf(titleBuf, "%s (%s)", calibration.action == ACTION___CALIBRATION ? "CALIBRATION" : "RESET", calibration.success ? "success" : "failure");
+    sprintf(titleBuf, "%s (%s)", actionTitle, calibration.success ? "success" : "failure");
 
     drawAntialiasedText08(String(titleBuf), RECT_TOP, 8, 40, EPD_BLACK);
     if (calibration.action == ACTION___CALIBRATION) {
@@ -519,6 +551,9 @@ void ModuleDisp::renderCo2(config_t& config, calibration_t calibration) {
         drawAntialiasedText08("cor: ", RECT_TOP, 8, 78, EPD_BLACK);
         drawAntialiasedText08(String(calibration.correctedCo2Ref), RECT_TOP, 50, 78, EPD_BLACK);
         drawAntialiasedText08("off: ", RECT_TOP, 8, 96, EPD_BLACK);
+        drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
+    } else if (calibration.action == ACTION_____SELF_TEST) {
+        drawAntialiasedText08("tst: ", RECT_TOP, 8, 96, EPD_BLACK);
         drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
     }
 
@@ -628,10 +663,7 @@ void ModuleDisp::drawOuterBorders(uint16_t color) {
     // top
     ModuleDisp::baseDisplay.drawFastHLine(0, 0, 296, color);
     ModuleDisp::baseDisplay.drawFastHLine(0, 1, 296, color);
-    // header
-    ModuleDisp::baseDisplay.drawFastHLine(0, 21, 296, color);
-    ModuleDisp::baseDisplay.drawFastHLine(0, 22, 296, color);
-    // footer
+    // footer separator
     ModuleDisp::baseDisplay.drawFastHLine(0, 105, 296, color);
     ModuleDisp::baseDisplay.drawFastHLine(0, 106, 296, color);
     // bottom
@@ -646,6 +678,9 @@ void ModuleDisp::drawOuterBorders(uint16_t color) {
 }
 
 void ModuleDisp::drawInnerBorders(uint16_t color) {
+    // header separator
+    ModuleDisp::baseDisplay.drawFastHLine(0, 21, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 22, 296, color);
     // horizontal center
     ModuleDisp::baseDisplay.drawFastHLine(206, 63, 100, color);
     ModuleDisp::baseDisplay.drawFastHLine(206, 64, 100, color);

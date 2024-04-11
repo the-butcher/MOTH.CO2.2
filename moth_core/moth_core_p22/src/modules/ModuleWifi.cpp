@@ -36,9 +36,6 @@ void ModuleWifi::createDat(config_t& config) {
 
             // problem: runs only when the dat file loads first
             config.wifi.networkExpiryMinutes = root[JSON_KEY___MINUTES] | 5;  // apply network expiry (independant from networks)
-#ifdef USE___SERIAL
-            Serial.printf("wifi config loaded, networkExpiryMinutes: %d\n", config.wifi.networkExpiryMinutes);
-#endif
 
             String key;
             String pwd;

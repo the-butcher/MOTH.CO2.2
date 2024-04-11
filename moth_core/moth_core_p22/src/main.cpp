@@ -39,16 +39,18 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 // uint16_t sc = sizeof(values);
 
 /**
- * -- restore full configuration :: display
- *    -- uploading a new display config must reconfigure display and also depending things (SCD41 temperature offset, ...)
- *    -- test changes to various properties, with restart and/or on the fly
+ * OK restore full configuration :: display
+ *    OK uploading a new display config must reconfigure display and also depending things (SCD41 temperature offset, ...)
+ *    OK test changes to various properties, with restart and/or on the fly
  * OK mqtt (+autoconnect for mqtt) :: TODO :: generally and specifically usr/pwd and secure
+ *    -- 1883, noauth :: OK
+ *    -- 1883, auth   :: OK
+ *    -- 8883, auth   :: OK
+ *    -- issue after so many connections
  * OK reimplement OTA update, TODO :: test
- * -- possible issue where only the last 30 minutes of data render in chart
- * OK implement pattern similar to mqtt for wifi, where the dat file is removed upon upload of new wifi.json, TODO :: test
- * -- in chart mode have a numeric value
  *
- * -- create series with 10min, 5min, 3min, 0min warmup
+ * -- possible issue where only the last 30 minutes of data render in chart
+ * -- create series with 10min, 5min, 3min, 0min warmup and check for value deviation, pick an energy/precision tradeoff
  */
 
 // schedule setting and display
@@ -144,9 +146,7 @@ void setup() {
         ModuleWifi::configure(config);  // recreate the wifi data file, this will also call the initial ModuleSdCard begin
         ModuleMqtt::configure(config);  // recreate the mqtt data file
         ModuleDisp::configure(config);  // load display config and apply to config, must be configured prior to SensorScd041 to have correct temperature offset
-        if (SensorScd041::configure(config)) {
-            ModuleSignal::setPixelColor(COLOR______RED);  // indicate that a configuration just took place (involving a write to the scd41's eeprom)
-        }
+        SensorScd041::configure(config);
 
         // have a battery measurement for the entry screen
         SensorEnergy::powerup();
@@ -171,27 +171,13 @@ void setup() {
 
     // there can be multiple causes for wakeup, RTC_SQW pin, BUSY pin, Button Pins
     handleWakeupCause();
-
-    // // did it wake up from a button press?
-    // esp_sleep_wakeup_cause_t wakeupReason = esp_sleep_get_wakeup_cause();
-    // if (wakeupReason == ESP_SLEEP_WAKEUP_EXT0) {
-    //     scheduleDeviceActionDepower();
-    // } else if (wakeupReason == ESP_SLEEP_WAKEUP_EXT1) {
-    //     uint64_t wakeupStatus = esp_sleep_get_ext1_wakeup_status();
-    //     gpio_num_t wakeupPin = (gpio_num_t)(log(wakeupStatus) / log(2));
-    //     if (wakeupPin == PIN_RTC_SQW) {  // wakeup from pin other than the rtc pulse, must be a button press
-    //         scheduleDeviceActionPowerup();
-    //     } else {
-    //         ButtonAction::createButtonAction(wakeupPin);
-    //     }
-    // }
 }
 
 /**
  * check if the device needs to stay awake
  * - while a button is pressed
  * - while actionPin is set (action is still active)
- * - while the WiFi is on
+ * - while WiFi is on
  * - for debugging purposes
  */
 bool isDelayRequired() {

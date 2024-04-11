@@ -256,6 +256,15 @@ const ServerApp = () => {
           }} />
           <ApiSimple {...{
             ...apiProps,
+            apiName: 'co2tst',
+            apiDesc: 'perform self-test of the CO₂ sensor',
+            confirm: {
+              title: 'do you really want to self-test?',
+              content: 'this call will consume ~10 seconds.'
+            }
+          }} />
+          <ApiSimple {...{
+            ...apiProps,
             apiName: 'esprst',
             apiDesc: 'resets the device ',
             confirm: {
