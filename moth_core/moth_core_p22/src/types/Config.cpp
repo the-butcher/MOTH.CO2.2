@@ -32,12 +32,12 @@ config_t Config::load() {
             DISPLAY_VAL_S__ENTRY,  // entry screen first
             DISPLAY_VAL_M__TABLE,  // entry -> chart | table
             DISPLAY_VAL_T____CO2,  // value shown when rendering a measurement (table)
-            DISPLAY_VAL_C____ALT,  // value shown when rendering the chart
+            DISPLAY_VAL_C____CO2,  // value shown when rendering the chart
             DISPLAY_HRS_C_____01,  // hours to be shown in chart display
             DISPLAY_THM____LIGHT,  // light theme
-            DISPLAY_VAL_D______C,  // temperature scale
-            DISPLAY_VAL_Y____SIG,
-            3  // display update minutes
+            DISPLAY_VAL_D______C,  // temperature scale celsius
+            DISPLAY_VAL_Y____SIG,  // significant change display
+            3                      // display update minutes
         },
         {
             CONFIG_STAT__DEFAULT,
@@ -59,13 +59,13 @@ config_t Config::load() {
         },
         {
             CONFIG_STAT__DEFAULT,
-            MQTT_PUBLISH___NEVER,  // mqtt publish minutes
-            MQTT_________UNKNOWN   // mqtt status
-        },
-        0.0,  // calculated sealevel pressure, 0.0 = needs recalculation
-        153   // the altitude that the sensor was configured to (or set to by the user)
-    };
-    String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
+            MQTT_PUBLISH___NEVER,                    // mqtt publish minutes
+            MQTT_________UNKNOWN                     // mqtt status
+        },                                           // }
+        0.0,                                         // calculated sealevel pressure, 0.0 = needs recalculation
+        153                                          // the altitude that the sensor was configured to (or set to by the user)
+    };                                               //
+    String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";  // initial timezone
     timezone.toCharArray(config.time.timezone, 64);
     return config;
 }

@@ -156,9 +156,9 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     }
     Values::values->nextMeasureIndex = nextMeasureIndex;
 
-    float pressure = measurementBme.pressure;
+    float pressure = measurementBme.pressure;  // unfiltered value, TODO :: change
     if (pressure > 0) {
-        uint16_t compensationAltitude = (uint16_t)round(SensorBme280::getAltitude(PRESSURE_ZERO, pressure));
+        uint16_t compensationAltitude = (uint16_t)max(0.0f, round(SensorBme280::getAltitude(PRESSURE_ZERO, pressure)));  // negative unsigned values jumps to 0xFFFF -> invalid co2 levels
         SensorScd041::setCompensationAltitude(compensationAltitude);
     }
 
@@ -178,19 +178,24 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     uint16_t co2LpfPrev = Values::values->measurements[prevStorageIndex].valuesCo2.co2Lpf;
     uint16_t co2RawCurr = measurementCo2.co2Raw;
 
-    // #ifdef USE___SERIAL
-    //     Serial.printf("co2LpfPrev: %d, co2RawCurr: %d\n", co2LpfPrev, co2RawCurr);
-    // #endif
-
-    float EXP = 3.0f;
+    float EXP = 3.0f;                                                                                          // TODO constant
     float co2CurrRatio = min(1.0f, 1 / EXP * pow(1 + abs(co2RawCurr - co2LpfPrev) * 1.0f / co2LpfPrev, EXP));  // when there is a large delta, ratio must be limited
     float co2PrevRatio = 1 - co2CurrRatio;
 
     uint16_t co2LpfCurr = (uint16_t)round(co2LpfPrev * co2PrevRatio + co2RawCurr * co2CurrRatio);
 
-    // #ifdef USE___SERIAL
-    //     Serial.printf("co2LpfCurr: %d\n", co2LpfCurr);
-    // #endif
+    // simple pressure low pass filtering
+    float pressureLpfPrev = Values::values->measurements[prevStorageIndex].valuesBme.pressure;
+    float pressureRawCurr = measurementBme.pressure;
+
+    float pressureCurrRatio = 0.33f;                  // TODO constant
+    float pressurePrevRatio = 1 - pressureCurrRatio;  // TODO constant
+
+    float pressureLpfCurr = pressureLpfPrev * pressurePrevRatio + pressureRawCurr * pressureCurrRatio;
+
+#ifdef USE___SERIAL
+    Serial.printf("pressureLpfPrev: %f, pressureRawCurr: %f, pressureLpfCurr: %f\n", pressureLpfPrev, pressureRawCurr, pressureLpfCurr);
+#endif
 
     // replace with a measurement containing the low pass value
     Values::values->measurements[currStorageIndex] = {
@@ -200,10 +205,12 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
             measurementCo2.deg,    // temperature
             measurementCo2.hum,    // humidity
             measurementCo2.co2Raw  // original co2 value
-        },
-        measurementBme,  // sensorBme280 values
-        measurementNrg,  // battery values
-        true             // publishable
+        },                         //
+        {
+            pressureLpfCurr  // lowpass pressure
+        },                   //
+        measurementNrg,      // battery values
+        true                 // publishable
     };
 
     if (config.sign.signalValSound == SIGNAL__VAL______ON && co2LpfCurr >= config.disp.thresholdsCo2.rHi) {
