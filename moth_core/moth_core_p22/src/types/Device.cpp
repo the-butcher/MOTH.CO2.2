@@ -22,9 +22,9 @@ device_t Device::load() {
     device_t device;
     device.deviceActions[DEVICE_ACTION_POWERUP] = {
         DEVICE_ACTION_POWERUP,  // trigger measurements
-        COLOR____GREEN,         // grenn to indicate powerup
+        COLOR____GREEN,         // green to indicate powerup
         WAKEUP_ACTION_BUTN,     // allow wakeup while measurement is active
-        3                       // 5 seconds delay until measurement
+        0                       // 0 for no warmup
     };
     device.deviceActions[DEVICE_ACTION_MEASURE] = {
         DEVICE_ACTION_MEASURE,  // trigger measurements
