@@ -116,18 +116,12 @@ void ModuleMqtt::publish(config_t& config) {
 
                 WiFiClient* wifiClient;
                 if (mqtt.crt != "" && ModuleCard::existsPath(mqtt.crt)) {
-#ifdef USE___SERIAL
-                    Serial.println("creating secure wifi client ...");
-#endif
                     wifiClient = new WiFiClientSecure();
                     File32 certFile;
                     certFile.open(mqtt.crt, O_RDONLY);
                     ((WiFiClientSecure*)wifiClient)->loadCACert(certFile, certFile.size());
                     certFile.close();
                 } else {
-#ifdef USE___SERIAL
-                    Serial.println("creating nonsecure wifi client ...");
-#endif
                     wifiClient = new WiFiClient();
                 }
                 PubSubClient* mqttClient;
@@ -142,10 +136,8 @@ void ModuleMqtt::publish(config_t& config) {
 
                     config.mqtt.mqttStatus = MQTT______________OK;
                     config.mqtt.mqttPublishMinutes = mqtt.min;  // set to configured interval
+                    config.mqtt.mqttFailureCount = 0;
 
-#ifdef USE___SERIAL
-                    Serial.printf("mqtt connected, mqtt.min: %d\n", mqtt.min);
-#endif
                     // max publishable features
                     uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
                     values_all_t datValue;
@@ -161,7 +153,7 @@ void ModuleMqtt::publish(config_t& config) {
                             DynamicJsonBuffer jsonBuffer;
                             JsonObject& root = jsonBuffer.createObject();
                             root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(datValue.secondstime);
-                            root[FIELD_NAME_CO2_LPF] = datValue.valuesCo2.co2Lpf;
+                            root[FIELD_NAME_CO2_LPF] = (uint16_t)round(datValue.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
                             root[FIELD_NAME_CO2_RAW] = datValue.valuesCo2.co2Raw;
                             root[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(datValue.valuesCo2.deg) * 10) / 10.0;
                             root[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(datValue.valuesCo2.hum) * 10) / 10.0;
@@ -193,6 +185,13 @@ void ModuleMqtt::publish(config_t& config) {
                         }
                     }
 
+                    // be sure any incoming data is cleaned out
+                    int loopExecutionCount = 0;
+                    mqttClient->loop();
+                    while (wifiClient->available() && loopExecutionCount++ < 5) {
+                        mqttClient->loop();
+                    }
+
                     // TODO :: find a way to know then the last publication time was, open and read all files from there and publish
                     // finally publish anything currently in measurement buffer
                     // publishable cant be older than mqtt config time (boot time?)
@@ -200,6 +199,10 @@ void ModuleMqtt::publish(config_t& config) {
                     // how could the file be tagged as completely published
 
                     mqttClient->disconnect();
+                    delete mqttClient;
+                    delete wifiClient;
+                    mqttClient = NULL;
+                    wifiClient = NULL;
 
                 } else {
                     config.mqtt.mqttStatus = ModuleMqtt::checkCliStat(mqttClient);
@@ -207,24 +210,35 @@ void ModuleMqtt::publish(config_t& config) {
 
             } else {  // datStat other than MQTT______________OK
                 config.mqtt.mqttStatus = datStat;
+                config.mqtt.mqttFailureCount = 5;  // treat as non-recoverable
             }
 
         } else {  // no data available in dat
             config.mqtt.mqttStatus = MQTT_NO__________DAT;
+            config.mqtt.mqttFailureCount = 5;  // treat as non-recoverable
         }
 
     } else {  // could not open dat
         config.mqtt.mqttStatus = MQTT_FAIL________DAT;
+        config.mqtt.mqttFailureCount = 5;  // treat as non-recoverable
     }
 
     // TODO :: appropriate config and values for status
     if (config.mqtt.mqttStatus != MQTT______________OK) {
+
+        config.mqtt.mqttFailureCount++;
+        if (config.mqtt.mqttFailureCount > 3) {
 #ifdef USE___SERIAL
-        Serial.printf("before returning infinite publish interval, stat: %d\n", config.mqtt.mqttStatus);
+            Serial.printf("before returning from mqtt failure (non-recoverable), stat: %d\n", config.mqtt.mqttStatus);
 #endif
-        config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // no update
+            config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // no update
+        } else {
+#ifdef USE___SERIAL
+            Serial.printf("before returning from mqtt failure (recoverable), stat: %d\n", config.mqtt.mqttStatus);
+#endif
+        }
     } else {
-        // do nothing the correct interval must have been set when the status was set to OK
+        // do nothing the correct interval must have been set when the status was set to OK, failure count reset there as well
 #ifdef USE___SERIAL
         Serial.println("before returning from mqtt success");
 #endif

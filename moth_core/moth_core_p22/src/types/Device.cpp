@@ -144,23 +144,15 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     uint32_t currStorageIndex = currMeasureIndex % MEASUREMENT_BUFFER_SIZE;  // the index of this measurement in the data
     uint32_t prevStorageIndex = currMeasureIndex > 0 ? (currMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE : 0;
 
+    // ok to use raw pressure value since the first value is unfiltered anyways
     if (currMeasureIndex == 0) {
         // when pressureZerolevel == 0.0 pressure at sealevel needs to be recalculated (should only happen once at startup)
-        if (config.pressureZerolevel == 0.0) {
-            config.pressureZerolevel = SensorBme280::getPressureZerolevel(config.altitudeBaselevel, measurementBme.pressure);
-        }
-        // prefill the lowpass values
-        for (uint8_t i = 0; i < MEASUREMENT_BUFFER_SIZE; i++) {
-            Values::values->measurements[i].valuesCo2.co2Raw = measurementCo2.co2Raw;
+        if (config.sbme.pressureZerolevel == 0.0) {
+            config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, measurementBme.pressure);
         }
     }
-    Values::values->nextMeasureIndex = nextMeasureIndex;
 
-    float pressure = measurementBme.pressure;  // unfiltered value, TODO :: change
-    if (pressure > 0) {
-        uint16_t compensationAltitude = (uint16_t)max(0.0f, round(SensorBme280::getAltitude(PRESSURE_ZERO, pressure)));  // negative unsigned values jumps to 0xFFFF -> invalid co2 levels
-        SensorScd041::setCompensationAltitude(compensationAltitude);
-    }
+    Values::values->nextMeasureIndex = nextMeasureIndex;
 
     Values::values->measurements[currStorageIndex] = {
         SensorTime::getSecondstime(),  // secondstime as of RTC
@@ -174,38 +166,28 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     SensorScd041::depower(config);
     SensorEnergy::depower();
 
-    // some filtering (see excel in nonrepo folder)
-    uint16_t co2LpfPrev = Values::values->measurements[prevStorageIndex].valuesCo2.co2Lpf;
-    uint16_t co2RawCurr = measurementCo2.co2Raw;
+    // co2 low pass filter
+    float co2LpfPrev = Values::values->measurements[prevStorageIndex].valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
+    float co2RawCurr = measurementCo2.co2Raw;
+    float co2LpfCurr = co2LpfPrev * (1 - config.sco2.lpFilterRatioCurr) + co2RawCurr * config.sco2.lpFilterRatioCurr;
 
-    float EXP = 3.0f;                                                                                          // TODO constant
-    float co2CurrRatio = min(1.0f, 1 / EXP * pow(1 + abs(co2RawCurr - co2LpfPrev) * 1.0f / co2LpfPrev, EXP));  // when there is a large delta, ratio must be limited
-    float co2PrevRatio = 1 - co2CurrRatio;
-
-    uint16_t co2LpfCurr = (uint16_t)round(co2LpfPrev * co2PrevRatio + co2RawCurr * co2CurrRatio);
-
-    // simple pressure low pass filtering
+    // pressure low pass filter
     float pressureLpfPrev = Values::values->measurements[prevStorageIndex].valuesBme.pressure;
     float pressureRawCurr = measurementBme.pressure;
-
-    float pressureCurrRatio = 0.33f;                  // TODO constant
-    float pressurePrevRatio = 1 - pressureCurrRatio;  // TODO constant
-
-    float pressureLpfCurr = pressureLpfPrev * pressurePrevRatio + pressureRawCurr * pressureCurrRatio;
-
-#ifdef USE___SERIAL
-    Serial.printf("pressureLpfPrev: %f, pressureRawCurr: %f, pressureLpfCurr: %f\n", pressureLpfPrev, pressureRawCurr, pressureLpfCurr);
-#endif
+    float pressureLpfCurr = pressureLpfPrev * (1 - config.sbme.lpFilterRatioCurr) + pressureRawCurr * config.sbme.lpFilterRatioCurr;
+    if (pressureLpfCurr > 0) {
+        SensorScd041::setCompensationPressure(pressureLpfCurr);
+    }
 
     // replace with a measurement containing the low pass value
     Values::values->measurements[currStorageIndex] = {
         SensorTime::getSecondstime(),  // secondstime as of RTC
         {
-            co2LpfCurr,            // lowpass
-            measurementCo2.deg,    // temperature
-            measurementCo2.hum,    // humidity
-            measurementCo2.co2Raw  // original co2 value
-        },                         //
+            (uint16_t)round(co2LpfCurr * VALUE_SCALE_CO2LPF),  // filtered
+            measurementCo2.deg,                                // temperature
+            measurementCo2.hum,                                // humidity
+            measurementCo2.co2Raw                              // original co2 value
+        },
         {
             pressureLpfCurr  // lowpass pressure
         },                   //
@@ -225,8 +207,8 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
 
     if (maxDeviceAction == DEVICE_ACTION_READVAL) {
         if (config.disp.displayValCycle == DISPLAY_VAL_Y____SIG) {
-            uint16_t lastCo2Lpf = Values::values->measurements[Values::values->lastDisplayIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
-            uint16_t currCo2Lpf = Values::values->measurements[(Values::values->nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf;
+            float lastCo2Lpf = Values::values->measurements[Values::values->lastDisplayIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
+            float currCo2Lpf = Values::values->measurements[(Values::values->nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
             if (Values::isSignificantChange(lastCo2Lpf, currCo2Lpf)) {
                 return DEVICE_ACTION_DISPLAY;  // skip settings and advance directly to display
             }

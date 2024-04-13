@@ -39,19 +39,16 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 // uint16_t sc = sizeof(values);
 
 /**
- * OK restore full configuration :: display
- *    OK uploading a new display config must reconfigure display and also depending things (SCD41 temperature offset, timezone)
- *    OK test changes to various properties, with restart and/or on the fly
  * OK mqtt (+autoconnect for mqtt) :: TODO :: generally and specifically usr/pwd and secure
  *    -- 1883, noauth        :: OK
  *    -- 1883, auth          :: OK
  *    -- 8883, cert + auth   :: OK
- *    -- can not reconnect after a number of connections, mosquitto or device problem?
+ *    !! can not reconnect after a number of connections, mosquitto or device problem?
+ *    !! how to publish historic data from file?
  * OK reimplement OTA update, TODO :: test
  * -- find out if altitude compensation survives an i2c depower cycle (by reading previous to measure)
+ *    -- need to have lower ambient pressure to reliably test
  *    -- if not find a way to compensate from previous (or average of previous) measurement(s)
- *    -- implement low pass on pressure (see if it reduces noise on co2 as well)
- *    -- find all places where .pressure is used and replace with pressure from values (which is filtered), ButtonAction uses readval
  *
  * -- possible issue where only the last 30 minutes of data render in chart
  * -- create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
@@ -205,7 +202,6 @@ void secondsSleep(uint32_t seconds) {
     SensorTime::prepareSleep(wakeupType);    // establishes gpio hold for the RTC_SQW pin, ...
     ModuleDisp::prepareSleep(wakeupType);    // adds ext0Wakeup (wait for busy pin high)
 
-    // needed for both deep and sleep
     if (wakeupType == WAKEUP_ACTION_BUTN) {
         esp_sleep_enable_ext1_wakeup(device.ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
     }
@@ -214,6 +210,9 @@ void secondsSleep(uint32_t seconds) {
         pinMode(I2C_POWER, OUTPUT);
         digitalWrite(I2C_POWER, LOW);
         gpio_hold_dis((gpio_num_t)I2C_POWER);
+        // lowpowerperiodic
+        // esp_sleep_enable_timer_wakeup(sleepMicros);
+        // gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
     } else {
         esp_sleep_enable_timer_wakeup(sleepMicros);
         gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure

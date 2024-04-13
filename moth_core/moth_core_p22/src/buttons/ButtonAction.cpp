@@ -241,32 +241,32 @@ void ButtonAction::toggleBeep(config_t& config) {
  * button action :: decrement the base altitude by 10m
  */
 void ButtonAction::decrementAltitude10(config_t& config) {
-    config.altitudeBaselevel = config.altitudeBaselevel - 10;
-    config.pressureZerolevel = SensorBme280::getPressureZerolevel(config.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel - 10;
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
 }
 
 /**
  * button action :: increment the base altitude by 10m
  */
 void ButtonAction::incrementAltitude10(config_t& config) {
-    config.altitudeBaselevel = config.altitudeBaselevel + 10;
-    config.pressureZerolevel = SensorBme280::getPressureZerolevel(config.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel + 10;
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
 }
 
 /**
  * button action :: decrement the base altitude by 50m
  */
 void ButtonAction::decrementAltitude50(config_t& config) {
-    config.altitudeBaselevel = config.altitudeBaselevel - 50;
-    config.pressureZerolevel = SensorBme280::getPressureZerolevel(config.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel - 50;
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
 }
 
 /**
  * button action :: increment the base altitude by 10m
  */
 void ButtonAction::incrementAltitude50(config_t& config) {
-    config.altitudeBaselevel = config.altitudeBaselevel + 50;
-    config.pressureZerolevel = SensorBme280::getPressureZerolevel(config.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel + 50;
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
 }
 
 /**

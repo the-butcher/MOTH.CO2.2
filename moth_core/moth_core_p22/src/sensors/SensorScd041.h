@@ -29,7 +29,7 @@ class SensorScd041 {
    public:
     static void begin();
     static bool configure(config_t& config);  // must have begun before configuration
-    static bool setCompensationAltitude(uint16_t compensationAltitude);
+    static bool setCompensationPressure(float compensationPressure);
     static calibration_t forceCalibration(uint16_t requestedCo2Ref);
     static calibration_t forceReset();
     static calibration_t forceSelfTest();
@@ -45,6 +45,8 @@ class SensorScd041 {
     static float getTemperatureOffset();
     static uint16_t getCompensationAltitude();
     static bool isAutomaticSelfCalibration();
+    static bool powerupPeriodicMeasurement();
+    static bool depowerPeriodicMeasurement();
 };
 
 #endif

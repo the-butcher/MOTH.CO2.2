@@ -11,6 +11,8 @@ const String FIELD_NAME_____HUM = "hum";
 const String FIELD_NAME_____HPA = "hpa";
 const String FIELD_NAME_____BAT = "bat";
 
+const float VALUE_SCALE_CO2LPF = 8.0f;
+
 /**
  * size of the measurement buffer
  * with a measurement interval currently hardcoded to one minute it represents the minute interval in which measurements are saved
@@ -23,9 +25,9 @@ const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
 const uint8_t HISTORY_____BUFFER_SIZE = 60;
 
 typedef struct {
-    uint16_t co2Lpf;
-    uint16_t deg;  // convention needed for fraction
-    uint16_t hum;  // convention needed for fraction
+    uint16_t co2Lpf;  // filtered value (multiplies by 8, since there is room in uint16_t and the low pass filter will benefit from it)
+    uint16_t deg;     // convention needed for fraction
+    uint16_t hum;     // convention needed for fraction
     uint16_t co2Raw;
 } values_co2_t;
 

@@ -3,6 +3,10 @@
 
 #include <Arduino.h>
 
+const String JSON_KEY_______CO2 = "co2";  // co2 thresholds
+const String JSON_KEY_______DEG = "deg";  // temperature thresholds
+const String JSON_KEY_______HUM = "hum";  // humidity thresholds
+const String JSON_KEY_______BME = "bme";  // altitude and low pass
 const String JSON_KEY____SERVER = "srv";
 const String JSON_KEY______PORT = "prt";
 const String JSON_KEY______USER = "usr";
@@ -16,15 +20,13 @@ const String JSON_KEY_______SSC = "ssc";  // show significant change
 const String JSON_KEY__ALTITUDE = "alt";  // base altitude
 const String JSON_KEY____OFFSET = "off";  // temperature offset
 const String JSON_KEY__TIMEZONE = "tzn";
-const String JSON_KEY_______CO2 = "co2";  // co2 thresholds
-const String JSON_KEY_______DEG = "deg";  // temperature thresholds
-const String JSON_KEY_______HUM = "hum";  // humidity thresholds
 const String JSON_KEY_RISK__LOW = "rLo";  //
 const String JSON_KEY_WARN__LOW = "wLo";
 const String JSON_KEY_WARN_HIGH = "wHi";
 const String JSON_KEY_RISK_HIGH = "rHi";
-const String JSON_KEY_REFERENCE = "ref";  // co2 refreence
-const String JSON_KEY_______C2F = "c2f";  //
+const String JSON_KEY_REFERENCE = "ref";  // co2 refrence
+const String JSON_KEY_______LPA = "lpa";  // low pass filter alpha
+const String JSON_KEY_______C2F = "c2f";  // convert to deg F?
 
 typedef struct {
     uint16_t wHi;  // upper warn level
@@ -168,6 +170,7 @@ typedef enum : uint8_t {
 typedef struct {
     config___stat__e configStatus;  // mqtt config status
     uint32_t mqttPublishMinutes;    // minute interval for publishing mqtt messages, 0xFFFFFF when mqtt is not configured or misconfigured
+    uint8_t mqttFailureCount;
     mqtt____stat__e mqttStatus;
 } mqtt____all___t;
 
@@ -178,10 +181,17 @@ typedef struct {
 
 typedef struct {
     float temperatureOffset;
+    float lpFilterRatioCurr;   // low pass filter alpha
     uint16_t requestedCo2Ref;  // only to hold a value if calibration should be performed
     bool requestedCo2Rst;      // only to be true when a reset should be performed
     bool requestedCo2Tst;      // only to be true when a self test should be performed
 } sco2____all___t;
+
+typedef struct {
+    float pressureZerolevel;  // calculated sealevel pressure
+    float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)
+    float lpFilterRatioCurr;  // low pass filter alpha
+} sbme____all___t;
 
 typedef enum : uint8_t {
     SIGNAL__VAL______ON,
@@ -197,10 +207,9 @@ typedef struct {
     wifi____all___t wifi;
     time____all___t time;
     sco2____all___t sco2;
+    sbme____all___t sbme;
     signal__all___t sign;
     mqtt____all___t mqtt;
-    float pressureZerolevel;  // calculated sealevel pressure
-    float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)
 } config_t;
 
 class Config {

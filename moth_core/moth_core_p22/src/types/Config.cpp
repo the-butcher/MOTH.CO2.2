@@ -50,9 +50,16 @@ config_t Config::load() {
             // [timezone char array [64]]
         },
         {
-            1.5,   // temperature offset
-            0,     // no requested calibration
-            false  // no requested reset
+            1.5,    // temperature offset
+            0.5,    // low pass filter alpha
+            0,      // no requested calibration
+            false,  // no requested reset
+            false   // no requested self test
+        },
+        {
+            0.0,  // calculated sealevel pressure, 0.0 = needs recalculation
+            153,  // the altitude that the sensor was configured to (or set to by the user)
+            0.5   // low pass filter alpha
         },
         {
             SIGNAL__VAL_____OFF  // warn signal
@@ -60,10 +67,9 @@ config_t Config::load() {
         {
             CONFIG_STAT__DEFAULT,
             MQTT_PUBLISH___NEVER,                    // mqtt publish minutes
+            0,                                       // failure count
             MQTT_________UNKNOWN                     // mqtt status
         },                                           // }
-        0.0,                                         // calculated sealevel pressure, 0.0 = needs recalculation
-        153                                          // the altitude that the sensor was configured to (or set to by the user)
     };                                               //
     String timezone = "CET-1CEST,M3.5.0,M10.5.0/3";  // initial timezone
     timezone.toCharArray(config.time.timezone, 64);

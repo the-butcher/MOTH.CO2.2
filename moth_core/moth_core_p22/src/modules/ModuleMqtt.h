@@ -5,6 +5,7 @@
 #include <PubSubClient.h>
 
 #include "types/Config.h"
+#include "types/Values.h"
 
 const String MQTT_CONFIG_JSON = "/config/mqtt.json";
 const String MQTT_CONFIG__DAT = "/config/mqtt.dat";

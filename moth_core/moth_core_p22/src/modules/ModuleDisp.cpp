@@ -33,6 +33,7 @@ ModuleDispBase ModuleDisp::baseDisplay;
 bool ModuleDisp::interrupted = false;
 
 void ModuleDisp::configure(config_t& config) {
+
     ModuleCard::begin();
     File32 dispFileJson;
     bool dispSuccess = dispFileJson.open(DISP_CONFIG_JSON.c_str(), O_RDONLY);
@@ -66,7 +67,8 @@ void ModuleDisp::configure(config_t& config) {
             config.disp.displayDegScale = isFahrenheit ? DISPLAY_VAL_D______F : DISPLAY_VAL_D______C;
 
             // display deg offset
-            config.sco2.temperatureOffset = root[JSON_KEY_______DEG][JSON_KEY____OFFSET][0] | config.sco2.temperatureOffset;
+            config.sco2.temperatureOffset = root[JSON_KEY_______DEG][JSON_KEY____OFFSET] | config.sco2.temperatureOffset;
+            config.sco2.lpFilterRatioCurr = root[JSON_KEY_______CO2][JSON_KEY_______LPA] | config.sco2.lpFilterRatioCurr;
 
             // display hum thresholds
             config.disp.thresholdsHum.rLo = root[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | config.disp.thresholdsHum.rLo;
@@ -75,7 +77,8 @@ void ModuleDisp::configure(config_t& config) {
             config.disp.thresholdsHum.rHi = root[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | config.disp.thresholdsHum.rHi;
 
             // altitude base level (home altitude of sensor)
-            config.altitudeBaselevel = root[JSON_KEY__ALTITUDE] | config.altitudeBaselevel;
+            config.sbme.altitudeBaselevel = root[JSON_KEY_______BME][JSON_KEY__ALTITUDE] | config.sbme.altitudeBaselevel;
+            config.sbme.lpFilterRatioCurr = root[JSON_KEY_______BME][JSON_KEY_______LPA] | config.sbme.lpFilterRatioCurr;
 
             String timezone = root[JSON_KEY__TIMEZONE] | "";
             if (timezone != "") {
@@ -158,11 +161,11 @@ void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
     if (config.disp.displayValTable == DISPLAY_VAL_T____CO2) {
 
         thresholds_co2_t thresholdsCo2 = config.disp.thresholdsCo2;
-        uint16_t co2Lpf = measurement.valuesCo2.co2Lpf;
+        float co2Lpf = measurement.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
 
-        float stale = max(0.0, min(10.0, (co2Lpf - thresholdsCo2.ref) / 380.0));  // don't allow negative stale values. max out at 10
-        float staleWarn = max(0.0, min(10.0, (thresholdsCo2.wHi - thresholdsCo2.ref) / 380.0));
-        float staleRisk = max(0.0, min(10.0, (thresholdsCo2.rHi - thresholdsCo2.ref) / 380.0));
+        float stale = max(0.0f, min(10.0f, (co2Lpf - thresholdsCo2.ref) / 380.0f));  // don't allow negative stale values. max out at 10
+        float staleWarn = max(0.0f, min(10.0f, (thresholdsCo2.wHi - thresholdsCo2.ref) / 380.0f));
+        float staleRisk = max(0.0f, min(10.0f, (thresholdsCo2.rHi - thresholdsCo2.ref) / 380.0f));
 
         float staleMax = 2.5;
         if (stale > 4) {
@@ -182,7 +185,7 @@ void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
 
         title = "CO² ppm";
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * 7;
-        ModuleDisp::drawAntialiasedText36(formatString(String(co2Lpf), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
+        ModuleDisp::drawAntialiasedText36(formatString(String(co2Lpf, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
 
         uint8_t yMax = RECT_CO2.ymax - 7;  // bottom limit of rebreathe indicator
         uint8_t yDim = round(stale * staleDif);
@@ -245,7 +248,7 @@ void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
         charPosFinalX = charPosValueX - CHAR_DIM_X6 * title.length();
         ModuleDisp::drawAntialiasedText36(formatString(String(pressure, 0), FORMAT_4_DIGIT), RECT_CO2, xPosMainValue, 76, textColor);
     } else if (config.disp.displayValTable == DISPLAY_VAL_T____ALT) {
-        float altitude = SensorBme280::getAltitude(config.pressureZerolevel, measurement.valuesBme.pressure);
+        float altitude = SensorBme280::getAltitude(config.sbme.pressureZerolevel, measurement.valuesBme.pressure);
         textColor = EPD_BLACK;
         fillColor = EPD_WHITE;
         vertColor = EPD_DARK;
@@ -309,13 +312,15 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
     uint16_t minValue = 0;
     uint16_t maxValue = 1500;
     if (displayValChart == DISPLAY_VAL_C____CO2) {
+        float co2Lpf;
         for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
             measurement = history[i];
-            if (measurement.valuesCo2.co2Lpf > 3600) {
+            co2Lpf = measurement.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
+            if (co2Lpf > 3600) {
                 maxValue = 6000;  // 0, 2000, 4000, (6000)
-            } else if (measurement.valuesCo2.co2Lpf > 2400) {
+            } else if (co2Lpf > 2400) {
                 maxValue = 4500;  // 0, 1500, 3000, (4500)
-            } else if (measurement.valuesCo2.co2Lpf > 1200) {
+            } else if (co2Lpf > 1200) {
                 maxValue = 3000;  // 0, 1000, 2000, (3000)
             }
         }
@@ -349,7 +354,7 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
         for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
             measurement = history[i];
             if (measurement.valuesBme.pressure > 0) {
-                altitude = SensorBme280::getAltitude(config.pressureZerolevel, measurement.valuesBme.pressure);
+                altitude = SensorBme280::getAltitude(config.sbme.pressureZerolevel, measurement.valuesBme.pressure);
             } else {
                 altitude = 0.0f;
             }
@@ -385,7 +390,7 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
     String vunit;
     if (displayValChart == DISPLAY_VAL_C____CO2) {
         label = "CO²";
-        value = String(lastMeasurement.valuesCo2.co2Lpf);
+        value = String(lastMeasurement.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF, 0);
         vunit = "ppm";
     } else if (displayValChart == DISPLAY_VAL_C____DEG) {
         label = "temperature";
@@ -402,7 +407,7 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
     } else if (displayValChart == DISPLAY_VAL_C____ALT) {
         label = "altitude";
         if (measurement.valuesBme.pressure > 0) {
-            value = String(SensorBme280::getAltitude(config.pressureZerolevel, lastMeasurement.valuesBme.pressure), 0);
+            value = String(SensorBme280::getAltitude(config.sbme.pressureZerolevel, lastMeasurement.valuesBme.pressure), 0);
         } else {
             value = String(0.0f, 0);
         }
@@ -432,7 +437,7 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
         measurement = history[i];
 
         if (displayValChart == DISPLAY_VAL_C____CO2) {
-            curValue = measurement.valuesCo2.co2Lpf;
+            curValue = measurement.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
         } else if (displayValChart == DISPLAY_VAL_C____DEG) {
             curValue = SensorScd041::toFloatDeg(measurement.valuesCo2.deg);
             if (config.disp.displayDegScale == DISPLAY_VAL_D______F) {
@@ -444,7 +449,7 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
             curValue = measurement.valuesBme.pressure;
         } else if (displayValChart == DISPLAY_VAL_C____ALT) {
             if (measurement.valuesBme.pressure > 0) {
-                curValue = SensorBme280::getAltitude(config.pressureZerolevel, measurement.valuesBme.pressure);
+                curValue = SensorBme280::getAltitude(config.sbme.pressureZerolevel, measurement.valuesBme.pressure);
             } else {
                 curValue = 0.0f;
             }

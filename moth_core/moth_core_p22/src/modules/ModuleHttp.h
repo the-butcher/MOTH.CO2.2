@@ -11,7 +11,7 @@ const String SEMICOLON = ";";
 const String CSV_HEAD = FIELD_NAME____TIME + SEMICOLON + FIELD_NAME_CO2_LPF + SEMICOLON + FIELD_NAME_CO2_RAW + SEMICOLON + FIELD_NAME_____DEG + SEMICOLON + FIELD_NAME_____HUM + SEMICOLON + FIELD_NAME_____HPA + SEMICOLON + FIELD_NAME_____BAT + "\r\n";
 const String CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d;%4d;%4d;%5.1f;%4.1f;%7.2f;%6.2f\r\n";
 const uint8_t CSV_LINE_LENGTH = 57;
-const uint16_t MAX_4DIGIT_VALUE = 9999;
+const uint16_t MAX_4DIGIT_VALUE = 0x1FFF;  // 8191
 
 class ModuleHttp {
    private:

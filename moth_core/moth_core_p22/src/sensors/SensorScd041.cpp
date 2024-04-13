@@ -1,5 +1,6 @@
 #include "SensorScd041.h"
 
+#include "sensors/SensorBme280.h"
 #include "types/Define.h"
 
 SensorScd041Base SensorScd041::baseSensor;
@@ -20,7 +21,7 @@ bool SensorScd041::configure(config_t& config) {
     float temperatureOffsetC = config.sco2.temperatureOffset;
     // apply, only if there is a real change
     bool temperatureApplied = false;
-    if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
+    if (temperatureOffsetC != 0.0f && abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
 #ifdef USE___SERIAL
         Serial.printf("!!! applying temperature offset, %f, %f !!!\n", temperatureOffsetV, temperatureOffsetC);
 #endif
@@ -33,35 +34,61 @@ bool SensorScd041::configure(config_t& config) {
         Serial.printf("no temperature offset application needed, %f, %f\n", temperatureOffsetV, temperatureOffsetC);
 #endif
     }
+
+    SensorScd041::powerupPeriodicMeasurement();
+
     // SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
     return temperatureApplied;
 }
 
-bool SensorScd041::setCompensationAltitude(uint16_t compensationAltitude) {
+bool SensorScd041::setCompensationPressure(float compensationPressure) {
+    uint16_t compensationAltitude = (uint16_t)max(0.0f, round(SensorBme280::getAltitude(PRESSURE_ZERO, compensationPressure)));  // negative unsigned values jumps to 0xFFFF -> invalid co2 levels
     return SensorScd041::baseSensor.setSensorAltitude(compensationAltitude);
+    // lowpowerperiodic
+    // return SensorScd041::baseSensor.setAmbientPressure(compensationPressure);
+}
+
+bool SensorScd041::powerupPeriodicMeasurement() {
+    // lowpowerperiodic
+    // uint16_t success = SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
+    // return success == 0;
+    return true;
+}
+
+bool SensorScd041::depowerPeriodicMeasurement() {
+    // lowpowerperiodic
+    // uint16_t success = SensorScd041::baseSensor.stopPeriodicMeasurement();
+    // delay(500);
+    // return success == 0;
+    return true;
 }
 
 calibration_t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
 
-    uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
-    uint32_t currMeasureIndex = nextMeasureIndex - 1;
-    values_all_t measurement;
-    uint16_t co2Lpf = 0;
-    uint16_t co2Raw = 0.0f;
-    for (int i = 0; i < 3; i++) {
-        measurement = Values::values->measurements[(currMeasureIndex - i + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
-        if (i == 0) {
-            co2Lpf = measurement.valuesCo2.co2Lpf;
-        }
-        co2Raw += measurement.valuesCo2.co2Raw;
-    }
-    uint16_t correctedCo2Ref = requestedCo2Ref - co2Lpf + (uint16_t)round(co2Raw / 3.0f);
+    SensorScd041::depowerPeriodicMeasurement();
+
+    // uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
+    // uint32_t currMeasureIndex = nextMeasureIndex - 1;
+    // values_all_t measurement;
+    // uint16_t co2Lpf = 0;
+    // uint16_t co2Raw = 0.0f;
+    // for (int i = 0; i < 3; i++) {
+    //     measurement = Values::values->measurements[(currMeasureIndex - i + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
+    //     if (i == 0) {
+    //         co2Lpf = measurement.valuesCo2.co2Lpf;
+    //     }
+    //     co2Raw += measurement.valuesCo2.co2Raw;
+    // }
+    // uint16_t correctedCo2Ref = requestedCo2Ref - co2Lpf + (uint16_t)round(co2Raw / 3.0f);
+    uint16_t correctedCo2Ref = requestedCo2Ref;
 
     uint16_t frcV = 0;
     uint16_t& frcR = frcV;
     int16_t offV = 0x8000;
     SensorScd041::baseSensor.performForcedRecalibration(correctedCo2Ref, frcR);
     delay(400);
+
+    SensorScd041::powerupPeriodicMeasurement();
 
     if (frcV == 0xffff) {
         return {false, ACTION___CALIBRATION, requestedCo2Ref, correctedCo2Ref, 0};
@@ -71,8 +98,14 @@ calibration_t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
 }
 
 calibration_t SensorScd041::forceReset() {
+
+    SensorScd041::depowerPeriodicMeasurement();
+
     uint16_t success = SensorScd041::baseSensor.performFactoryReset();
     delay(400);
+
+    SensorScd041::powerupPeriodicMeasurement();
+
     return {
         success == 0,  // zero indicates success
         ACTION_FACTORY_RESET,
@@ -98,6 +131,8 @@ calibration_t SensorScd041::forceSelfTest() {
 
 bool SensorScd041::measure() {
     return SensorScd041::baseSensor.measureSingleShotNoDelay();
+    // lowpowerperiodic
+    // return true;
 }
 
 bool SensorScd041::powerup(config_t& config) {
@@ -139,7 +174,7 @@ values_co2_t SensorScd041::readval() {
         float deg;
         float hum;
         SensorScd041::baseSensor.readMeasurement(co2, deg, hum);
-        SensorScd041::values = {co2, SensorScd041::toShortDeg(deg), SensorScd041::toShortHum(hum), co2};
+        SensorScd041::values = {(uint16_t)round(co2 * VALUE_SCALE_CO2LPF), SensorScd041::toShortDeg(deg), SensorScd041::toShortHum(hum), co2};
     }
     return SensorScd041::values;
 }

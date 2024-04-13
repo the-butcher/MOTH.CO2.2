@@ -60,7 +60,7 @@ void ModuleHttp::handleApiLatest(AsyncWebServerRequest *request) {
     values_all_t latestValue = Values::values->measurements[(Values::values->nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE];
 
     root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(latestValue.secondstime);
-    root[FIELD_NAME_CO2_LPF] = latestValue.valuesCo2.co2Lpf;
+    root[FIELD_NAME_CO2_LPF] = (uint16_t)round(latestValue.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
     root[FIELD_NAME_CO2_RAW] = latestValue.valuesCo2.co2Raw;
     root[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(latestValue.valuesCo2.deg) * 10) / 10.0;
     root[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(latestValue.valuesCo2.hum) * 10) / 10.0;
@@ -552,11 +552,12 @@ void ModuleHttp::serve404Json(AsyncWebServerRequest *request, String file) {
 
 void ModuleHttp::fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_t offset) {
     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + value->secondstime);
+    uint16_t co2 = (uint16_t)round(value->valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
     float deg = SensorScd041::toFloatDeg(value->valuesCo2.deg);
     float hum = SensorScd041::toFloatHum(value->valuesCo2.hum);
     float nrg = SensorEnergy::toFloatPercent(value->valuesNrg.percent);
     char csvBuffer[CSV_LINE_LENGTH + 1];
-    sprintf(csvBuffer, CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), min(MAX_4DIGIT_VALUE, value->valuesCo2.co2Lpf), min(MAX_4DIGIT_VALUE, value->valuesCo2.co2Raw), deg, hum, value->valuesBme.pressure, nrg);
+    sprintf(csvBuffer, CSV_FRMT.c_str(), date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second(), min(MAX_4DIGIT_VALUE, co2), min(MAX_4DIGIT_VALUE, value->valuesCo2.co2Raw), deg, hum, value->valuesBme.pressure, nrg);
     for (uint8_t charIndex = 0; charIndex < CSV_LINE_LENGTH; charIndex++) {
         if (csvBuffer[charIndex] == '.') {
             data[offset + charIndex] = ',';
