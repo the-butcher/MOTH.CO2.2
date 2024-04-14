@@ -220,7 +220,7 @@ void ButtonAction::toggleWifi(config_t& config) {
     if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_N) {  // if it is actually off -> set to pending on
         config.wifi.wifiValPower = WIFI____VAL_P__PND_Y;
     } else if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_Y) {  // if it is actually on -> set to pending off
-        config.wifi.wifiValPower = WIFI____VAL_P__PND_Y;
+        config.wifi.wifiValPower = WIFI____VAL_P__PND_N;
     } else {
         // already in one of the pending states, do nothing
     }
@@ -242,7 +242,7 @@ void ButtonAction::toggleBeep(config_t& config) {
  */
 void ButtonAction::decrementAltitude10(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel - 10;
-    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
 }
 
 /**
@@ -250,7 +250,7 @@ void ButtonAction::decrementAltitude10(config_t& config) {
  */
 void ButtonAction::incrementAltitude10(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel + 10;
-    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
 }
 
 /**
@@ -258,7 +258,7 @@ void ButtonAction::incrementAltitude10(config_t& config) {
  */
 void ButtonAction::decrementAltitude50(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel - 50;
-    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
 }
 
 /**
@@ -266,7 +266,7 @@ void ButtonAction::decrementAltitude50(config_t& config) {
  */
 void ButtonAction::incrementAltitude50(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel + 50;
-    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, SensorBme280::readval().pressure);
+    config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
 }
 
 /**

@@ -52,7 +52,6 @@ class Device {
     static device_action_e handleActionDisplay(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionDepower(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionInvalid(config_t& config, device_action_e maxDeviceAction);
-    static bool isEnergyCycle();
 
    public:
     static uint32_t secondstimeBoot;

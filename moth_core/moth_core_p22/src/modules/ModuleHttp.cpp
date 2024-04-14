@@ -57,7 +57,7 @@ void ModuleHttp::handleApiLatest(AsyncWebServerRequest *request) {
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 200;
 
-    values_all_t latestValue = Values::values->measurements[(Values::values->nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE];
+    values_all_t latestValue = Values::latest();
 
     root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(latestValue.secondstime);
     root[FIELD_NAME_CO2_LPF] = (uint16_t)round(latestValue.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
@@ -119,6 +119,21 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     root["heap"] = ESP.getFreeHeap();
     root["sram"] = ESP.getPsramSize();
     root["freq"] = ESP.getCpuFreqMHz();
+#ifdef USE____DELAY
+    root["ddel"] = true;
+#else
+    root["ddel"] = false;
+#endif
+#ifdef USE___SERIAL
+    root["dser"] = true;
+#else
+    root["dser"] = false;
+#endif
+#ifdef USE_NEOPIXEL
+    root["dneo"] = true;
+#else
+    root["dneo"] = false;
+#endif
 
     JsonObject &scd041Jo = root.createNestedObject("scd041");
     scd041Jo["toff"] = SensorScd041::getTemperatureOffset();

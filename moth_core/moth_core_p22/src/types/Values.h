@@ -72,6 +72,8 @@ class Values {
     static values_t load();
     static void begin(values_t* values);
     static bool isSignificantChange(float last, float curr);
+    static bool isEnergyCycle();
+    static values_all_t latest();
 };
 
 #endif

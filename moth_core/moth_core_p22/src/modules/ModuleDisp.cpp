@@ -278,6 +278,9 @@ void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
     ModuleDisp::drawAntialiasedText08(".", RECT_DEG, 63, 35, textColor);
     ModuleDisp::drawAntialiasedText08(String(temperatureFrc), RECT_DEG, 72, 35, textColor);
 
+    // TODO :: remove after the reason for wifi can not be turned was found and the problem was fixed
+    // ModuleDisp::drawAntialiasedText06(String(config.wifi.wifiValPower), RECT_DEG, 7, TEXT_OFFSET_Y + 2, textColor);
+
     thresholds_hum_t thresholdsHum = config.disp.thresholdsHum;
     textColor = getTextColor(hum, thresholdsHum.rLo, thresholdsHum.wLo, thresholdsHum.wHi, thresholdsHum.rHi);
     fillColor = getFillColor(hum, thresholdsHum.rLo, thresholdsHum.wLo, thresholdsHum.wHi, thresholdsHum.rHi);
@@ -490,7 +493,9 @@ void ModuleDisp::renderButton(button_action_t buttonAction, uint16_t x) {
 }
 
 void ModuleDisp::renderFooter(config_t& config) {
-    float percent = SensorEnergy::toFloatPercent(SensorEnergy::readval().percent);
+
+    values_nrg_t valuesEnergy = SensorEnergy::readval();
+    float percent = SensorEnergy::toFloatPercent(valuesEnergy.percent);
 
     String cellPercentFormatted = formatString(String(percent, 0), FORMAT_CELL_PERCENT);
     ModuleDisp::drawAntialiasedText06(cellPercentFormatted, RECT_BOT, LIMIT_POS_X - 14 - CHAR_DIM_X6 * cellPercentFormatted.length(), TEXT_OFFSET_Y, EPD_BLACK);

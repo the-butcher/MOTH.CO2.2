@@ -18,7 +18,6 @@ class SensorBme280 {
    private:
     static SensorBme280Base baseSensor;
     static values_bme_t values;
-    static bool isReadRequired;
 
    public:
     static void begin();

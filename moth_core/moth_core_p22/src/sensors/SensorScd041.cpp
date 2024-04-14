@@ -183,6 +183,7 @@ float SensorScd041::getTemperatureOffset() {
     float degV = 0;
     float& degR = degV;
     SensorScd041::baseSensor.getTemperatureOffset(degR);
+    delay(1);
     return degV;
 }
 
@@ -190,6 +191,7 @@ uint16_t SensorScd041::getCompensationAltitude() {
     uint16_t altV = 0;
     uint16_t& altR = altV;
     SensorScd041::baseSensor.getSensorAltitude(altR);
+    delay(1);
     return altV;
 }
 
@@ -197,6 +199,7 @@ bool SensorScd041::isAutomaticSelfCalibration() {
     uint16_t ascV = 0;
     uint16_t& ascR = ascV;
     SensorScd041::baseSensor.getAutomaticSelfCalibration(ascR);
+    delay(1);
     return ascV;
 }
 

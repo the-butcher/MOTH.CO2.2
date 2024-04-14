@@ -18,7 +18,7 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
     // setup search seconds
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
     uint32_t secondstimeIncr = config.disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
-    uint32_t secondstimeBase = Values::values->measurements[currMeasureIndex % MEASUREMENT_BUFFER_SIZE].secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // the secondstime
+    uint32_t secondstimeBase = Values::latest().secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // the secondstime
 
     int32_t secondstimeDiff;
     uint32_t secondstimeIndx;

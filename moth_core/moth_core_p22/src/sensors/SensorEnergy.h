@@ -10,8 +10,6 @@
 class SensorEnergy {
    private:
     static Adafruit_LC709203F basePack;
-    static values_nrg_t values;
-    static bool isReadRequired;
     static bool hasBegun;
 
    public:

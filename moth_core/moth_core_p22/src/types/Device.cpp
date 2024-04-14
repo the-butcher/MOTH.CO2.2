@@ -103,17 +103,10 @@ device_action_e Device::handleActionInvalid(config_t& config, device_action_e ma
     return DEVICE_ACTION_POWERUP;
 }
 
-/**
- * check if this cycle should be used to take a battery measurement
- */
-bool Device::isEnergyCycle() {
-    return (Values::values->nextMeasureIndex) % 5 == 0;
-}
-
 device_action_e Device::handleActionPowerup(config_t& config, device_action_e maxDeviceAction) {
 
     SensorScd041::powerup(config);
-    if (Device::isEnergyCycle()) {
+    if (Values::isEnergyCycle()) {
         SensorEnergy::powerup();
     }
 
@@ -122,11 +115,14 @@ device_action_e Device::handleActionPowerup(config_t& config, device_action_e ma
 
 device_action_e Device::handleActionMeasure(config_t& config, device_action_e maxDeviceAction) {
 
+    // use previous measurement for pressure compensation
+    if (Values::values->nextMeasureIndex > 0) {
+        SensorScd041::setCompensationPressure(Values::latest().valuesBme.pressure);
+    }
+
     SensorScd041::measure();
     SensorBme280::measure();
-    if (Device::isEnergyCycle()) {
-        SensorEnergy::measure();
-    }
+    SensorEnergy::measure();
 
     return DEVICE_ACTION_READVAL;  // read values after measuring
 }
@@ -208,7 +204,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     if (maxDeviceAction == DEVICE_ACTION_READVAL) {
         if (config.disp.displayValCycle == DISPLAY_VAL_Y____SIG) {
             float lastCo2Lpf = Values::values->measurements[Values::values->lastDisplayIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
-            float currCo2Lpf = Values::values->measurements[(Values::values->nextMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
+            float currCo2Lpf = Values::latest().valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
             if (Values::isSignificantChange(lastCo2Lpf, currCo2Lpf)) {
                 return DEVICE_ACTION_DISPLAY;  // skip settings and advance directly to display
             }
@@ -311,6 +307,6 @@ device_action_e Device::handleActionDisplay(config_t& config, device_action_e ma
 
 device_action_e Device::handleActionDepower(config_t& config, device_action_e maxDeviceAction) {
     ModuleDisp::depower();
-    SensorEnergy::depower();       // redundant, but battery monitor does not seem to depower properly after display cycles
+    SensorEnergy::depower();       // redundant, but battery monitor does not seem to depower properly after some display cycles
     return DEVICE_ACTION_POWERUP;  // after redrawing pause, then measure
 }

@@ -7,7 +7,6 @@ const Adafruit_BME280::standby_duration STANDBY_MS_1000 = (Adafruit_BME280::stan
 
 SensorBme280Base SensorBme280::baseSensor;
 values_bme_t SensorBme280::values = {0.0f};
-bool SensorBme280::isReadRequired = true;
 
 void SensorBme280::begin() {
     SensorBme280::baseSensor.begin();
@@ -16,16 +15,11 @@ void SensorBme280::begin() {
 }
 
 bool SensorBme280::measure() {
-    bool result = SensorBme280::baseSensor.takeForcedMeasurementNoDelay();
-    SensorBme280::isReadRequired = true;
-    return result;
+    return SensorBme280::baseSensor.takeForcedMeasurementNoDelay();
 }
 
 values_bme_t SensorBme280::readval() {
-    if (SensorBme280::isReadRequired) {
-        SensorBme280::values = {SensorBme280::baseSensor.readPressure() / 100.0f};
-        SensorBme280::isReadRequired = false;
-    }
+    SensorBme280::values = {SensorBme280::baseSensor.readPressure() / 100.0f};
     return SensorBme280::values;
 }
 

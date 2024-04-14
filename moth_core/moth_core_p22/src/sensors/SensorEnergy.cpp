@@ -1,9 +1,9 @@
 #include "SensorEnergy.h"
 
+#include "modules/ModuleSignal.h"
+
 Adafruit_LC709203F SensorEnergy::basePack;
-values_nrg_t SensorEnergy::values = {0};
-bool SensorEnergy::hasBegun = false;
-bool SensorEnergy::isReadRequired = true;
+bool SensorEnergy::hasBegun = false;  // only valid for a single awake cycle
 
 void SensorEnergy::begin() {
     if (!SensorEnergy::hasBegun) {
@@ -23,16 +23,15 @@ bool SensorEnergy::depower() {
 }
 
 bool SensorEnergy::measure() {
-    isReadRequired = true;
     return true;
 }
 
 values_nrg_t SensorEnergy::readval() {
-    if (SensorEnergy::isReadRequired) {
-        SensorEnergy::values = {toShortPercent(SensorEnergy::basePack.cellPercent())};
-        SensorEnergy::isReadRequired = false;
+    if (Values::isEnergyCycle()) {
+        return {SensorEnergy::toShortPercent(SensorEnergy::basePack.cellPercent())};
+    } else {
+        return Values::latest().valuesNrg;
     }
-    return SensorEnergy::values;
 }
 
 uint16_t SensorEnergy::toShortPercent(float floatValue) {
