@@ -15,10 +15,18 @@ void ModuleCard::begin() {
 }
 
 void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY_____BUFFER_SIZE]) {
+
+    // file access needed for history
+    ModuleCard::begin();
+
     // setup search seconds
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
     uint32_t secondstimeIncr = config.disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
     uint32_t secondstimeBase = Values::latest().secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // the secondstime
+
+#ifdef USE___SERIAL
+    Serial.printf("secondstimeBase: %d, %d\n", secondstimeBase, secondstimeBase + SECONDS_FROM_1970_TO_2000);
+#endif
 
     int32_t secondstimeDiff;
     uint32_t secondstimeIndx;
@@ -26,64 +34,68 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
     int8_t historyIndexMax = -1;
 
     // file related stuff
-    if (config.disp.displayHrsChart > 1) {
-        File32 datFile;
-        file32_def_t fileDef32;
+    // if (config.disp.displayHrsChart > 1) {
+    File32 datFile;
+    file32_def_t fileDef32;
 
-        String datFileNameLast = "";
-        String datFilePathLast = "";
+    String datFileNameLast = "";
+    String datFilePathLast = "";
 
-        values_all_t readValue;
+    values_all_t readValue;
 
-        for (uint8_t historyIndex = 0; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
-            secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
-            history[historyIndex] = Values::emptyMeasurement(secondstimeIndx);
-            fileDef32 = SensorTime::getFile32Def(secondstimeIndx, "dat");
-            // when a new (or actually first) file is encountered -> open it
-            if (fileDef32.name != datFileNameLast) {
-                if (datFile) {
-                    datFile.close();  // close the previous file
-                }
-                datFile.open(fileDef32.name.c_str(), O_READ);
-                datFileNameLast = fileDef32.name;
-            }
-            // keep reading from old to young until a date larger than search date - 30s is found
-            while (datFile.available() > 1 && secondstimeFile + 30 < secondstimeIndx) {
-                datFile.read((byte*)&readValue, sizeof(readValue));  // read the next value into readValue
-                secondstimeFile = readValue.secondstime;
-            }
-            secondstimeDiff = secondstimeFile - secondstimeIndx;
-            if (abs(secondstimeDiff) <= 30) {
+    for (uint8_t historyIndex = 0; historyIndex < HISTORY_____BUFFER_SIZE; historyIndex++) {
+        secondstimeIndx = secondstimeBase + historyIndex * secondstimeIncr;
+        history[historyIndex] = Values::emptyMeasurement(secondstimeIndx);
+        fileDef32 = SensorTime::getFile32Def(secondstimeIndx, "dat");
+        // when a new (or actually first) file is encountered -> open it
+
+        if (fileDef32.name != datFileNameLast) {
 #ifdef USE___SERIAL
-                Serial.print(historyIndex);
-                Serial.print(" => ");
-                Serial.print(secondstimeDiff);
-                Serial.print(" OK ");
-                Serial.print(SensorTime::getDateTimeSecondsString(secondstimeIndx));
-                Serial.print(" :: ");
-                Serial.println(SensorTime::getDateTimeSecondsString(secondstimeFile));
+            Serial.printf("fileDef32: %s\n", fileDef32.name.c_str());
 #endif
-                historyIndexMax = historyIndex;
-                history[historyIndex] = readValue;
-            } else {
-#ifdef USE___SERIAL
-                Serial.print(historyIndex);
-                Serial.print(" => ");
-                Serial.print(secondstimeDiff);
-                Serial.print(" !! ");
-                Serial.print(SensorTime::getDateTimeSecondsString(secondstimeIndx));
-                Serial.print(" :: ");
-                Serial.println(SensorTime::getDateTimeSecondsString(secondstimeFile));
-#endif
+            if (datFile) {
+                datFile.close();  // close the previous file
             }
-            if (datFile.available() <= 1) {
-                break;
-            }
+            datFile.open(fileDef32.name.c_str(), O_READ);
+            datFileNameLast = fileDef32.name;
         }
-        if (datFile) {
-            datFile.close();
+        // keep reading from old to young until a date larger than search date - 30s is found
+        while (datFile.available() > 1 && secondstimeFile + 30 < secondstimeIndx) {
+            datFile.read((byte*)&readValue, sizeof(readValue));  // read the next value into readValue
+            secondstimeFile = readValue.secondstime;
+        }
+        secondstimeDiff = secondstimeFile - secondstimeIndx;
+        if (abs(secondstimeDiff) <= 30) {
+#ifdef USE___SERIAL
+            Serial.print(historyIndex);
+            Serial.print(" => ");
+            Serial.print(secondstimeDiff);
+            Serial.print(" OK ");
+            Serial.print(SensorTime::getDateTimeSecondsString(secondstimeIndx));
+            Serial.print(" :: ");
+            Serial.println(SensorTime::getDateTimeSecondsString(secondstimeFile));
+#endif
+            historyIndexMax = historyIndex;
+            history[historyIndex] = readValue;
+        } else {
+#ifdef USE___SERIAL
+            Serial.print(historyIndex);
+            Serial.print(" => ");
+            Serial.print(secondstimeDiff);
+            Serial.print(" !! ");
+            Serial.print(SensorTime::getDateTimeSecondsString(secondstimeIndx));
+            Serial.print(" :: ");
+            Serial.println(SensorTime::getDateTimeSecondsString(secondstimeFile));
+#endif
+        }
+        if (datFile.available() <= 1) {
+            break;
         }
     }
+    if (datFile) {
+        datFile.close();
+    }
+    // }
 
 #ifdef USE___SERIAL
     Serial.println("------------------------------------------------------");

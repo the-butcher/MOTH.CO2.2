@@ -44,14 +44,9 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  *    !! can not reconnect after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
  *    !! how to publish historic data from file?
  * -- more robust calibration
- * -- more info in status (maybe config needs to be made public after all)
- *
- * -- issue where only the last 30 minutes of data render in chart
- * OK issue when wifi can not be turned on (debug display added, problem in ButtonAction found) :: TODO verify it was fixed
- * OK issue with battery float value (jumping up and down between i.e. 51.4 and 50.4) :: TODO verify it was fixed
- *    OK values appear to be stable while wifi is on, so it may be a sleep associated issue
- *    OK still strange that sometimes only a single battery line is off, while the isEnergyCycle sh
- * -- create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
+ * -- add more info to status (maybe config needs to be made public after all)
+ * OK issue where only the last 30 minutes of data render in chart :: TODO :: verify
+ * ?? create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
  */
 
 // schedule setting and display

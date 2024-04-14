@@ -676,6 +676,9 @@ void ModuleDisp::drawOuterBorders(uint16_t color) {
     // footer separator
     ModuleDisp::baseDisplay.drawFastHLine(0, 105, 296, color);
     ModuleDisp::baseDisplay.drawFastHLine(0, 106, 296, color);
+    // header separator
+    ModuleDisp::baseDisplay.drawFastHLine(0, 21, 296, color);
+    ModuleDisp::baseDisplay.drawFastHLine(0, 22, 296, color);
     // bottom
     ModuleDisp::baseDisplay.drawFastHLine(0, 126, 296, color);
     ModuleDisp::baseDisplay.drawFastHLine(0, 127, 296, color);
@@ -688,9 +691,6 @@ void ModuleDisp::drawOuterBorders(uint16_t color) {
 }
 
 void ModuleDisp::drawInnerBorders(uint16_t color) {
-    // header separator
-    ModuleDisp::baseDisplay.drawFastHLine(0, 21, 296, color);
-    ModuleDisp::baseDisplay.drawFastHLine(0, 22, 296, color);
     // horizontal center
     ModuleDisp::baseDisplay.drawFastHLine(206, 63, 100, color);
     ModuleDisp::baseDisplay.drawFastHLine(206, 64, 100, color);
