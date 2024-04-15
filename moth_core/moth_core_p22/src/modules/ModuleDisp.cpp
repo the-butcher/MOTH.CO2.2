@@ -35,6 +35,7 @@ bool ModuleDisp::interrupted = false;
 void ModuleDisp::configure(config_t& config) {
 
     ModuleCard::begin();
+
     File32 dispFileJson;
     bool dispSuccess = dispFileJson.open(DISP_CONFIG_JSON.c_str(), O_RDONLY);
     if (dispSuccess) {
@@ -370,8 +371,37 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
             }
         }
     } else if (displayValChart == DISPLAY_VAL_C____NRG) {
-        minValue = 0;
-        maxValue = 150;  // 0, 50, 100, (150)
+        double batteryAvg = 0;
+        float batteryVal;
+        float batteryMin = 100;
+        float batteryMax = 0;
+        uint8_t validValueCount = 0;
+        for (uint8_t i = 0; i < HISTORY_____BUFFER_SIZE; i++) {
+            measurement = history[i];
+            if (measurement.valuesBme.pressure > 0) {  // is it a valid value?
+                batteryVal = SensorEnergy::toFloatPercent(measurement.valuesNrg.percent);
+                batteryMin = min(batteryMin, batteryVal);
+                batteryMax = max(batteryMax, batteryVal);
+                batteryAvg += batteryVal;
+                validValueCount++;
+            }
+        }
+        batteryAvg /= validValueCount;
+        batteryAvg = round(batteryAvg);
+
+        double batteryDif = max(2.0, ceil((batteryMax - batteryMin) / 2.0));  // half dif from min to max, min 1
+        if (batteryAvg > 50) {
+            maxValue = min(100.0, batteryAvg + batteryDif);  // avg + dif (but not more than 100)
+            minValue = maxValue - batteryDif * 2;
+        } else {
+            minValue = max(0.0, batteryAvg - batteryDif);  // avg - dif (but not less than zero)
+            maxValue = minValue + batteryDif * 2;
+        }
+        maxValue += batteryDif;  // room for text
+
+#ifdef USE___SERIAL
+        Serial.printf("batteryDif: %f, batteryAvg: %f\n", batteryDif, batteryAvg);
+#endif
     }
 
     String label2 = String(minValue + (maxValue - minValue) * 2 / 3);
