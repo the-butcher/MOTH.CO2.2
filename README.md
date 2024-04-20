@@ -6,7 +6,7 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 - CO₂, temperature, humidity, pressure, altitude.
 
-- 3 weeks on one battery charge, when operated in low power mode (no WiFi, 3 minute display update).
+- 2 months on one battery charge, when operated in low power mode (no WiFi, 3 minute display update).
 
 - [Sensirion SCD-41](https://www.adafruit.com/product/5190) Sensor used, a small and high performance photoacoustic CO₂ sensor.
 
@@ -34,7 +34,9 @@ The root folder of the project is structured as follows:
 
 ---
 
-The Arduino Sketch running on the device, configuration files and some [GFX Fonts](https://learn.adafruit.com/adafruit-gfx-graphics-library/using-fonts) used:
+This project is built with [PlatformIO](https://platformio.org/). Please refer to the instructions provided on the PlatformIO website. PlatformIO makes development with the ESP32 microcontroller easier and faster compared to the Arduino IDE. If you have not switched yet i advise you to do so, it will save you time after a very short period of time.
+
+The PlatformIO project, and configuration files can be found here:
 
 ## [MOTH Core](moth_core/README.md)
 
