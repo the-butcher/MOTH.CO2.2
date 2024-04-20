@@ -324,7 +324,20 @@ void ModuleHttp::handleApiUpload(AsyncWebServerRequest *request) {
 }
 
 void ModuleHttp::handleApiEspRst(AsyncWebServerRequest *request) {
-    ESP.restart();
+
+    ModuleWifi::expire();
+
+    ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+        ESP.restart();
+    };
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=10");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = 200;
+    root.printTo(*response);
+    request->send(response);
 }
 
 void ModuleHttp::handleApiUpdate(AsyncWebServerRequest *request) {

@@ -48,7 +48,6 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  * ?? create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
  * ?? measure power consumption while in chart mode (is there considerable processing time?)
  * ?? better server UI - offer the option to get data for a defined range (load file by file, then concat on the client and download)
- * OK in chart mode single measurements and also blocks of measurements are missing randomly :: TODO :: verify
  */
 
 // schedule setting and display

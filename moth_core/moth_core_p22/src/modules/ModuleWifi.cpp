@@ -164,6 +164,12 @@ bool ModuleWifi::isPowered() {
 }
 
 bool ModuleWifi::connectToNetwork(config_t& config, network_t& network) {
+
+#ifdef USE___SERIAL
+    Serial.print("connecting to network: ");
+    Serial.println(String(network.key));
+#endif
+
     WiFi.mode(WIFI_STA);
     WiFi.begin(network.key, network.pwd);
     for (int i = 0; i < 10; i++) {
@@ -172,14 +178,25 @@ bool ModuleWifi::connectToNetwork(config_t& config, network_t& network) {
             char networkNameBuf[64];
             sprintf(networkNameBuf, "%s%s%s", "WIFI:T:WPA;S:", network.key, ";;;");
             ModuleWifi::networkName = String(networkNameBuf);
-            config.wifi.wifiValPower = WIFI____VAL_P__CUR_Y;  // set flat to current on
+            config.wifi.wifiValPower = WIFI____VAL_P__CUR_Y;  // set flag to current on
             return true;
         }
     }
+
+#ifdef USE___SERIAL
+    Serial.println(", failed to connect");
+#endif
+
+    ModuleWifi::depower(config);  // be sure the correct mode is set
     return false;
 }
 
 bool ModuleWifi::enableSoftAP(config_t& config) {
+
+#ifdef USE___SERIAL
+    Serial.println("enabling AP mode");
+#endif
+
     WiFi.mode(WIFI_AP);
 
     uint64_t _chipmacid = 0LL;
@@ -198,15 +215,20 @@ bool ModuleWifi::enableSoftAP(config_t& config) {
     for (int i = 0; i < 10; i++) {
         delay(200);
         if (ModuleWifi::isPowered()) {
-            config.wifi.wifiValPower = WIFI____VAL_P__CUR_Y;  // set flat to current on
+            config.wifi.wifiValPower = WIFI____VAL_P__CUR_Y;  // set flag to current on
             return true;
         }
     }
+
+#ifdef USE___SERIAL
+    Serial.println(", failed to enable");
+#endif
+
+    ModuleWifi::depower(config);  // be sure the correct mode is set
     return false;
 }
 
 void ModuleWifi::depower(config_t& config) {
-    // adc_power_off();
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
@@ -238,7 +260,7 @@ String ModuleWifi::getAddress() {
     } else if (wifiMode == WIFI_OFF) {
         return "wifi off";
     } else {
-        return "wifi unknown";
+        return String(wifiMode);
     }
 }
 
