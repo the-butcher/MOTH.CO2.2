@@ -260,7 +260,7 @@ Provides a simple graphic UI to access historic data stored in the device.
 
 Provides a simple UI to access the api operations of the device.
 
-The files for the webserver are built from the [moth_client](../moth_client/) subproject.
+The files for the webserver are built from the [moth_client_p22](../moth_client_p22/) subproject.
 
 ---
 

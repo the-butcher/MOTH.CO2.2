@@ -50,7 +50,7 @@ Building instructions, drawings and printable files for the device:
 A react administration UI for the device:
 
 
-## [MOTH Client](moth_client/README.md)
+## [MOTH Client](moth_client_p22/README.md)
 
 ---
 
