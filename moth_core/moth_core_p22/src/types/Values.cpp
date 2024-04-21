@@ -47,3 +47,52 @@ bool Values::isSignificantChange(float last, float curr) {
 bool Values::isEnergyCycle() {
     return (Values::values->nextMeasureIndex) % 5 == 0;
 }
+
+co2cal______t Values::getCo2Cal() {
+    co2cal______t co2cal = {
+        10000,           // minValue
+        0,               // maxValue
+        0,               // avgValue
+        0,               // devValue
+        0,               // refValue, zero = undefined for the beginning
+        0,               // corValue, zero = no correction for the beginning
+        CO2CAL_DISPLAY,  // type
+        // values
+    };
+    uint32_t valueIndex;
+    for (uint8_t index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
+        valueIndex = index - CALIBRATION_BUFFER_SIZE + Values::values->nextMeasureIndex;
+        co2cal.values[index] = Values::values->measurements[valueIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Raw;
+        if (co2cal.values[index] > 0) {
+            co2cal.minValue = min(co2cal.minValue, co2cal.values[index]);
+            co2cal.maxValue = max(co2cal.maxValue, co2cal.values[index]);
+        }
+#ifdef USE___SERIAL
+        Serial.printf("co2cal.values[%d/%d]: %d\n", index, valueIndex, co2cal.values[index]);
+#endif
+    }
+    uint32_t sumValue = 0;
+    uint8_t numValue = 0;
+    for (uint8_t index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
+        if (co2cal.values[index] > 0) {
+            sumValue += co2cal.values[index];
+            numValue++;
+        }
+    }
+    co2cal.avgValue = round(sumValue * 1.0f / numValue);
+    uint32_t sumDeviation = 0;
+    for (uint8_t index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
+        if (co2cal.values[index] > 0) {
+            sumDeviation += pow(co2cal.values[index] - co2cal.avgValue, 2);
+        }
+    }
+    co2cal.devValue = round(sqrt(sumDeviation * 1.0f / numValue));
+
+#ifdef USE___SERIAL
+    Serial.printf("co2cal.minValue: %d\n", co2cal.minValue);
+    Serial.printf("co2cal.maxValue: %d\n", co2cal.maxValue);
+    Serial.printf("co2cal.avgValue: %d\n", co2cal.avgValue);
+    Serial.printf("co2cal.devValue: %d\n", co2cal.devValue);
+#endif
+    return co2cal;
+}

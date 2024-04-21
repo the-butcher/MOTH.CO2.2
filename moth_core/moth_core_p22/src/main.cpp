@@ -48,6 +48,13 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  * ?? create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
  * ?? measure power consumption while in chart mode (is there considerable processing time?)
  * ?? better server UI - offer the option to get data for a defined range (load file by file, then concat on the client and download)
+ * -- ISSUE: sporadic crashes when powering wifi after a multi hour non connection perdiod
+ * -- expand UI to have a display value for the calibration screen
+ *
+ * -- calibration:
+ *    -- put outside
+ *    -- have a clibrateable state (value deviation over the last  i.e. 5 value smaller than threshold)
+ *    --
  */
 
 // schedule setting and display

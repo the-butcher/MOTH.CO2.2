@@ -24,6 +24,28 @@ const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
  */
 const uint8_t HISTORY_____BUFFER_SIZE = 60;
 
+/**
+ * minimum value count for calibration
+ */
+const uint8_t CALIBRATION_BUFFER_SIZE = 5;
+
+typedef enum : uint8_t {
+    CO2CAL_SUCCESS,
+    CO2CAL_FAILURE,
+    CO2CAL_DISPLAY
+} co2cal______e;
+
+typedef struct {
+    uint16_t minValue;
+    uint16_t maxValue;
+    uint16_t avgValue;
+    uint16_t devValue;
+    uint16_t refValue;  // calibration reference (caslibration target)
+    int16_t corValue;   // calibration offset (the correction applied)
+    co2cal______e type;
+    uint16_t values[CALIBRATION_BUFFER_SIZE];
+} co2cal______t;
+
 typedef struct {
     uint16_t co2Lpf;  // filtered value (multiplies by 8, since there is room in uint16_t and the low pass filter will benefit from it)
     uint16_t deg;     // convention needed for fraction
@@ -74,6 +96,7 @@ class Values {
     static bool isSignificantChange(float last, float curr);
     static bool isEnergyCycle();
     static values_all_t latest();
+    static co2cal______t getCo2Cal();
 };
 
 #endif

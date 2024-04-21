@@ -45,7 +45,6 @@ class ModuleHttp {
     static void handleApiNetOff(AsyncWebServerRequest *request);
     static void handleApiCo2Cal(AsyncWebServerRequest *request);
     static void handleApiCo2Rst(AsyncWebServerRequest *request);
-    static void handleApiCo2Tst(AsyncWebServerRequest *request);
     static void handleApiUpdate(AsyncWebServerRequest *request);
     static void handleApiEspRst(AsyncWebServerRequest *request);
     static void serveStatic(AsyncWebServerRequest *request);

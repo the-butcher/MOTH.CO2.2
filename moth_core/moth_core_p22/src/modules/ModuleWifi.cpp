@@ -165,11 +165,6 @@ bool ModuleWifi::isPowered() {
 
 bool ModuleWifi::connectToNetwork(config_t& config, network_t& network) {
 
-#ifdef USE___SERIAL
-    Serial.print("connecting to network: ");
-    Serial.println(String(network.key));
-#endif
-
     WiFi.mode(WIFI_STA);
     WiFi.begin(network.key, network.pwd);
     for (int i = 0; i < 10; i++) {
@@ -183,19 +178,11 @@ bool ModuleWifi::connectToNetwork(config_t& config, network_t& network) {
         }
     }
 
-#ifdef USE___SERIAL
-    Serial.println(", failed to connect");
-#endif
-
     ModuleWifi::depower(config);  // be sure the correct mode is set
     return false;
 }
 
 bool ModuleWifi::enableSoftAP(config_t& config) {
-
-#ifdef USE___SERIAL
-    Serial.println("enabling AP mode");
-#endif
 
     WiFi.mode(WIFI_AP);
 
@@ -219,10 +206,6 @@ bool ModuleWifi::enableSoftAP(config_t& config) {
             return true;
         }
     }
-
-#ifdef USE___SERIAL
-    Serial.println(", failed to enable");
-#endif
 
     ModuleWifi::depower(config);  // be sure the correct mode is set
     return false;

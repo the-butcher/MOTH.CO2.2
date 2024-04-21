@@ -38,7 +38,6 @@ void ModuleHttp::begin() {
         server.on("/api/netoff", HTTP_GET, handleApiNetOff);
         server.on("/api/co2cal", HTTP_GET, handleApiCo2Cal);
         server.on("/api/co2rst", HTTP_GET, handleApiCo2Rst);
-        server.on("/api/co2tst", HTTP_GET, handleApiCo2Tst);
         server.on("/api/esprst", HTTP_GET, handleApiEspRst);
         server.on("/api/update", HTTP_POST, handleApiUpdate, ModuleHttp::handleUpdate);
         server.onNotFound(serveStatic);
@@ -168,7 +167,7 @@ void ModuleHttp::handleApiDspSet(AsyncWebServerRequest *request) {
             if (p >= 0 && p <= 5) {
                 uint8_t v = vRaw.toInt();
                 if (p == 0) {
-                    if (v >= DISPLAY_VAL_M__TABLE && v <= DISPLAY_VAL_M__CHART) {
+                    if (v >= DISPLAY_VAL_M__TABLE && v <= DISPLAY_VAL_M__CALIB) {
                         ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                             config.disp.displayValModus = (display_val_m_e)v;
                         };
@@ -435,39 +434,60 @@ void ModuleHttp::handleApiNetOff(AsyncWebServerRequest *request) {
 void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
-    if (request->hasParam("ref")) {
-        String refRaw = request->getParam("ref")->value();
-        if (ModuleHttp::isNumeric(refRaw)) {
-            int ref = refRaw.toInt();
-            if (ref >= 400) {
 
-                ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                    config.sco2.requestedCo2Ref = ref;
-                };
+    co2cal______t co2cal = Values::getCo2Cal();
 
-                AsyncResponseStream *response = request->beginResponseStream("application/json");
-                DynamicJsonBuffer jsonBuffer;
-                JsonObject &root = jsonBuffer.createObject();
-                root["code"] = 200;
-                root["ref"] = ref;
-                response->addHeader("Cache-Control", "max-age=180");
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = 200;
 
-                root.printTo(*response);
-                request->send(response);
-
-            } else {
-                serve400Json(request, "ref must be >= 400");
-                return;
-            }
-        } else {
-            serve400Json(request, "ref must be numeric");
-            return;
-        }
-
-    } else {
-        serve400Json(request, "ref must be specified");
-        return;
+    root["minValue"] = co2cal.minValue;
+    root["maxValue"] = co2cal.maxValue;
+    root["avgValue"] = co2cal.avgValue;
+    root["devValue"] = co2cal.devValue;
+    JsonArray &valuesJa = root.createNestedArray("values");
+    network_t network;
+    for (int index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
+        valuesJa.add(co2cal.values[index]);
     }
+
+    root.printTo(*response);
+    request->send(response);
+
+    // if (request->hasParam("ref")) {
+    //     String refRaw = request->getParam("ref")->value();
+    //     if (ModuleHttp::isNumeric(refRaw)) {
+    //         int ref = refRaw.toInt();
+    //         if (ref >= 400) {
+
+    //             ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+    //                 config.sco2.requestedCo2Ref = ref;
+    //             };
+
+    //             AsyncResponseStream *response = request->beginResponseStream("application/json");
+    //             DynamicJsonBuffer jsonBuffer;
+    //             JsonObject &root = jsonBuffer.createObject();
+    //             root["code"] = 200;
+    //             root["ref"] = ref;
+    //             response->addHeader("Cache-Control", "max-age=180");
+
+    //             root.printTo(*response);
+    //             request->send(response);
+
+    //         } else {
+    //             serve400Json(request, "ref must be >= 400");
+    //             return;
+    //         }
+    //     } else {
+    //         serve400Json(request, "ref must be numeric");
+    //         return;
+    //     }
+
+    // } else {
+    //     serve400Json(request, "ref must be specified");
+    //     return;
+    // }
 }
 
 void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
@@ -481,23 +501,6 @@ void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
 
     ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
         config.sco2.requestedCo2Rst = true;
-    };
-
-    root.printTo(*response);
-    request->send(response);
-}
-
-void ModuleHttp::handleApiCo2Tst(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=180");
-
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
-
-    ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-        config.sco2.requestedCo2Tst = true;
     };
 
     root.printTo(*response);

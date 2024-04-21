@@ -510,6 +510,83 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
     ModuleDisp::flushBuffer();
 }
 
+void ModuleDisp::renderCo2Cal(co2cal______t co2cal, config_t& config) {
+
+    ModuleDisp::clearBuffer(config);
+    ModuleDisp::drawOuterBorders(EPD_LIGHT);
+
+    values_all_t measurement;
+    uint16_t minValue = co2cal.minValue - 50;
+    uint16_t maxValue = co2cal.maxValue + 50;
+
+    uint16_t minX;
+    uint8_t minY;
+    uint8_t maxY = 103;
+    uint8_t dimY;
+    uint8_t limY = 78;
+    float curValue;
+
+    curValue = co2cal.avgValue - co2cal.devValue;
+    dimY = max(0, min((int)limY, (int)round((curValue - minValue) * limY / (maxValue - minValue))));
+    uint8_t maxD = max((uint8_t)22, min((uint8_t)105, (uint8_t)(maxY - dimY)));
+    curValue = co2cal.avgValue + co2cal.devValue;
+    dimY = max(0, min((int)limY, (int)round((curValue - minValue) * limY / (maxValue - minValue))));
+    uint8_t minD = max((uint8_t)22, min((uint8_t)105, (uint8_t)(maxY - dimY)));
+
+    for (uint8_t devD = minD; devD <= maxD; devD++) {
+        baseDisplay.drawFastHLine(5, devD, 286, EPD_LIGHT);
+    }
+
+    uint8_t displayableBarWidth = 220 / CALIBRATION_BUFFER_SIZE;
+    uint8_t basX = LIMIT_POS_X - CALIBRATION_BUFFER_SIZE * displayableBarWidth;
+    for (uint8_t i = 0; i < CALIBRATION_BUFFER_SIZE; i++) {
+
+        curValue = co2cal.values[i];
+
+        minX = basX + i * displayableBarWidth;
+        dimY = max(0, min((int)limY, (int)round((curValue - minValue) * limY / (maxValue - minValue))));
+        minY = maxY - dimY;
+
+        if (dimY > 0) {
+            for (int b = 0; b < displayableBarWidth - 1; b++) {
+                baseDisplay.drawFastVLine(minX + b, minY, dimY, EPD_DARK);  // draw line top down
+            }
+        } else {
+            // indicator lines
+            // baseDisplay.drawFastHLine(minX, minY - 1, displayableBarWidth - 1, EPD_BLACK);
+        }
+    }
+
+    // avg indicator line
+    curValue = co2cal.avgValue;
+    dimY = max(0, min((int)limY, (int)round((curValue - minValue) * limY / (maxValue - minValue))));
+    minY = maxY - dimY;
+    baseDisplay.drawFastHLine(5, minY, 286, EPD_BLACK);
+
+    String labelAvg = String(curValue, 0);
+    String labelDev = String(co2cal.devValue);
+    String labelMsg = "display";
+    String labelOff = "-30";
+    if (co2cal.type == CO2CAL_SUCCESS) {
+        labelMsg = "success";
+        labelOff = String(co2cal.corValue);
+    } else if (co2cal.type == CO2CAL_FAILURE) {
+        labelMsg = "failure";
+    }
+
+    uint8_t charPosValueX = 61;
+    uint8_t charPosValueY = minY - 4;
+    ModuleDisp::drawAntialiasedText06(labelAvg, RECT_TOP, charPosValueX - CHAR_DIM_X6 * labelAvg.length(), charPosValueY, EPD_BLACK);       // use RECT_TOP becuase it refers to Y=0
+    ModuleDisp::drawAntialiasedText06(labelDev, RECT_TOP, charPosValueX - CHAR_DIM_X6 * labelDev.length(), charPosValueY + 14, EPD_BLACK);  // use RECT_TOP becuase it refers to Y=0
+    ModuleDisp::drawAntialiasedText06(labelMsg, RECT_CO2, charPosValueX - CHAR_DIM_X6 * labelMsg.length(), 12, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(labelOff, RECT_CO2, charPosValueX - CHAR_DIM_X6 * labelOff.length(), 80, EPD_BLACK);
+
+    ModuleDisp::renderHeader();
+    ModuleDisp::renderFooter(config);
+
+    ModuleDisp::flushBuffer();
+}
+
 void ModuleDisp::renderHeader() {
     renderButton(ButtonAction::A.buttonAction, 6);
     renderButton(ButtonAction::B.buttonAction, 135);
@@ -569,39 +646,32 @@ void ModuleDisp::renderEntry(config_t& config) {
     ModuleDisp::flushBuffer();
 }
 
-void ModuleDisp::renderCo2(config_t& config, calibration_t calibration) {
+// void ModuleDisp::renderCo2(config_t& config, calibration_t calibration) {
 
-    ModuleDisp::clearBuffer(config);
-    ModuleDisp::drawOuterBorders(EPD_LIGHT);
+//     ModuleDisp::clearBuffer(config);
+//     ModuleDisp::drawOuterBorders(EPD_LIGHT);
 
-    String actionTitle = "CALIBRATION";
-    if (calibration.action == ACTION_FACTORY_RESET) {
-        actionTitle = "RESET";
-    } else if (calibration.action == ACTION_____SELF_TEST) {
-        actionTitle = "SELF TEST";
-    }
+//     String actionTitle = "CALIBRATION";
+//     if (calibration.action == ACTION_FACTORY_RESET) {
+//         actionTitle = "RESET";
+//     }
 
-    char titleBuf[32];
-    sprintf(titleBuf, "%s (%s)", actionTitle, calibration.success ? "success" : "failure");
+//     char titleBuf[32];
+//     sprintf(titleBuf, "%s (%s)", actionTitle, calibration.success ? "success" : "failure");
 
-    drawAntialiasedText08(String(titleBuf), RECT_TOP, 8, 40, EPD_BLACK);
-    if (calibration.action == ACTION___CALIBRATION) {
-        drawAntialiasedText08("req: ", RECT_TOP, 8, 60, EPD_BLACK);
-        drawAntialiasedText08(String(calibration.requestedCo2Ref), RECT_TOP, 50, 60, EPD_BLACK);
-        drawAntialiasedText08("cor: ", RECT_TOP, 8, 78, EPD_BLACK);
-        drawAntialiasedText08(String(calibration.correctedCo2Ref), RECT_TOP, 50, 78, EPD_BLACK);
-        drawAntialiasedText08("off: ", RECT_TOP, 8, 96, EPD_BLACK);
-        drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
-    } else if (calibration.action == ACTION_____SELF_TEST) {
-        drawAntialiasedText08("tst: ", RECT_TOP, 8, 96, EPD_BLACK);
-        drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
-    }
+//     drawAntialiasedText08(String(titleBuf), RECT_TOP, 8, 40, EPD_BLACK);
+//     if (calibration.action == ACTION___CALIBRATION) {
+//         drawAntialiasedText08("req: ", RECT_TOP, 8, 60, EPD_BLACK);
+//         drawAntialiasedText08(String(calibration.requestedCo2Ref), RECT_TOP, 50, 60, EPD_BLACK);
+//         drawAntialiasedText08("off: ", RECT_TOP, 8, 96, EPD_BLACK);
+//         drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
+//     }
 
-    ModuleDisp::renderHeader();
-    ModuleDisp::renderFooter(config);
+//     ModuleDisp::renderHeader();
+//     ModuleDisp::renderFooter(config);
 
-    ModuleDisp::flushBuffer();
-}
+//     ModuleDisp::flushBuffer();
+// }
 
 void ModuleDisp::renderQRCodes(config_t& config) {
     ModuleDisp::clearBuffer(config);

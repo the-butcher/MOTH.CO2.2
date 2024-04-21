@@ -44,7 +44,7 @@ typedef struct {
 class Device {
    private:
     static int cmpfunc(const void* a, const void* b);
-    static calibration_t calibrationResult;
+    static co2cal______t calibrationResult;
     static device_action_e handleActionPowerup(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionMeasure(config_t& config, device_action_e maxDeviceAction);
     static device_action_e handleActionReadval(config_t& config, device_action_e maxDeviceAction);

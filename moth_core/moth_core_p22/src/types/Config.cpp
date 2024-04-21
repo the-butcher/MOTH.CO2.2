@@ -50,11 +50,10 @@ config_t Config::load() {
             // [timezone char array [64]]
         },
         {
-            1.5,    // temperature offset
-            0.5,    // low pass filter alpha
-            0,      // no requested calibration
-            false,  // no requested reset
-            false   // no requested self test
+            1.5,   // temperature offset
+            0.5,   // low pass filter alpha
+            0,     // no requested calibration
+            false  // no requested reset
         },
         {
             0.0,  // calculated sealevel pressure, 0.0 = needs recalculation

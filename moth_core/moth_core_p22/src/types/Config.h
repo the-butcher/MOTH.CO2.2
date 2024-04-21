@@ -58,7 +58,8 @@ typedef enum : uint8_t {
  */
 typedef enum : uint8_t {
     DISPLAY_VAL_M__TABLE,
-    DISPLAY_VAL_M__CHART
+    DISPLAY_VAL_M__CHART,
+    DISPLAY_VAL_M__CALIB
 } display_val_m_e;
 
 typedef enum : uint8_t {
@@ -184,7 +185,6 @@ typedef struct {
     float lpFilterRatioCurr;   // low pass filter alpha
     uint16_t requestedCo2Ref;  // only to hold a value if calibration should be performed
     bool requestedCo2Rst;      // only to be true when a reset should be performed
-    bool requestedCo2Tst;      // only to be true when a self test should be performed
 } sco2____all___t;
 
 typedef struct {

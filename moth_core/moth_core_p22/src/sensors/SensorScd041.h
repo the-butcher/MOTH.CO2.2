@@ -7,20 +7,6 @@
 #include "types/Config.h"
 #include "types/Values.h"
 
-typedef enum : uint8_t {
-    ACTION___CALIBRATION,
-    ACTION_FACTORY_RESET,
-    ACTION_____SELF_TEST
-} calibration_e;
-
-typedef struct {
-    bool success;
-    calibration_e action;
-    uint16_t requestedCo2Ref;   // calibrationReference requested through wifi
-    uint16_t correctedCo2Ref;   // calibrationReference adapted with recent measurements
-    int16_t calibrationResult;  // the offset effectively applied through calibration
-} calibration_t;
-
 class SensorScd041 {
    private:
     static SensorScd041Base baseSensor;
@@ -30,9 +16,8 @@ class SensorScd041 {
     static void begin();
     static bool configure(config_t& config);  // must have begun before configuration
     static bool setCompensationPressure(float compensationPressure);
-    static calibration_t forceCalibration(uint16_t requestedCo2Ref);
-    static calibration_t forceReset();
-    static calibration_t forceSelfTest();
+    static co2cal______t forceCalibration(uint16_t requestedCo2Ref);
+    static co2cal______t forceReset();
     static bool measure();
     static values_co2_t readval();
     static bool powerup(config_t& config);

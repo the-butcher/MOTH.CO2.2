@@ -34,10 +34,14 @@ bool ButtonAction::adapt(config_t& config) {
             ButtonAction::B.buttonAction = getButtonActionDisplayValMT(config);  // toggle modus and theme
         }
         ButtonAction::C.buttonAction = getButtonActionDisplayValTT(config);  // toggle table value
-    } else {
+    } else if (config.disp.displayValModus == DISPLAY_VAL_M__CHART) {
         ButtonAction::A.buttonAction = getButtonActionDisplayValHR(config);  // toggle chart hours
         ButtonAction::B.buttonAction = getButtonActionDisplayValMT(config);  // toggle modus and theme
         ButtonAction::C.buttonAction = getButtonActionDisplayValCC(config);  // toggle chart value
+    } else {
+        ButtonAction::A.buttonAction = getButtonActionFunctionWFBP(config);  // button A toggles wifi and sound
+        ButtonAction::B.buttonAction = getButtonActionDisplayValMT(config);  // toggle modus and theme
+        ButtonAction::C.buttonAction = {"", "", "", nullptr, nullptr};       // nothing
     }
     return true;
 }
@@ -307,11 +311,13 @@ void ButtonAction::toggleDisplayValCBw(config_t& config) {
  * button action :: toggle between table and chart
  */
 void ButtonAction::toggleDisplayValMod(config_t& config) {
-    if (config.disp.displayValModus == DISPLAY_VAL_M__TABLE) {
-        config.disp.displayValModus = DISPLAY_VAL_M__CHART;
-    } else {
-        config.disp.displayValModus = DISPLAY_VAL_M__TABLE;
-    }
+    uint8_t valueCount = DISPLAY_VAL_M__CALIB + 1;
+    config.disp.displayValModus = (display_val_m_e)((config.disp.displayValModus + 1) % valueCount);
+    // if (config.disp.displayValModus == DISPLAY_VAL_M__TABLE) {
+    //     config.disp.displayValModus = DISPLAY_VAL_M__CHART;
+    // } else {
+    //     config.disp.displayValModus = DISPLAY_VAL_M__TABLE;
+    // }
     ButtonAction::adapt(config);
 }
 

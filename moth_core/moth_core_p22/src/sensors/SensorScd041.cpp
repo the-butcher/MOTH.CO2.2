@@ -63,70 +63,68 @@ bool SensorScd041::depowerPeriodicMeasurement() {
     return true;
 }
 
-calibration_t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
+co2cal______t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
 
-    SensorScd041::depowerPeriodicMeasurement();
+    co2cal______t result = Values::getCo2Cal();  // get the initial set of values
+    result.refValue = requestedCo2Ref;
 
-    // uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
-    // uint32_t currMeasureIndex = nextMeasureIndex - 1;
-    // values_all_t measurement;
-    // uint16_t co2Lpf = 0;
-    // uint16_t co2Raw = 0.0f;
-    // for (int i = 0; i < 3; i++) {
-    //     measurement = Values::values->measurements[(currMeasureIndex - i + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
-    //     if (i == 0) {
-    //         co2Lpf = measurement.valuesCo2.co2Lpf;
-    //     }
-    //     co2Raw += measurement.valuesCo2.co2Raw;
-    // }
-    // uint16_t correctedCo2Ref = requestedCo2Ref - co2Lpf + (uint16_t)round(co2Raw / 3.0f);
-    uint16_t correctedCo2Ref = requestedCo2Ref;
+    SensorScd041::depowerPeriodicMeasurement();  // stop periodic if set to be periodic
+
+    // the correction that is expected from the calibration
+    int16_t corExpct = requestedCo2Ref - result.avgValue;
 
     uint16_t frcV = 0;
     uint16_t& frcR = frcV;
-    int16_t offV = 0x8000;
-    SensorScd041::baseSensor.performForcedRecalibration(correctedCo2Ref, frcR);
+    SensorScd041::baseSensor.performForcedRecalibration(requestedCo2Ref, frcR);
     delay(400);
 
-    SensorScd041::powerupPeriodicMeasurement();
+    if (frcV != 0xffff) {  // other than error
 
-    if (frcV == 0xffff) {
-        return {false, ACTION___CALIBRATION, requestedCo2Ref, correctedCo2Ref, 0};
-    } else {
-        return {true, ACTION___CALIBRATION, requestedCo2Ref, correctedCo2Ref, (int16_t)(frcV - offV)};
+        int16_t corValue = (int16_t)(frcV - 0x8000);
+
+        // assume avgValue was 450 and requestedCo2Ref was 420 -> corExpct would be -30
+        // if corValue came out at -20, an additional amount of -10 would have to be applied
+
+        requestedCo2Ref += corExpct;  // -30 -> 390
+        requestedCo2Ref -= corValue;  // -20 -> 410
+
+        int16_t corExtra = corValue - corExpct;
+
+#ifdef USE___SERIAL
+        Serial.printf("corExpct: %d, corValue: %d, requestedCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
+#endif
+
+        // TODO :: second forced calibration with the corrected value
+        // add second correction to first, return as final correction, treat error if present
+
+        result.corValue = corValue;
+        result.type = CO2CAL_SUCCESS;
+
+    } else {  // error
+
+        result.corValue = 0;
+        result.type = CO2CAL_FAILURE;
     }
+
+    SensorScd041::powerupPeriodicMeasurement();  // start periodic if set to be periodic
+
+    return result;
 }
 
-calibration_t SensorScd041::forceReset() {
+co2cal______t SensorScd041::forceReset() {
 
-    SensorScd041::depowerPeriodicMeasurement();
+    co2cal______t result = Values::getCo2Cal();  // get the initial set of values
+
+    SensorScd041::depowerPeriodicMeasurement();  // stop periodic if set to be periodic
 
     uint16_t success = SensorScd041::baseSensor.performFactoryReset();
     delay(400);
 
-    SensorScd041::powerupPeriodicMeasurement();
+    SensorScd041::powerupPeriodicMeasurement();  // start periodic if set to be periodic
 
-    return {
-        success == 0,  // zero indicates success
-        ACTION_FACTORY_RESET,
-        0,  // no requested value
-        0,  // no corrected value
-        0   // no applied offset
-    };
-}
-
-calibration_t SensorScd041::forceSelfTest() {
-    uint16_t statV = 0;
-    uint16_t& statR = statV;
-    uint16_t success = SensorScd041::baseSensor.performSelfTest(statR);
-    delay(10000);
-    return {
-        success == 0,  // zero indicates success
-        ACTION_____SELF_TEST,
-        0,              // no requested value
-        0,              // no corrected value
-        (int16_t)statV  // self test result
-    };
+    result.refValue = 0;
+    result.corValue = 0;
+    result.type = success == 0 ? CO2CAL_SUCCESS : CO2CAL_FAILURE;  // zero indicates success
 }
 
 bool SensorScd041::measure() {

@@ -13,7 +13,7 @@
 #include "sensors/SensorTime.h"
 #include "types/Define.h"
 
-calibration_t Device::calibrationResult;
+co2cal______t Device::calibrationResult;
 uint32_t Device::secondstimeBoot;
 
 device_t Device::load() {
@@ -266,12 +266,6 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         config.disp.displayValSetng = DISPLAY_VAL_S____CO2;      // next display should show the calibration result
         config.sco2.requestedCo2Rst = false;
         SensorScd041::depower(config);
-    } else if (config.sco2.requestedCo2Tst) {
-        SensorScd041::powerup(config);
-        Device::calibrationResult = SensorScd041::forceSelfTest();  // reset and store result
-        config.disp.displayValSetng = DISPLAY_VAL_S____CO2;         // next display should show the calibration result
-        config.sco2.requestedCo2Tst = false;
-        SensorScd041::depower(config);
     }
 
     return DEVICE_ACTION_DISPLAY;  // when settings runs, there should always be a redraw
@@ -285,7 +279,7 @@ device_action_e Device::handleActionDisplay(config_t& config, device_action_e ma
         ModuleDisp::renderQRCodes(config);
         Values::values->nextDisplayIndex = currMeasureIndex + 1;  // wait a minute before next update
     } else if (config.disp.displayValSetng == DISPLAY_VAL_S____CO2) {
-        ModuleDisp::renderCo2(config, calibrationResult);
+        ModuleDisp::renderCo2Cal(calibrationResult, config);
         Values::values->nextDisplayIndex = currMeasureIndex + 1;  // wait a minute before next update
     } else if (config.disp.displayValModus == DISPLAY_VAL_M__TABLE) {
         values_all_t measurement = Values::values->measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
@@ -296,6 +290,11 @@ device_action_e Device::handleActionDisplay(config_t& config, device_action_e ma
         values_all_t history[HISTORY_____BUFFER_SIZE];
         ModuleCard::historyValues(config, history);  // will fill history with values from file or current measurements
         ModuleDisp::renderChart(history, config);
+        Values::values->lastDisplayIndex = currMeasureIndex;
+        Values::values->nextDisplayIndex = currMeasureIndex + config.disp.displayUpdateMinutes;
+    } else if (config.disp.displayValModus == DISPLAY_VAL_M__CALIB) {
+        co2cal______t co2cal = Values::getCo2Cal();
+        ModuleDisp::renderCo2Cal(co2cal, config);
         Values::values->lastDisplayIndex = currMeasureIndex;
         Values::values->nextDisplayIndex = currMeasureIndex + config.disp.displayUpdateMinutes;
     } else {

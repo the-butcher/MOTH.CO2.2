@@ -74,9 +74,10 @@ class ModuleDisp {
     static void detachWakeup(wakeup_action_e wakeupType);
     static void renderTable(values_all_t& measurement, config_t& config);
     static void renderChart(values_all_t history[60], config_t& config);
+    static void renderCo2Cal(co2cal______t co2cal, config_t& config);
     static void renderQRCodes(config_t& config);
     static void renderEntry(config_t& config);
-    static void renderCo2(config_t& config, calibration_t calibration);
+    // static void renderCo2(config_t& config, calibration_t calibration);
     static void depower();
     static bool isInterrupted();
 };
