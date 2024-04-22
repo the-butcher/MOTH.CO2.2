@@ -106,10 +106,6 @@ void ModuleCard::persistValues() {
 
     ModuleCard::begin();
 
-    ModuleSignal::beep();
-    delay(100);
-    ModuleSignal::beep();
-
     file32_def_t fileDef32;
     String datFileNameLast = "";
     String datFilePathLast = "";
