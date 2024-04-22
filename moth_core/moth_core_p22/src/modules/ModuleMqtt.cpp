@@ -16,6 +16,11 @@ void ModuleMqtt::configure(config_t& config) {
 
 void ModuleMqtt::createDat(config_t& config) {
 
+    ModuleSignal::beep();
+    delay(100);
+    ModuleSignal::beep();
+    delay(100);
+
     File32 mqttFileJson;
     bool jsonSuccess = mqttFileJson.open(MQTT_CONFIG_JSON.c_str(), O_RDONLY);
     if (jsonSuccess) {
@@ -26,36 +31,36 @@ void ModuleMqtt::createDat(config_t& config) {
             config.mqtt.configStatus = CONFIG_STAT__APPLIED;
 
             File32 mqttFileDat;
-            mqttFileDat.open(MQTT_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
+            bool datSuccess = mqttFileDat.open(MQTT_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
+            if (datSuccess) {
 
-            String srv = root[JSON_KEY____SERVER] | "";
-            uint16_t prt = root[JSON_KEY______PORT] | 0;
-            String usr = root[JSON_KEY______USER] | "";
-            String pwd = root[JSON_KEY_______PWD] | "";
-            String cli = root[JSON_KEY____CLIENT] | "";
-            String crt = root[JSON_KEY______CERT] | "";
-            uint8_t min = root[JSON_KEY___MINUTES] | 15;
+                String srv = root[JSON_KEY____SERVER] | "";
+                uint16_t prt = root[JSON_KEY______PORT] | 0;
+                String usr = root[JSON_KEY______USER] | "";
+                String pwd = root[JSON_KEY_______PWD] | "";
+                String cli = root[JSON_KEY____CLIENT] | "";
+                String crt = root[JSON_KEY______CERT] | "";
+                uint8_t min = root[JSON_KEY___MINUTES] | 15;
 
-            mqtt____t mqtt;
-            mqtt.prt = prt;
-            mqtt.min = min;
-            srv.toCharArray(mqtt.srv, 64);
-            usr.toCharArray(mqtt.usr, 64);
-            pwd.toCharArray(mqtt.pwd, 64);
-            cli.toCharArray(mqtt.cli, 16);
-            crt.toCharArray(mqtt.crt, 16);
+                mqtt____t mqtt;
+                mqtt.prt = prt;
+                mqtt.min = min;
+                srv.toCharArray(mqtt.srv, 64);
+                usr.toCharArray(mqtt.usr, 64);
+                pwd.toCharArray(mqtt.pwd, 64);
+                cli.toCharArray(mqtt.cli, 16);
+                crt.toCharArray(mqtt.crt, 16);
 
-            mqttFileDat.write((byte*)&mqtt, sizeof(mqtt));
-            mqttFileDat.close();
+                mqttFileDat.write((byte*)&mqtt, sizeof(mqtt));
+                mqttFileDat.close();
+            }
 
         } else {
             // TODO :: handle this condition (+ handle when dat file could not be opened)
         }
+        mqttFileJson.close();
     } else {
         // TODO :: handle this condition
-    }
-    if (mqttFileJson) {
-        mqttFileJson.close();
     }
 }
 
@@ -101,6 +106,8 @@ mqtt____stat__e ModuleMqtt::checkCliStat(PubSubClient* mqttClient) {
 
 void ModuleMqtt::publish(config_t& config) {
 
+    ModuleCard::begin();
+
     if (!ModuleCard::existsPath(MQTT_CONFIG__DAT)) {
         ModuleMqtt::createDat(config);
     }
@@ -111,6 +118,7 @@ void ModuleMqtt::publish(config_t& config) {
         mqtt____t mqtt;
         if (mqttFileDat.available()) {
             mqttFileDat.read((byte*)&mqtt, sizeof(mqtt));
+
             mqtt____stat__e datStat = ModuleMqtt::checkDatStat(mqtt);
             if (datStat == MQTT______________OK) {  // a set of config worth trying
 
@@ -217,6 +225,8 @@ void ModuleMqtt::publish(config_t& config) {
             config.mqtt.mqttStatus = MQTT_NO__________DAT;
             config.mqtt.mqttFailureCount = 5;  // treat as non-recoverable
         }
+
+        mqttFileDat.close();  // close, regardless of data available or not
 
     } else {  // could not open dat
         config.mqtt.mqttStatus = MQTT_FAIL________DAT;

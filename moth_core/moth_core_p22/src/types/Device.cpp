@@ -197,7 +197,6 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
 
     // upon rollover, write measurements to SD card
     if (Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE == 0) {  // when the next measurement index is dividable by MEASUREMENT_BUFFER_SIZE, measurements need to be written to sd
-        ModuleCard::begin();
         ModuleCard::persistValues();
     }
 
@@ -216,6 +215,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
 }
 
 device_action_e Device::handleActionSetting(config_t& config, device_action_e maxDeviceAction) {
+
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
 
     // turn on wifi, if required and adapt display modus

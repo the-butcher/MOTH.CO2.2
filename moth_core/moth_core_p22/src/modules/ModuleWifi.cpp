@@ -20,6 +20,12 @@ void ModuleWifi::configure(config_t& config) {
 }
 
 void ModuleWifi::createDat(config_t& config) {
+
+    ModuleSignal::beep();
+    delay(100);
+    ModuleSignal::beep();
+    delay(100);
+
     File32 wifiFileJson;
     bool jsonSuccess = wifiFileJson.open(WIFI_CONFIG_JSON.c_str(), O_RDONLY);
     if (jsonSuccess) {
@@ -30,39 +36,41 @@ void ModuleWifi::createDat(config_t& config) {
             config.wifi.configStatus = CONFIG_STAT__APPLIED;
 
             File32 wifiFileDat;
-            wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
+            bool datSuccess = wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
+            if (datSuccess) {
 
-            int jsonNetworkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
+                int jsonNetworkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
 
-            // problem: runs only when the dat file loads first
-            config.wifi.networkExpiryMinutes = root[JSON_KEY___MINUTES] | 5;  // apply network expiry (independant from networks)
+                // problem: runs only when the dat file loads first
+                config.wifi.networkExpiryMinutes = root[JSON_KEY___MINUTES] | 5;  // apply network expiry (independant from networks)
 
-            String key;
-            String pwd;
-            network_t network;
-            for (uint8_t jsonNetworkIndex = 0; jsonNetworkIndex < jsonNetworkCount; jsonNetworkIndex++) {
-                key = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______KEY] | "";
-                pwd = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______PWD] | "";
-                network = {0};
-                key.toCharArray(network.key, 64);
-                pwd.toCharArray(network.pwd, 64);
-                wifiFileDat.write((byte*)&network, sizeof(network));
+                String key;
+                String pwd;
+                network_t network;
+                for (uint8_t jsonNetworkIndex = 0; jsonNetworkIndex < jsonNetworkCount; jsonNetworkIndex++) {
+                    key = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______KEY] | "";
+                    pwd = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______PWD] | "";
+                    network = {0};
+                    key.toCharArray(network.key, 64);
+                    pwd.toCharArray(network.pwd, 64);
+                    wifiFileDat.write((byte*)&network, sizeof(network));
+                }
+                wifiFileDat.close();
+            } else {
+                // TODO :: handle dat.open() failure
             }
-            wifiFileDat.close();
 
         } else {
-            // TODO :: handle this condition
+            // TODO :: handle root not createable error
         }
-    }
-    if (wifiFileJson) {
         wifiFileJson.close();
     }
 }
 
 bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
-    // adc_power_on();
 
     ModuleCard::begin();
+
     // recreate, when necessary
     if (!ModuleCard::existsPath(WIFI_CONFIG__DAT)) {
         ModuleWifi::createDat(config);
@@ -81,11 +89,9 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
             wifiFileDat.read((byte*)&readValue, sizeof(readValue));    // read the next value into readValue
             configuredNetworks[configuredNetworkCount++] = readValue;  // TODO put the network into an array of configured networks
         }
+        wifiFileDat.close();
     } else {
         // TODO :: handle this condition
-    }
-    if (wifiFileDat) {
-        wifiFileDat.close();
     }
 
     bool powerupSuccess = false;

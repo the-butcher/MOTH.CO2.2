@@ -1,5 +1,6 @@
 #include "SensorScd041.h"
 
+#include "modules/ModuleSignal.h"
 #include "sensors/SensorBme280.h"
 #include "types/Define.h"
 
@@ -21,7 +22,8 @@ bool SensorScd041::configure(config_t& config) {
     float temperatureOffsetC = config.sco2.temperatureOffset;
     // apply, only if there is a real change
     bool temperatureApplied = false;
-    if (temperatureOffsetC != 0.0f && abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
+    if (abs(temperatureOffsetV - temperatureOffsetC) > 0.01) {
+
 #ifdef USE___SERIAL
         Serial.printf("!!! applying temperature offset, %f, %f !!!\n", temperatureOffsetV, temperatureOffsetC);
 #endif
@@ -72,36 +74,40 @@ co2cal______t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
 
     // the correction that is expected from the calibration
     int16_t corExpct = requestedCo2Ref - result.avgValue;
+    int16_t corValue = 0;
+    int16_t corExtra;
 
     uint16_t frcV = 0;
     uint16_t& frcR = frcV;
+
+    // 1. calibration
     SensorScd041::baseSensor.performForcedRecalibration(requestedCo2Ref, frcR);
     delay(400);
 
     if (frcV != 0xffff) {  // other than error
 
-        int16_t corValue = (int16_t)(frcV - 0x8000);
+        corValue += (int16_t)(frcV - 0x8000);
+        corExtra = corExpct - corValue;
+        requestedCo2Ref += corExtra;
 
-        // assume avgValue was 450 and requestedCo2Ref was 420 -> corExpct would be -30
-        // if corValue came out at -20, an additional amount of -10 would have to be applied
+        // 2. calibration
+        SensorScd041::baseSensor.performForcedRecalibration(requestedCo2Ref, frcR);
+        delay(400);
 
-        requestedCo2Ref += corExpct;  // -30 -> 390
-        requestedCo2Ref -= corValue;  // -20 -> 410
+        if (frcV != 0xffff) {  // other than error
 
-        int16_t corExtra = corValue - corExpct;
+            corValue += (int16_t)(frcV - 0x8000);
+            corExtra = corExpct - corValue;
 
-#ifdef USE___SERIAL
-        Serial.printf("corExpct: %d, corValue: %d, requestedCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
-#endif
+            result.corValue = corValue;
+            result.type = CO2CAL_SUCCESS;
 
-        // TODO :: second forced calibration with the corrected value
-        // add second correction to first, return as final correction, treat error if present
-
-        result.corValue = corValue;
-        result.type = CO2CAL_SUCCESS;
+        } else {  // error
+            result.corValue = 0;
+            result.type = CO2CAL_FAILURE;
+        }
 
     } else {  // error
-
         result.corValue = 0;
         result.type = CO2CAL_FAILURE;
     }
@@ -125,6 +131,8 @@ co2cal______t SensorScd041::forceReset() {
     result.refValue = 0;
     result.corValue = 0;
     result.type = success == 0 ? CO2CAL_SUCCESS : CO2CAL_FAILURE;  // zero indicates success
+
+    return result;
 }
 
 bool SensorScd041::measure() {

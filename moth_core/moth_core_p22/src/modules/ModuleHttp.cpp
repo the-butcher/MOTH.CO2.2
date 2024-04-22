@@ -327,7 +327,15 @@ void ModuleHttp::handleApiEspRst(AsyncWebServerRequest *request) {
     ModuleWifi::expire();
 
     ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-        ESP.restart();
+        // this happens before wifi becomes a chance to disconnect
+        // check for wifi to become disconnected, or ESP.restart() may not work
+        ModuleWifi::depower(config);
+        for (uint8_t i = 0; i < 5; i++) {
+            delay(1000);
+            if (!ModuleWifi::isPowered()) {
+                ESP.restart();
+            }
+        }
     };
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -435,59 +443,68 @@ void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
 
-    co2cal______t co2cal = Values::getCo2Cal();
+    // co2cal______t co2cal = Values::getCo2Cal();
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
+    // AsyncResponseStream *response = request->beginResponseStream("application/json");
+    // DynamicJsonBuffer jsonBuffer;
+    // JsonObject &root = jsonBuffer.createObject();
+    // root["code"] = 200;
 
-    root["minValue"] = co2cal.minValue;
-    root["maxValue"] = co2cal.maxValue;
-    root["avgValue"] = co2cal.avgValue;
-    root["devValue"] = co2cal.devValue;
-    JsonArray &valuesJa = root.createNestedArray("values");
-    network_t network;
-    for (int index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
-        valuesJa.add(co2cal.values[index]);
-    }
-
-    root.printTo(*response);
-    request->send(response);
-
-    // if (request->hasParam("ref")) {
-    //     String refRaw = request->getParam("ref")->value();
-    //     if (ModuleHttp::isNumeric(refRaw)) {
-    //         int ref = refRaw.toInt();
-    //         if (ref >= 400) {
-
-    //             ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-    //                 config.sco2.requestedCo2Ref = ref;
-    //             };
-
-    //             AsyncResponseStream *response = request->beginResponseStream("application/json");
-    //             DynamicJsonBuffer jsonBuffer;
-    //             JsonObject &root = jsonBuffer.createObject();
-    //             root["code"] = 200;
-    //             root["ref"] = ref;
-    //             response->addHeader("Cache-Control", "max-age=180");
-
-    //             root.printTo(*response);
-    //             request->send(response);
-
-    //         } else {
-    //             serve400Json(request, "ref must be >= 400");
-    //             return;
-    //         }
-    //     } else {
-    //         serve400Json(request, "ref must be numeric");
-    //         return;
-    //     }
-
-    // } else {
-    //     serve400Json(request, "ref must be specified");
-    //     return;
+    // root["minValue"] = co2cal.minValue;
+    // root["maxValue"] = co2cal.maxValue;
+    // root["avgValue"] = co2cal.avgValue;
+    // root["devValue"] = co2cal.devValue;
+    // JsonArray &valuesJa = root.createNestedArray("values");
+    // network_t network;
+    // for (int index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
+    //     valuesJa.add(co2cal.values[index]);
     // }
+
+    // root.printTo(*response);
+    // request->send(response);
+
+    if (request->hasParam("ref")) {
+        String refRaw = request->getParam("ref")->value();
+        if (ModuleHttp::isNumeric(refRaw)) {
+
+            int ref = refRaw.toInt();
+
+            AsyncResponseStream *response = request->beginResponseStream("application/json");
+            DynamicJsonBuffer jsonBuffer;
+            JsonObject &root = jsonBuffer.createObject();
+            root["code"] = 200;
+
+            co2cal______t co2cal = Values::getCo2Cal();
+            root["minValue"] = co2cal.minValue;
+            root["maxValue"] = co2cal.maxValue;
+            root["avgValue"] = co2cal.avgValue;
+            root["devValue"] = co2cal.devValue;
+            root["refValue"] = ref;
+            JsonArray &valuesJa = root.createNestedArray("values");
+            network_t network;
+            for (int index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
+                valuesJa.add(co2cal.values[index]);
+            }
+
+            // only if ref is valid -> actual calibration
+            if (ref >= 400) {
+                ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                    config.sco2.requestedCo2Ref = ref;
+                };
+            }
+
+            root.printTo(*response);
+            request->send(response);
+
+        } else {
+            serve400Json(request, "ref must be numeric");
+            return;
+        }
+
+    } else {
+        serve400Json(request, "ref must be specified");
+        return;
+    }
 }
 
 void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {

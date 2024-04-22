@@ -41,9 +41,19 @@ bool ButtonAction::adapt(config_t& config) {
     } else {
         ButtonAction::A.buttonAction = getButtonActionFunctionWFBP(config);  // button A toggles wifi and sound
         ButtonAction::B.buttonAction = getButtonActionDisplayValMT(config);  // toggle modus and theme
-        ButtonAction::C.buttonAction = {"", "", "", nullptr, nullptr};       // nothing
+        ButtonAction::C.buttonAction = getButtonActionCo2Reference(config);  // nothing
     }
     return true;
+}
+
+button_action_t ButtonAction::getButtonActionCo2Reference(config_t& config) {
+    return {
+        "~",                                // the symbol for a fast press
+        "",                                 // the symbol for a slow press,
+        "",                                 // extra information to be displayed for this button
+        ButtonAction::calibrateToCo2Refer,  // a function to be executed on fast press
+        nullptr                             // a function to be executed on slow press
+    };
 }
 
 button_action_t ButtonAction::getButtonActionDisplayValTT(config_t& config) {
@@ -179,6 +189,13 @@ gpio_num_t ButtonAction::getPressedPin() {
         return ButtonAction::C.gpin;
     }
     return GPIO_NUM_0;
+}
+
+/**
+ * button action :: set requested co2 reference to the configured co2 ref value
+ */
+void ButtonAction::calibrateToCo2Refer(config_t& config) {
+    config.sco2.requestedCo2Ref = config.disp.thresholdsCo2.ref;
 }
 
 /**

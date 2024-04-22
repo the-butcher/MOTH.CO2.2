@@ -3,7 +3,6 @@
 #include "ModuleCard.h"
 
 File32Response::~File32Response() {
-
     if (_content) {
         _content.close();
     }
@@ -15,6 +14,7 @@ File32Response::~File32Response() {
 File32Response::File32Response(String path, String contentType) : AsyncAbstractResponse() {
 
     ModuleCard::begin();
+
     _code = 200;
     _path = path;
     _content.open(_path.c_str(), O_RDONLY);

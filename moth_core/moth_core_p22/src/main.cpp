@@ -43,18 +43,16 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  * OK mqtt (+autoconnect for mqtt)
  *    !! can not reconnect after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
  *    !! how to publish historic data from file?
- * -- more robust calibration
  * -- add more info to status (maybe config needs to be made public after all)
  * ?? create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
- * ?? measure power consumption while in chart mode (is there considerable processing time?)
  * ?? better server UI - offer the option to get data for a defined range (load file by file, then concat on the client and download)
- * -- ISSUE: sporadic crashes when powering wifi after a multi hour non connection perdiod
- * -- expand UI to have a display value for the calibration screen
+ * -- ISSUE: regular crashes when powering wifi, rarely wifi is permantly broken afterwards (until wifi dat gets deleted)
+ *    -- orruption of the wifi.dat may be a problem
+ *    -- if no cause can be found for wifi.dat corruption -> delete dat upon connection failure
+ *    -- it seems, even though strange, that this happens more often when the device was outside and is cold
+ * -- ISSUE: status does not reliably provide correct SCD41 state (maybe depending on I2C power status)
+ * -- update server files (co2tst to be removed, display modus calib needs to be added)
  *
- * -- calibration:
- *    -- put outside
- *    -- have a clibrateable state (value deviation over the last  i.e. 5 value smaller than threshold)
- *    --
  */
 
 // schedule setting and display
@@ -285,7 +283,7 @@ void secondsDelay(uint32_t seconds) {
         if (ModuleHttp::requestedReconfiguration != nullptr) {
             ModuleSignal::beep();
             ModuleHttp::requestedReconfiguration(config, values);
-            ButtonAction::adapt(config);
+            ButtonAction::adapt(config);  // be sure buttons reflect potentially altered configuration
             scheduleDeviceActionSetting();
             ModuleHttp::requestedReconfiguration = nullptr;
             break;

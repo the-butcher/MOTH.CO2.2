@@ -89,8 +89,6 @@ void ModuleDisp::configure(config_t& config) {
         } else {
             // TODO :: handle this condition
         }
-    }
-    if (dispFileJson) {
         dispFileJson.close();
     }
 }
@@ -565,8 +563,8 @@ void ModuleDisp::renderCo2Cal(co2cal______t co2cal, config_t& config) {
 
     String labelAvg = String(curValue, 0);
     String labelDev = String(co2cal.devValue);
-    String labelMsg = "display";
-    String labelOff = "-30";
+    String labelMsg = "";
+    String labelOff = "";
     if (co2cal.type == CO2CAL_SUCCESS) {
         labelMsg = "success";
         labelOff = String(co2cal.corValue);

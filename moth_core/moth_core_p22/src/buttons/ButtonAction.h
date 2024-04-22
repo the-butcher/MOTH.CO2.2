@@ -24,6 +24,7 @@ class ButtonAction {
     static void decrementAltitude10(config_t& config);
     static void incrementAltitude50(config_t& config);
     static void decrementAltitude50(config_t& config);
+    static void calibrateToCo2Refer(config_t& config);
     static void toggleWifi(config_t& config);
     static void toggleBeep(config_t& config);
     static button_action_t getButtonActionFunctionWFBP(config_t& config);
@@ -33,6 +34,7 @@ class ButtonAction {
     static button_action_t getButtonActionDisplayValTT(config_t& config);
     static button_action_t getButtonActionDisplayValCC(config_t& config);
     static button_action_t getButtonActionDisplayValMT(config_t& config);
+    static button_action_t getButtonActionCo2Reference(config_t& config);
     static std::function<void(config_t& config)> getActionFunction(button_action_t buttonAction, button_action_e buttonActionType);
     static gpio_num_t actionPin;
     static std::function<void(std::function<void(config_t& config)>)> buttonActionCompleteCallback;

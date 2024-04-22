@@ -21,10 +21,6 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
     uint32_t secondstimeIncr = config.disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
     uint32_t secondstimeBase = Values::latest().secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // secondstime of the first history measurement being searched for
 
-    // #ifdef USE___SERIAL
-    //     Serial.printf("secondstimeBase: %d, %d\n", secondstimeBase, secondstimeBase + SECONDS_FROM_1970_TO_2000);
-    // #endif
-
     int32_t secondstimeDiff;
     uint32_t secondstimeIndx;
     uint32_t secondstimeFile = 0;
@@ -57,9 +53,6 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
 
             // open when hitting a new file name
             if (fileDef32.name != datFileNameLast) {
-                // #ifdef USE___SERIAL
-                //                 Serial.printf("fileDef32: %s\n", fileDef32.name.c_str());
-                // #endif
                 if (datFile) {
                     datFile.close();  // close the previous file
                 }
@@ -74,29 +67,9 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
             }
             secondstimeDiff = secondstimeFile - secondstimeIndx;
             if (abs(secondstimeDiff) <= 30) {
-                // measurement is within search tolerance (30 seconds)
-                // #ifdef USE___SERIAL
-                //                 Serial.print(historyIndex);
-                //                 Serial.print(" => ");
-                //                 Serial.print(secondstimeDiff);
-                //                 Serial.print(" OK ");
-                //                 Serial.print(SensorTime::getDateTimeSecondsString(secondstimeIndx));
-                //                 Serial.print(" :: ");
-                //                 Serial.println(SensorTime::getDateTimeSecondsString(secondstimeFile));
-                // #endif
                 historyIndexMax = historyIndex;
                 history[historyIndex] = readValue;
             } else {
-                // measurement is out of (older than) search tolerance
-                // #ifdef USE___SERIAL
-                //                 Serial.print(historyIndex);
-                //                 Serial.print(" => ");
-                //                 Serial.print(secondstimeDiff);
-                //                 Serial.print(" !! ");
-                //                 Serial.print(SensorTime::getDateTimeSecondsString(secondstimeIndx));
-                //                 Serial.print(" :: ");
-                //                 Serial.println(SensorTime::getDateTimeSecondsString(secondstimeFile));
-                // #endif
             }
             if (datFile.available() <= 1) {
                 break;
@@ -106,10 +79,6 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
             datFile.close();
         }
     }
-
-    // #ifdef USE___SERIAL
-    //     Serial.println("------------------------------------------------------");
-    // #endif
 
     uint32_t measureIndex = nextMeasureIndex;  // first searchable index in data
     uint32_t secondstimeMeas = 0;
@@ -124,33 +93,23 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
         // keep reading from old to young until a time is found that is within search bounds or above search bounds
         while (measureIndex < nextMeasureIndex + MEASUREMENT_BUFFER_SIZE && secondstimeMeas + 30 <= secondstimeIndx) {  // TODO :: currMeasureIndex + 1 should be measureIndex
             secondstimeMeas = Values::values->measurements[measureIndex % MEASUREMENT_BUFFER_SIZE].secondstime;
-            // #ifdef USE___SERIAL
-            //             Serial.print(measureIndex);
-            //             Serial.print(" ## ");
-            //             Serial.println(SensorTime::getDateTimeDisplayString(secondstimeMeas));
-            // #endif
             measureIndex++;
         }
         secondstimeDiff = secondstimeMeas - secondstimeIndx;
         if (abs(secondstimeDiff) <= 30) {
-            // #ifdef USE___SERIAL
-            //             Serial.print(historyIndex);
-            //             Serial.print(" => ");
-            //             Serial.print(secondstimeDiff);
-            //             Serial.print(" OK ");
-            //             Serial.print(SensorTime::getDateTimeSecondsString(secondstimeIndx));
-            //             Serial.print(" :: ");
-            //             Serial.println(SensorTime::getDateTimeSecondsString(secondstimeMeas));
-            // #endif
             history[historyIndex] = Values::values->measurements[(measureIndex - 1) % MEASUREMENT_BUFFER_SIZE];  // assign (is this a copy or a reference?)
         }
     }
-    // #ifdef USE___SERIAL
-    //     Serial.println("======================================================");
-    // #endif
 }
 
 void ModuleCard::persistValues() {
+
+    ModuleCard::begin();
+
+    ModuleSignal::beep();
+    delay(100);
+    ModuleSignal::beep();
+
     file32_def_t fileDef32;
     String datFileNameLast = "";
     String datFilePathLast = "";
@@ -172,7 +131,9 @@ void ModuleCard::persistValues() {
         }
         datFile.write((byte*)&value, sizeof(value));
     }
-    datFile.close();
+    if (datFile) {
+        datFile.close();
+    }
 }
 
 bool ModuleCard::buildFolders(String folder) {
