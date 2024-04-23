@@ -7,4 +7,6 @@
 // #define USE___SERIAL = 1;
 // #define USE_NEOPIXEL = 1;
 
+#define USE_PERIODIC = 1;
+
 #endif

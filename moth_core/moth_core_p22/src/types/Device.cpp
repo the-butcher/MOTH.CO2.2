@@ -21,7 +21,7 @@ device_t Device::load() {
     uint32_t secondstime = SensorTime::getSecondstime();
     device_t device;
     device.deviceActions[DEVICE_ACTION_POWERUP] = {
-        DEVICE_ACTION_POWERUP,  // trigger measurements
+        DEVICE_ACTION_POWERUP,  // turn on anything that needs to be turned on
         COLOR____GREEN,         // green to indicate powerup
         WAKEUP_ACTION_BUTN,     // allow wakeup while measurement is active
         0                       // 0 for no warmup
@@ -30,7 +30,11 @@ device_t Device::load() {
         DEVICE_ACTION_MEASURE,  // trigger measurements
         COLOR__MAGENTA,         // magenta while measuring
         WAKEUP_ACTION_BUTN,     // allow wakeup while measurement is active
-        5                       // 5 seconds delay to complete measurement
+#ifdef USE_PERIODIC
+        0  // no delay in case of periodic measurement
+#else
+        5  // 5 seconds delay to complete measurement
+#endif
     };
     device.deviceActions[DEVICE_ACTION_READVAL] = {
         DEVICE_ACTION_READVAL,  // read any values that the sensors may have produced

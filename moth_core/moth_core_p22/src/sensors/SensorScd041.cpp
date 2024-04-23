@@ -44,25 +44,31 @@ bool SensorScd041::configure(config_t& config) {
 }
 
 bool SensorScd041::setCompensationPressure(float compensationPressure) {
+#ifdef USE_PERIODIC
+    return SensorScd041::baseSensor.setAmbientPressure(compensationPressure);
+#else
     uint16_t compensationAltitude = (uint16_t)max(0.0f, round(SensorBme280::getAltitude(PRESSURE_ZERO, compensationPressure)));  // negative unsigned values jumps to 0xFFFF -> invalid co2 levels
     return SensorScd041::baseSensor.setSensorAltitude(compensationAltitude);
-    // lowpowerperiodic
-    // return SensorScd041::baseSensor.setAmbientPressure(compensationPressure);
+#endif
 }
 
 bool SensorScd041::powerupPeriodicMeasurement() {
-    // lowpowerperiodic
-    // uint16_t success = SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
-    // return success == 0;
+#ifdef USE_PERIODIC
+    uint16_t success = SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
+    return success == 0;
+#else
     return true;
+#endif
 }
 
 bool SensorScd041::depowerPeriodicMeasurement() {
-    // lowpowerperiodic
-    // uint16_t success = SensorScd041::baseSensor.stopPeriodicMeasurement();
-    // delay(500);
-    // return success == 0;
+#ifdef USE_PERIODIC
+    uint16_t success = SensorScd041::baseSensor.stopPeriodicMeasurement();
+    delay(500);
+    return success == 0;
+#else
     return true;
+#endif
 }
 
 co2cal______t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
@@ -136,9 +142,11 @@ co2cal______t SensorScd041::forceReset() {
 }
 
 bool SensorScd041::measure() {
+#ifdef USE_PERIODIC
+    return true;
+#else
     return SensorScd041::baseSensor.measureSingleShotNoDelay();
-    // lowpowerperiodic
-    // return true;
+#endif
 }
 
 bool SensorScd041::powerup(config_t& config) {
@@ -185,6 +193,9 @@ values_co2_t SensorScd041::readval() {
     return SensorScd041::values;
 }
 
+/**
+ * can not be called during periodic measurement
+ */
 float SensorScd041::getTemperatureOffset() {
     float degV = 0;
     float& degR = degV;
@@ -193,6 +204,9 @@ float SensorScd041::getTemperatureOffset() {
     return degV;
 }
 
+/**
+ * can be called during periodic measurement
+ */
 uint16_t SensorScd041::getCompensationAltitude() {
     uint16_t altV = 0;
     uint16_t& altR = altV;
@@ -201,6 +215,9 @@ uint16_t SensorScd041::getCompensationAltitude() {
     return altV;
 }
 
+/**
+ * can not be called during periodic measurement
+ */
 bool SensorScd041::isAutomaticSelfCalibration() {
     uint16_t ascV = 0;
     uint16_t& ascR = ascV;

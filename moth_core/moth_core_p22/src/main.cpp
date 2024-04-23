@@ -40,19 +40,24 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
 
 /**
  * OK reimplement OTA update, TODO :: test
- * OK mqtt (+autoconnect for mqtt)
- *    !! can not reconnect after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
- *    !! how to publish historic data from file?
+ * -- enable MQTT publishing of historic data from file?
  * -- add more info to status (maybe config needs to be made public after all)
  * ?? create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
  * ?? better server UI - offer the option to get data for a defined range (load file by file, then concat on the client and download)
+ * -- update server files (co2tst to be removed, display modus calib needs to be added)
  * -- ISSUE: regular crashes when powering wifi, rarely wifi is permantly broken afterwards (until wifi dat gets deleted)
- *    -- orruption of the wifi.dat may be a problem
+ *    -- corruption of the wifi.dat may be a problem
  *    -- if no cause can be found for wifi.dat corruption -> delete dat upon connection failure
  *    -- it seems, even though strange, that this happens more often when the device was outside and is cold
- * -- ISSUE: status does not reliably provide correct SCD41 state (maybe depending on I2C power status)
- * -- update server files (co2tst to be removed, display modus calib needs to be added)
+ * -- ISSUE: status does not reliably provide correct SCD41 state (maybe depending on I2C power status << actually i2c is up while wifi is up)
+ * -- ISSUE: it seems that calibration by button only works at certain times (maybe failure while I2C power is down)
+ *    -- button action wakes the device and restores power (but maybe there needs be more time for the sensor to be fully functional, try a delay before calibration)
+ * -- ISSUE: can not reconnect MQTT after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
  *
+ * -- DESIGN: re-eval a low power periodic version with adapted device-actions (1 wakeup for powerup|measure|readval, 1 wakeup for setting|display, 1 wakeup for depower)
+ *    -- wait for first measurement pulse, wait another 15 seconds, configure SCD41 sensor (periodic measurement will start there)
+ *    -- from there on it would be
+ *    -- 0 : readvalue (display), 15: measure, 45: measure, 0: readvalue
  */
 
 // schedule setting and display
@@ -144,11 +149,11 @@ void setup() {
         values = Values::load();
         device = Device::load();
 
-        SensorTime::configure(config);  // enables the 1 minute timer
-        ModuleWifi::configure(config);  // recreate the wifi data file, this will also call the initial ModuleSdCard begin
-        ModuleMqtt::configure(config);  // recreate the mqtt data file
-        ModuleDisp::configure(config);  // load display config and apply to config, must be configured prior to SensorScd041 to have correct temperature offset
-        SensorScd041::configure(config);
+        SensorTime::configure(config);    // enables the 1 minute timer
+        ModuleWifi::configure(config);    // recreate the wifi data file, this will also call the initial ModuleSdCard begin
+        ModuleMqtt::configure(config);    // recreate the mqtt data file
+        ModuleDisp::configure(config);    // load display config and apply to config, must be configured prior to SensorScd041 to have correct temperature offset
+        SensorScd041::configure(config);  // starts periodic measurement
 
         // have a battery measurement for the entry screen
         SensorEnergy::powerup();
@@ -207,27 +212,22 @@ void secondsSleep(uint32_t seconds) {
         esp_sleep_enable_ext1_wakeup(device.ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
     }
 
+#ifdef USE_PERIODIC
+    esp_sleep_enable_timer_wakeup(sleepMicros);
+    gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
+#else
     if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {  // next action is DEVICE_ACTION_POWERUP, therfore no timer wakeup, RTC pulse will take care of wakeup
         pinMode(I2C_POWER, OUTPUT);
         digitalWrite(I2C_POWER, LOW);
         gpio_hold_dis((gpio_num_t)I2C_POWER);
-        // lowpowerperiodic
-        // esp_sleep_enable_timer_wakeup(sleepMicros);
-        // gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
     } else {
         esp_sleep_enable_timer_wakeup(sleepMicros);
         gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
     }
+#endif
 
     Wire.end();
     digitalWrite(PIN_PKK2_A, LOW);
-
-    // https://github.com/espressif/arduino-esp32/issues/3363
-    // pinMode(SDA, INPUT);  // needed because Wire.end() enables pullups, power Saving
-    // pinMode(SCL, INPUT);
-
-    // adc_power_release();
-    // esp_wifi_stop();
 
     ModuleSignal::setPixelColor(COLOR____OCEAN);
     esp_deep_sleep_start();  // waiting for powerup (up to ~50 seconds) -> deep sleep

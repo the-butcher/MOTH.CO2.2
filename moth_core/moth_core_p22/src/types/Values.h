@@ -27,7 +27,7 @@ const uint8_t HISTORY_____BUFFER_SIZE = 60;
 /**
  * minimum value count for calibration
  */
-const uint8_t CALIBRATION_BUFFER_SIZE = 5;
+const uint8_t CALIBRATION_BUFFER_SIZE = 10;
 
 typedef enum : uint8_t {
     CO2CAL_SUCCESS,
