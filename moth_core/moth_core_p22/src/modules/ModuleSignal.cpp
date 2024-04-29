@@ -27,11 +27,15 @@ void ModuleSignal::begin() {
 #endif
 }
 
-void ModuleSignal::beep() {
+void ModuleSignal::beep(uint16_t frequency) {
     ledcWrite(BUZZER____CHANNEL, 180);
-    ledcWriteTone(BUZZER____CHANNEL, BUZZER____FREQ_LO);
+    ledcWriteTone(BUZZER____CHANNEL, frequency);
     delay(50);
     ledcWrite(BUZZER____CHANNEL, 0);
+}
+
+void ModuleSignal::beep() {
+    ModuleSignal::beep(BUZZER____FREQ_LO);
 }
 
 void ModuleSignal::prepareSleep() {

@@ -70,6 +70,7 @@ void ModuleDisp::configure(config_t& config) {
             // display deg offset
             config.sco2.temperatureOffset = root[JSON_KEY_______DEG][JSON_KEY____OFFSET] | config.sco2.temperatureOffset;
             config.sco2.lpFilterRatioCurr = root[JSON_KEY_______CO2][JSON_KEY_______LPA] | config.sco2.lpFilterRatioCurr;
+            config.sco2.calibrationCo2Ref = root[JSON_KEY_______CO2][JSON_KEY_______CAL] | config.sco2.calibrationCo2Ref;
 
             // display hum thresholds
             config.disp.thresholdsHum.rLo = root[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | config.disp.thresholdsHum.rLo;
@@ -563,21 +564,22 @@ void ModuleDisp::renderCo2Cal(co2cal______t co2cal, config_t& config) {
 
     String labelAvg = String(curValue, 0);
     String labelDev = String(co2cal.devValue);
-    String labelMsg = "";
-    String labelOff = "";
+    String labelTop = String(co2cal.maxValue);
+    String labelBot = String(co2cal.minValue);
     if (co2cal.type == CO2CAL_SUCCESS) {
-        labelMsg = "success";
-        labelOff = String(co2cal.corValue);
+        labelTop = "success";
+        labelBot = String(co2cal.corValue);
     } else if (co2cal.type == CO2CAL_FAILURE) {
-        labelMsg = "failure";
+        labelTop = "failure";
+        labelBot = "";
     }
 
     uint8_t charPosValueX = 61;
     uint8_t charPosValueY = minY - 4;
     ModuleDisp::drawAntialiasedText06(labelAvg, RECT_TOP, charPosValueX - CHAR_DIM_X6 * labelAvg.length(), charPosValueY, EPD_BLACK);       // use RECT_TOP becuase it refers to Y=0
     ModuleDisp::drawAntialiasedText06(labelDev, RECT_TOP, charPosValueX - CHAR_DIM_X6 * labelDev.length(), charPosValueY + 14, EPD_BLACK);  // use RECT_TOP becuase it refers to Y=0
-    ModuleDisp::drawAntialiasedText06(labelMsg, RECT_CO2, charPosValueX - CHAR_DIM_X6 * labelMsg.length(), 12, EPD_BLACK);
-    ModuleDisp::drawAntialiasedText06(labelOff, RECT_CO2, charPosValueX - CHAR_DIM_X6 * labelOff.length(), 80, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(labelTop, RECT_CO2, charPosValueX - CHAR_DIM_X6 * labelTop.length(), 12, EPD_BLACK);
+    ModuleDisp::drawAntialiasedText06(labelBot, RECT_CO2, charPosValueX - CHAR_DIM_X6 * labelBot.length(), 80, EPD_BLACK);
 
     ModuleDisp::renderHeader();
     ModuleDisp::renderFooter(config);

@@ -443,26 +443,6 @@ void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
 
-    // co2cal______t co2cal = Values::getCo2Cal();
-
-    // AsyncResponseStream *response = request->beginResponseStream("application/json");
-    // DynamicJsonBuffer jsonBuffer;
-    // JsonObject &root = jsonBuffer.createObject();
-    // root["code"] = 200;
-
-    // root["minValue"] = co2cal.minValue;
-    // root["maxValue"] = co2cal.maxValue;
-    // root["avgValue"] = co2cal.avgValue;
-    // root["devValue"] = co2cal.devValue;
-    // JsonArray &valuesJa = root.createNestedArray("values");
-    // network_t network;
-    // for (int index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
-    //     valuesJa.add(co2cal.values[index]);
-    // }
-
-    // root.printTo(*response);
-    // request->send(response);
-
     if (request->hasParam("ref")) {
         String refRaw = request->getParam("ref")->value();
         if (ModuleHttp::isNumeric(refRaw)) {

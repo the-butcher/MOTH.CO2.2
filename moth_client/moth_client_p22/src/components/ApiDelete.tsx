@@ -23,7 +23,7 @@ const ApiDelete = (props: IApiDeleteProps) => {
   const apiDesc = `delete ${apiProp}s from the device`;
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
 
   const [param, setParam] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -67,7 +67,7 @@ const ApiDelete = (props: IApiDeleteProps) => {
   }, [status, props[apiName]]);
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
         <div>
           <div id={apiName}>/{apiName}</div>

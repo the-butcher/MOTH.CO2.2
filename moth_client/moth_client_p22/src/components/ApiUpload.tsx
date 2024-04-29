@@ -24,7 +24,7 @@ const ApiUpload = (props: IApiProperties) => {
   const apiDesc = 'upload files to the device';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
   const [file, setFile] = useState<string>();
   const [data, setData] = useState<string>();
   const apiHref = `${boxUrl}/${apiName}`;
@@ -48,6 +48,7 @@ const ApiUpload = (props: IApiProperties) => {
       });
     }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, props[apiName]]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +71,7 @@ const ApiUpload = (props: IApiProperties) => {
   };
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
         <div>
           <div id={apiName}>/{apiName}</div>

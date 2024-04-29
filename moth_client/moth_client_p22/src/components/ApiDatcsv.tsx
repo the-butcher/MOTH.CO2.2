@@ -18,7 +18,7 @@ const ApiDatcsv = (props: IApiProperties) => {
   const apiDesc = 'get historic measurements as csv data';
   const apiType = 'csv';
 
-  const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
 
   const [file, setFile] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -65,7 +65,7 @@ const ApiDatcsv = (props: IApiProperties) => {
 
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
         <div>
           <div id={apiName}>/{apiName}</div>

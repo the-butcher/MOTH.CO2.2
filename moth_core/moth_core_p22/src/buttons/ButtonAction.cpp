@@ -195,7 +195,12 @@ gpio_num_t ButtonAction::getPressedPin() {
  * button action :: set requested co2 reference to the configured co2 ref value
  */
 void ButtonAction::calibrateToCo2Refer(config_t& config) {
-    config.sco2.requestedCo2Ref = config.disp.thresholdsCo2.ref;
+
+#ifdef USE___SERIAL
+    Serial.printf("config.sco2.calibrationCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
+#endif
+
+    config.sco2.requestedCo2Ref = config.sco2.calibrationCo2Ref;
 }
 
 /**

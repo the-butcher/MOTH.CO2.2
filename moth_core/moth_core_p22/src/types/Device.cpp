@@ -258,7 +258,7 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         }
     }
 
-    if (config.sco2.requestedCo2Ref > 400) {
+    if (config.sco2.requestedCo2Ref >= 400) {
         SensorScd041::powerup(config);
         Device::calibrationResult = SensorScd041::forceCalibration(config.sco2.requestedCo2Ref);  // calibrate and store result
         config.disp.displayValSetng = DISPLAY_VAL_S____CO2;                                       // next display should show the calibration result

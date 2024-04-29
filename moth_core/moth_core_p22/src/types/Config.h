@@ -26,6 +26,7 @@ const String JSON_KEY_WARN_HIGH = "wHi";
 const String JSON_KEY_RISK_HIGH = "rHi";
 const String JSON_KEY_REFERENCE = "ref";  // co2 refrence
 const String JSON_KEY_______LPA = "lpa";  // low pass filter alpha
+const String JSON_KEY_______CAL = "cal";  // button calibration reference value
 const String JSON_KEY_______C2F = "c2f";  // convert to deg F?
 
 typedef struct {
@@ -182,6 +183,7 @@ typedef struct {
 
 typedef struct {
     float temperatureOffset;
+    uint16_t calibrationCo2Ref;  // the co2 value to be calibrated to on button-action
     float lpFilterRatioCurr;   // low pass filter alpha
     uint16_t requestedCo2Ref;  // only to hold a value if calibration should be performed
     bool requestedCo2Rst;      // only to be true when a reset should be performed

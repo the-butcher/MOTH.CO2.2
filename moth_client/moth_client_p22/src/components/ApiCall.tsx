@@ -25,7 +25,7 @@ const ApiCall = (props: ICallProps) => {
             frameRef.current.src = url;
         }
 
-
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [time, url]);
 
     const inputs: JSX.Element[] = [];
@@ -50,14 +50,14 @@ const ApiCall = (props: ICallProps) => {
             </Typography>
             <Typography variant="caption" sx={{ display: "flex", alignItems: "center" }}>
                 {
-                    returns == 'json' ? <DataObjectIcon sx={{ fontSize: 'medium' }} /> : <DataArrayIcon sx={{ fontSize: 'medium' }} />
+                    returns === 'json' ? <DataObjectIcon sx={{ fontSize: 'medium' }} /> : <DataArrayIcon sx={{ fontSize: 'medium' }} />
                 }
                 &nbsp;{returns}
             </Typography>
             <form ref={formRef} target={name} method="POST">
                 {inputs}
             </form>
-            <iframe ref={frameRef} name={name} style={{ width: '100%', border: '1px solid #cccccc', background: 'white' }}></iframe>
+            <iframe title={'apicallframe'} ref={frameRef} name={name} style={{ width: '100%', border: '1px solid #cccccc', background: 'white' }}></iframe>
         </div>
 
     );

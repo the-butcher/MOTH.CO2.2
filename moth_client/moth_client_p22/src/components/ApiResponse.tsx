@@ -1,18 +1,17 @@
+import DataArrayIcon from '@mui/icons-material/DataArray';
+import DataObjectIcon from '@mui/icons-material/DataObject';
 import HttpIcon from '@mui/icons-material/Http';
 import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import SmartScreenIcon from '@mui/icons-material/SmartScreen';
 import Typography from '@mui/material/Typography';
-import { createRef, useEffect } from 'react';
-import { ICallProps } from './ICallProps';
-import DataObjectIcon from '@mui/icons-material/DataObject';
-import DataArrayIcon from '@mui/icons-material/DataArray';
+import { useEffect } from 'react';
 import { IResponseProps } from './IResponseProps';
 
 const ApiResponse = (props: IResponseProps) => {
 
     const { time, href, http, type, data } = props;
 
-    const content = type == 'json' ? JSON.stringify(JSON.parse(data), null, 2) : data;
+    const content = type === 'json' ? JSON.stringify(JSON.parse(data), null, 2) : data;
 
     useEffect(() => {
         console.debug('⚙ updating ApiResponse component', time, href);
@@ -34,7 +33,7 @@ const ApiResponse = (props: IResponseProps) => {
             </Typography>
             <Typography variant="caption" sx={{ display: "flex", alignItems: "center" }}>
                 {
-                    type == 'json' ? <DataObjectIcon sx={{ fontSize: 'medium' }} /> : <DataArrayIcon sx={{ fontSize: 'medium' }} />
+                    type === 'json' ? <DataObjectIcon sx={{ fontSize: 'medium' }} /> : <DataArrayIcon sx={{ fontSize: 'medium' }} />
                 }
                 &nbsp;{type}
             </Typography>

@@ -42,22 +42,12 @@ const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
  * OK reimplement OTA update, TODO :: test
  * -- enable MQTT publishing of historic data from file?
  * -- add more info to status (maybe config needs to be made public after all)
- * ?? create series with 10sec, 5sec, 3sec, 0sec warmup and check for value deviation, pick an energy/precision tradeoff
- * ?? better server UI - offer the option to get data for a defined range (load file by file, then concat on the client and download)
  * -- update server files (co2tst to be removed, display modus calib needs to be added)
- * -- ISSUE: regular crashes when powering wifi, rarely wifi is permantly broken afterwards (until wifi dat gets deleted)
- *    -- corruption of the wifi.dat may be a problem
- *    -- if no cause can be found for wifi.dat corruption -> delete dat upon connection failure
- *    -- it seems, even though strange, that this happens more often when the device was outside and is cold
- * -- ISSUE: status does not reliably provide correct SCD41 state (maybe depending on I2C power status << actually i2c is up while wifi is up)
- * -- ISSUE: it seems that calibration by button only works at certain times (maybe failure while I2C power is down)
- *    -- button action wakes the device and restores power (but maybe there needs be more time for the sensor to be fully functional, try a delay before calibration)
+ * -- ISSUE: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
  * -- ISSUE: can not reconnect MQTT after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
- *
- * -- DESIGN: re-eval a low power periodic version with adapted device-actions (1 wakeup for powerup|measure|readval, 1 wakeup for setting|display, 1 wakeup for depower)
- *    -- wait for first measurement pulse, wait another 15 seconds, configure SCD41 sensor (periodic measurement will start there)
- *    -- from there on it would be
- *    -- 0 : readvalue (display), 15: measure, 45: measure, 0: readvalue
+ * -- TODO: reduce nrg precision in csv output to one digit
+ * -- TODO: create some RecordLoader type that can be used by calcsv and chart to load records (will likely need another endpoint for the "last hour") aspect
+ * -- TODO: maybe the UI can be rebuilt to give an app-like look and feel (but dont forget wifi power usage)
  */
 
 // schedule setting and display
@@ -216,14 +206,16 @@ void secondsSleep(uint32_t seconds) {
     esp_sleep_enable_timer_wakeup(sleepMicros);
     gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
 #else
-    if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {  // next action is DEVICE_ACTION_POWERUP, therfore no timer wakeup, RTC pulse will take care of wakeup
-        pinMode(I2C_POWER, OUTPUT);
-        digitalWrite(I2C_POWER, LOW);
-        gpio_hold_dis((gpio_num_t)I2C_POWER);
-    } else {
-        esp_sleep_enable_timer_wakeup(sleepMicros);
-        gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
-    }
+    esp_sleep_enable_timer_wakeup(sleepMicros);
+    gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
+    // if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {  // next action is DEVICE_ACTION_POWERUP, therfore no timer wakeup, RTC pulse will take care of wakeup
+    //     pinMode(I2C_POWER, OUTPUT);
+    //     digitalWrite(I2C_POWER, LOW);
+    //     gpio_hold_dis((gpio_num_t)I2C_POWER);
+    // } else {
+    //     esp_sleep_enable_timer_wakeup(sleepMicros);
+    //     gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
+    // }
 #endif
 
     Wire.end();

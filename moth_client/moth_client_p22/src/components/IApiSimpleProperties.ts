@@ -6,7 +6,7 @@ export interface IApiSimpleProperties extends IApiProperties {
     apiDesc: string;
     boxUrl: string;
     panels: string[];
-    handlePanel: (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => void;
+    handlePanel: (panel: string, expanded: boolean) => void;
     handleApiCall: (call: IApiCall) => void;
     confirm?: {
         title: string;

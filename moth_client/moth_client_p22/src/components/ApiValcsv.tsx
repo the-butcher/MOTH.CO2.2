@@ -17,7 +17,7 @@ const ApiValcsv = (props: IApiProperties) => {
   const apiDesc = 'get the last hour of csv data';
   const apiType = 'csv';
 
-  const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
 
   const [responseProps, setResponseProps] = useState<IResponseProps>();
 
@@ -42,11 +42,11 @@ const ApiValcsv = (props: IApiProperties) => {
         data: props[apiName]
       });
     }
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, props[apiName]]);
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
         <div>
           <div id={apiName}>/{apiName}</div>

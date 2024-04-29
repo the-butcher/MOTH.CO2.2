@@ -20,10 +20,10 @@ typedef enum : uint32_t {
     COLOR_____GRAY = 0x060606
 } color_t;
 
-const int BUZZER____FREQ_LO = 1000;  // 3755
-const int BUZZER____CHANNEL = 0;
-const int BUZZER_RESOLUTION = 8;  // 0 - 255
-const int BUZZER_______GPIO = GPIO_NUM_17;
+const uint16_t BUZZER____FREQ_LO = 1000;
+const uint8_t BUZZER____CHANNEL = 0;
+const uint8_t BUZZER_RESOLUTION = 8;  // 0 - 255
+const gpio_num_t BUZZER_______GPIO = GPIO_NUM_17;
 
 class ModuleSignal {
    private:
@@ -32,6 +32,7 @@ class ModuleSignal {
    public:
     static void begin();
     static void beep();
+    static void beep(uint16_t frequency);
     static void prepareSleep();
     static color_t getPixelColor();
     static void setPixelColor(color_t pixelColor);

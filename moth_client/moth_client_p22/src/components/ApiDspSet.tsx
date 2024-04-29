@@ -30,6 +30,10 @@ const displayProperties: IDisplayProperties[] = [
       {
         value: 1,
         label: 'chart'
+      },
+      {
+        value: 2,
+        label: 'calib'
       }
     ]
   },
@@ -125,7 +129,7 @@ const ApiDspSet = (props: IApiProperties) => {
   const apiDesc = 'toggles various display aspects';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
 
   const [propsIndexP, setPropsIndexP] = useState<number>(0);
   const [propsPropsP, setPropsPropsP] = useState<IDisplayProperty[]>(displayProperties[0].props);
@@ -162,6 +166,7 @@ const ApiDspSet = (props: IApiProperties) => {
       });
 
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, props[apiName]]);
 
@@ -191,7 +196,7 @@ const ApiDspSet = (props: IApiProperties) => {
   };
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
         <div>
           <div id={apiName}>/{apiName}</div>
@@ -213,7 +218,7 @@ const ApiDspSet = (props: IApiProperties) => {
                 onChange={event => handlePropsValuePChange(event.target.value)}
               >
                 {
-                  displayProperties.map(prop => <MenuItem value={prop.label}>{prop.label}</MenuItem>)
+                  displayProperties.map(prop => <MenuItem key={prop.label} value={prop.label}>{prop.label}</MenuItem>)
                 }
               </Select>
             </FormControl>
@@ -229,7 +234,7 @@ const ApiDspSet = (props: IApiProperties) => {
                 onChange={event => handlePropsValueVChange(event.target.value)}
               >
                 {
-                  propsPropsP.map(prop => <MenuItem value={prop.label}>{prop.label}</MenuItem>)
+                  propsPropsP.map(prop => <MenuItem key={prop.label} value={prop.label}>{prop.label}</MenuItem>)
                 }
               </Select>
             </FormControl>

@@ -18,7 +18,7 @@ const ApiDatOut = (props: IApiProperties) => {
   const apiDesc = 'get the contents of a file on the device';
   const apiType = 'csv';
 
-  const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
 
   const [file, setFile] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -66,7 +66,7 @@ const ApiDatOut = (props: IApiProperties) => {
   };
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
         <div>
           <div id={apiName}>/{apiName}</div>

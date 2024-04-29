@@ -18,7 +18,7 @@ const ApiDirOut = (props: IApiProperties) => {
   const apiDesc = 'list the contents of a folder on the device';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
 
   const [folder, setFolder] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -58,6 +58,7 @@ const ApiDirOut = (props: IApiProperties) => {
       });
 
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, props[apiName]]);
 
@@ -66,7 +67,7 @@ const ApiDirOut = (props: IApiProperties) => {
   };
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
         <div>
           <div id={apiName}>/{apiName}</div>

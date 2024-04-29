@@ -16,9 +16,9 @@ void ModuleMqtt::configure(config_t& config) {
 
 void ModuleMqtt::createDat(config_t& config) {
 
-    ModuleSignal::beep();
+    ModuleSignal::beep(523);
     delay(100);
-    ModuleSignal::beep();
+    ModuleSignal::beep(659);
     delay(100);
 
     File32 mqttFileJson;

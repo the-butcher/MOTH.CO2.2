@@ -37,9 +37,12 @@ bool SensorScd041::configure(config_t& config) {
 #endif
     }
 
+    // in case it was operating in periodic measurement it needs to be stopped once
+    SensorScd041::baseSensor.stopPeriodicMeasurement();
+    delay(500);
+
     SensorScd041::powerupPeriodicMeasurement();
 
-    // SensorScd041::baseSensor.startLowPowerPeriodicMeasurement();
     return temperatureApplied;
 }
 
@@ -87,23 +90,40 @@ co2cal______t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
     uint16_t& frcR = frcV;
 
     // 1. calibration
+    ModuleSignal::beep(523);
     SensorScd041::baseSensor.performForcedRecalibration(requestedCo2Ref, frcR);
     delay(400);
+
+#ifdef USE___SERIAL
+    Serial.printf("frcV: %d\n", frcV);
+#endif
 
     if (frcV != 0xffff) {  // other than error
 
         corValue += (int16_t)(frcV - 0x8000);
         corExtra = corExpct - corValue;
+
+#ifdef USE___SERIAL
+        Serial.printf("corExpct: %d, corValue: %d, requestedCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
+#endif
+
         requestedCo2Ref += corExtra;
 
         // 2. calibration
+        ModuleSignal::beep(659);
         SensorScd041::baseSensor.performForcedRecalibration(requestedCo2Ref, frcR);
         delay(400);
 
         if (frcV != 0xffff) {  // other than error
 
+            ModuleSignal::beep(1047);
+
             corValue += (int16_t)(frcV - 0x8000);
             corExtra = corExpct - corValue;
+
+#ifdef USE___SERIAL
+            Serial.printf("corExpct: %d, corValue: %d, requestedCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
+#endif
 
             result.corValue = corValue;
             result.type = CO2CAL_SUCCESS;

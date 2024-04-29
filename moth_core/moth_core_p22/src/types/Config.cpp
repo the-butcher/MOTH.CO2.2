@@ -51,6 +51,7 @@ config_t Config::load() {
         },
         {
             1.5,   // temperature offset
+            400,   // button calibration reference value
             0.5,   // low pass filter alpha
             0,     // no requested calibration
             false  // no requested reset

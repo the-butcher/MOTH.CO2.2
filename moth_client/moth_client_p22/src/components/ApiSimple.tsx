@@ -18,7 +18,7 @@ import { IResponseProps } from './IResponseProps';
 
 const ApiSimple = (props: IApiSimpleProperties) => {
 
-  const { apiName, apiDesc, boxUrl, panels, pstate: status, handlePanel: handleChange, handleApiCall } = props;
+  const { apiName, apiDesc, boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
   const [responseProps, setResponseProps] = useState<IResponseProps>();
   const apiType = 'json';
 
@@ -53,6 +53,7 @@ const ApiSimple = (props: IApiSimpleProperties) => {
       });
     }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, props[apiName]]);
 
   const [open, setOpen] = useState(false);
@@ -68,7 +69,7 @@ const ApiSimple = (props: IApiSimpleProperties) => {
   };
 
   return (
-    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={handleChange(apiName)}>
+    <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary >
         <div>
           <div style={{ display: "flex", alignItems: "center" }} id={apiName}>/{apiName}</div>
@@ -78,7 +79,7 @@ const ApiSimple = (props: IApiSimpleProperties) => {
       <AccordionDetails>
         <Card>
           <Stack>
-            <Button disabled={status == 'disconnected'} variant="contained" endIcon={props.confirm ? <WarningAmberIcon /> : <PlayCircleOutlineIcon />} onClick={confirmOrCall}>
+            <Button disabled={status === 'disconnected'} variant="contained" endIcon={props.confirm ? <WarningAmberIcon /> : <PlayCircleOutlineIcon />} onClick={confirmOrCall}>
               click to execute
             </Button>
             {

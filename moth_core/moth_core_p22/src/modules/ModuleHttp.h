@@ -43,7 +43,7 @@ class ModuleHttp {
     static void handleApiDatDel(AsyncWebServerRequest *request);
     static void handleApiNetOut(AsyncWebServerRequest *request);
     static void handleApiNetOff(AsyncWebServerRequest *request);
-    static void handleApiCo2Cal(AsyncWebServerRequest *request);
+    static void handleApiCo2Cal(AsyncWebServerRequest *request);  // calibration with a reference value
     static void handleApiCo2Rst(AsyncWebServerRequest *request);
     static void handleApiUpdate(AsyncWebServerRequest *request);
     static void handleApiEspRst(AsyncWebServerRequest *request);

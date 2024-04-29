@@ -6,6 +6,6 @@ export interface IApiProperties {
     boxUrl: string;
     panels: string[];
     pstate: EStatus;
-    handlePanel: (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => void;
+    handlePanel: (panel: string, expaneded: boolean) => void;
     handleApiCall: (call: IApiCall) => void;
 }

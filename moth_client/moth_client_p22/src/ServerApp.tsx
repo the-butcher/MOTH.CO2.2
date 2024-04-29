@@ -18,6 +18,7 @@ import ApiUpload from './components/ApiUpload';
 import { IApiCall } from './components/IApiCall';
 import { EStatus, IApiProperties } from './components/IApiProperties';
 import ApiDatcsv from './components/ApiDatcsv';
+import ApiCalcsv from './components/ApiCalcsv';
 
 const darkTheme = createTheme({
   typography: {
@@ -74,8 +75,8 @@ const darkTheme = createTheme({
 
 const ServerApp = () => {
 
-  const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  // const boxUrl = `http://192.168.0.73/api`; // when running directly from device
+  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  const boxUrl = `http://192.168.0.66/api`; // when running directly from device
 
   const urlParams = new URLSearchParams(window.location.search);
   // const boxUrlParamValue = `http://${urlParams.get("boxUrl")}/api`; // when not running directly from device
@@ -89,24 +90,29 @@ const ServerApp = () => {
       boxUrl,
       panels: panels.current,
       pstate: status.current,
-      handlePanel: handlePanel,
+      handlePanel,
       handleApiCall
     });
   }
 
   /**
-   * change in open panels panel
+   * change in open panels
    * @param panel
    * @returns
    */
-  const handlePanel = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
-    const indexOfPanel = panels.current.indexOf(panel);
-    if (indexOfPanel >= 0) {
+  const handlePanel = (panel: string, expanded: boolean) => {
+
+    console.debug('handlePanel', panel, expanded);
+
+    const contained = panels.current.indexOf(panel) >= 0;
+    if (contained !== expanded) {
       panels.current = panels.current.filter(p => p !== panel)
-    } else {
-      panels.current.push(panel);
+      if (expanded) {
+        panels.current.push(panel);
+      }
+      console.debug('handlePanel', panel, panels)
+      rebuildAndSetApiProps();
     }
-    rebuildAndSetApiProps();
   };
 
   /**
@@ -127,14 +133,14 @@ const ServerApp = () => {
 
   }
 
-  const panels = useRef<string[]>([panelParamValue]);
+  const panels = useRef<string[]>(panelParamValue ? [panelParamValue] : []);
   const status = useRef<EStatus>('disconnected');
 
   const [apiProps, setApiProps] = useState<IApiProperties>({
     boxUrl,
     panels: panels.current,
     pstate: status.current,
-    handlePanel: handlePanel,
+    handlePanel,
     handleApiCall
   });
 
@@ -155,7 +161,7 @@ const ServerApp = () => {
           boxUrl,
           panels: panels.current,
           pstate: status.current,
-          handlePanel: handlePanel,
+          handlePanel,
           handleApiCall
         };
         _apiProps[data.call] = data.data; // set the specific message on the api props
@@ -202,6 +208,7 @@ const ServerApp = () => {
           }} />
           <ApiValcsv {...apiProps} />
           <ApiDatcsv {...apiProps} />
+          <ApiCalcsv {...apiProps} />
         </CardContent>
       </Card>
       <Card sx={{ padding: '0px' }}>
@@ -252,15 +259,6 @@ const ServerApp = () => {
             confirm: {
               title: 'do you really want to reset?',
               content: 'this call will remove all calibration history from the box\'s CO₂ sensor. only use if the sensor appears to be stuck.'
-            }
-          }} />
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'co2tst',
-            apiDesc: 'perform self-test of the CO₂ sensor',
-            confirm: {
-              title: 'do you really want to self-test?',
-              content: 'this call will consume ~10 seconds.'
             }
           }} />
           <ApiSimple {...{
