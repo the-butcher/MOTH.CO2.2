@@ -18,7 +18,7 @@ const ApiDirOut = (props: IApiProperties) => {
   const apiDesc = 'list the contents of a folder on the device';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel, handleApiCall } = props;
 
   const [folder, setFolder] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -60,7 +60,7 @@ const ApiDirOut = (props: IApiProperties) => {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const handleFolderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFolder(event.target.value);
@@ -78,7 +78,6 @@ const ApiDirOut = (props: IApiProperties) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status === 'disconnected'}
               label="folder"
               id="outlined-start-adornment"
               size='small'
@@ -86,7 +85,7 @@ const ApiDirOut = (props: IApiProperties) => {
               onKeyUp={handleKeyUp}
               helperText="optional folder name. specify to list the contents of a specific folder. leave empty to get the root folders contents"
             />
-            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

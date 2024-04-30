@@ -24,7 +24,7 @@ const ApiUpload = (props: IApiProperties) => {
   const apiDesc = 'upload files to the device';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel } = props;
   const [file, setFile] = useState<string>();
   const [data, setData] = useState<string>();
   const apiHref = `${boxUrl}/${apiName}`;
@@ -49,7 +49,7 @@ const ApiUpload = (props: IApiProperties) => {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFile(event.target.value);
@@ -91,7 +91,6 @@ const ApiUpload = (props: IApiProperties) => {
                   id="outlined-start-adornment"
                   size='small'
                   onChange={handleFileChange}
-                  disabled={status === 'disconnected'}
                   value={file}
                 />
                 <TextField
@@ -99,7 +98,6 @@ const ApiUpload = (props: IApiProperties) => {
                   id="outlined-start-adornment"
                   size='small'
                   label={data && data !== "" ? data : "file"}
-                  disabled={status === 'disconnected'}
                   InputProps={{
                     endAdornment: (
                       <IconButton component="label">
@@ -114,7 +112,7 @@ const ApiUpload = (props: IApiProperties) => {
                     ),
                   }}
                 />
-                <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+                <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
                   click to execute
                 </Button>
                 <Dialog

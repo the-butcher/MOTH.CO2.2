@@ -9,8 +9,8 @@
 
 const String SEMICOLON = ";";
 const String CSV_HEAD = FIELD_NAME____TIME + SEMICOLON + FIELD_NAME_CO2_LPF + SEMICOLON + FIELD_NAME_CO2_RAW + SEMICOLON + FIELD_NAME_____DEG + SEMICOLON + FIELD_NAME_____HUM + SEMICOLON + FIELD_NAME_____HPA + SEMICOLON + FIELD_NAME_____BAT + "\r\n";
-const String CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d;%4d;%4d;%5.1f;%4.1f;%7.2f;%6.2f\r\n";
-const uint8_t CSV_LINE_LENGTH = 57;
+const String CSV_FRMT = "%04d-%02d-%02d %02d:%02d:%02d;%4d;%4d;%5.1f;%4.1f;%7.2f;%5.1f\r\n";
+const uint8_t CSV_LINE_LENGTH = 56;
 const uint16_t MAX_4DIGIT_VALUE = 0x1FFF;  // 8191
 
 class ModuleHttp {
@@ -32,15 +32,16 @@ class ModuleHttp {
     static std::function<void(config_t &config, values_t &values)> requestedReconfiguration;
     static void begin();
     static void handleApiLatest(AsyncWebServerRequest *request);
-    static void handleApiValCsv(AsyncWebServerRequest *request);
-    static void handleApiDatCsv(AsyncWebServerRequest *request);
-    static void handleApiStatus(AsyncWebServerRequest *request);
-    static void handleApiDspSet(AsyncWebServerRequest *request);
+    static void handleApiValCsv(AsyncWebServerRequest *request);  // in memory data as csv
+    static void handleApiDatCsv(AsyncWebServerRequest *request);  // file data as csv
+    static void handleApiValOut(AsyncWebServerRequest *request);  // raw in memory data
+    static void handleApiDatOut(AsyncWebServerRequest *request);  // raw file data
+    static void handleApiDatDel(AsyncWebServerRequest *request);
     static void handleApiDirOut(AsyncWebServerRequest *request);
-    static void handleApiDatOut(AsyncWebServerRequest *request);
     static void handleApiUpload(AsyncWebServerRequest *request);
     static void handleApiDirDel(AsyncWebServerRequest *request);
-    static void handleApiDatDel(AsyncWebServerRequest *request);
+    static void handleApiStatus(AsyncWebServerRequest *request);
+    static void handleApiDspSet(AsyncWebServerRequest *request);
     static void handleApiNetOut(AsyncWebServerRequest *request);
     static void handleApiNetOff(AsyncWebServerRequest *request);
     static void handleApiCo2Cal(AsyncWebServerRequest *request);  // calibration with a reference value

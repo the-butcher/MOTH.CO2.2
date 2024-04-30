@@ -1,52 +1,27 @@
-import { createTheme, CssBaseline, Fab, FormControl, IconButton, InputLabel, MenuItem, Select, ThemeProvider, Tooltip as TooltipR, Typography } from '@mui/material';
+import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { useEffect, useState, WheelEvent } from 'react';
+import { WheelEvent, useEffect, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import './App.css';
-import { JsonLoader } from './util/JsonLoader';
 
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import moment from 'moment';
 import 'moment/locale/de';
-import { CsvToJsonLoader } from './util/CsvToJsonLoader';
 
-import ConstructionIcon from '@mui/icons-material/Construction';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
 import { TimePicker } from '@mui/x-date-pickers';
-import { IChartProperty } from './util/IChartProperty';
-
-const darkTheme = createTheme({
-  typography: {
-    fontFamily: [
-      'SimplyMono-Bold',
-    ].join(','),
-    button: {
-      textTransform: 'none'
-    }
-  },
-  components: {
-    MuiCard: {
-      defaultProps: {
-        elevation: 10
-      },
-      styleOverrides: {
-        root: {
-          margin: '6px',
-          padding: '12px'
-        }
-      }
-    },
-  }
-});
+import { ByteLoader } from '../util/ByteLoader';
+import { IChartProperty } from '../util/IChartProperty';
+import { IRecord } from '../util/IRecord';
+import { TimeUtil } from '../util/TimeUtil';
+import { ITabProperties } from './ITabProperties';
 
 const propertyLookup: { [K in string]: IChartProperty } = {
-  'co2_lpf': {
+  'co2Lpf': {
     label: 'CO₂ ppm (filtered)',
-    toDomain: (data: any[]) => {
-      let max = Math.max(...data.map(data => data.co2_lpf));
+    toDomain: (data: IRecord[]) => {
+      let max = Math.max(...data.map(data => data.co2Raw)); // co2Raw on purpose to get same value range
       max = Math.ceil(max / 250) * 250;
       return [
         0,
@@ -60,10 +35,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       riskHi: 1000
     }
   },
-  'co2_raw': {
+  'co2Raw': {
     label: 'CO₂ ppm (raw)',
-    toDomain: (data: any[]) => {
-      let max = Math.max(...data.map(data => data.co2_raw));
+    toDomain: (data: IRecord[]) => {
+      let max = Math.max(...data.map(data => data.co2Raw));
       max = Math.ceil(max / 250) * 250;
       return [
         0,
@@ -77,10 +52,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       riskHi: 1000
     }
   },
-  'temperature': {
+  'deg': {
     label: 'Temperature °C',
-    toDomain: (data: any[]) => {
-      let max = Math.max(...data.map(data => data.temperature));
+    toDomain: (data: IRecord[]) => {
+      let max = Math.max(...data.map(data => data.deg));
       max = Math.ceil(max / 5) * 5;
       return [
         0,
@@ -94,10 +69,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       riskHi: 30
     }
   },
-  'humidity': {
+  'hum': {
     label: 'Humidity %RH',
-    toDomain: (data: any[]) => {
-      let max = Math.max(...data.map(data => data.humidity));
+    toDomain: (data: IRecord[]) => {
+      let max = Math.max(...data.map(data => data.hum));
       max = Math.ceil(max / 5) * 5;
       return [
         0,
@@ -111,11 +86,11 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       riskHi: 65
     }
   },
-  'pressure': {
+  'hpa': {
     label: 'Pressure hPa',
-    toDomain: (data: any[]) => {
-      let min = Math.min(...data.map(data => data.pressure));
-      let max = Math.max(...data.map(data => data.pressure));
+    toDomain: (data: IRecord[]) => {
+      let min = Math.min(...data.map(data => data.hpa));
+      let max = Math.max(...data.map(data => data.hpa));
       min = Math.floor(min / 5) * 5;
       max = Math.ceil(max / 5) * 5;
       return [
@@ -130,9 +105,9 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       riskHi: 10000
     }
   },
-  'battery': {
+  'bat': {
     label: 'Battery %',
-    toDomain: (data: any[]) => {
+    toDomain: (data: IRecord[]) => {
       return [
         0,
         100
@@ -148,16 +123,15 @@ const propertyLookup: { [K in string]: IChartProperty } = {
 }
 
 
-const ChartApp = () => {
+const TabChart = (props: ITabProperties) => {
 
-  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  const boxUrl = `http://192.168.0.66/api`; // when running directly from device
+  const { boxUrl } = { ...props };
 
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<IRecord[]>([]);
   const [chartMinX, setChartMinX] = useState<number>();
   const [chartMaxX, setChartMaxX] = useState<number>();
 
-  const [dispData, setDispData] = useState<any[]>([]);
+  const [dispData, setDispData] = useState<IRecord[]>([]);
   const [dispMinX, setDispMinX] = useState<number>();
   const [dispMaxX, setDispMaxX] = useState<number>();
   const [domain, setDomain] = useState<[number, number]>();
@@ -166,43 +140,8 @@ const ChartApp = () => {
   const [dateRange, setDateRange] = useState<[Date, Date]>([new Date('2100-01-01'), new Date('2000-01-01')]);
   const [chartTicks, setChartTicks] = useState<number[]>([]);
 
-  const [chartProp, setChartProp] = useState<string>('co2_lpf');
+  const [chartProp, setChartProp] = useState<string>('co2Lpf');
   const [chartRefX, setChartRefX] = useState<number>();
-
-  const collectDays = async (year: number, month: number, _dateRange: [Date, Date]) => {
-    const urlYYYY_MM = `${boxUrl}/dirout?folder=${year}/${String(month).padStart(2, '0')}`;
-    const folderYYYY_MM = await new JsonLoader().load(urlYYYY_MM);
-    folderYYYY_MM.files.forEach(_file => {
-      const day = _file.file.substring(6, 8);
-      const date = new Date(year, month - 1, day);
-      if (date.getTime() < _dateRange[0].getTime()) {
-        _dateRange[0] = date;
-      }
-      if (date.getTime() > _dateRange[1].getTime()) {
-        _dateRange[1] = date;
-      }
-    });
-    return _dateRange;
-  };
-
-  const collectMonths = async (year: number, _dateRange: [Date, Date]) => {
-    const urlYYYY = `${boxUrl}/dirout?folder=${year}`;
-    const folderYYYY = await new JsonLoader().load(urlYYYY);
-    for (let _subfolder of folderYYYY.folders) {
-      if (!isNaN(_subfolder.folder)) {
-        _dateRange = await collectDays(year, parseInt(_subfolder.folder), _dateRange);
-      }
-    }; // done iterating folders
-    return _dateRange;
-  };
-
-  const collectYears = async (_dateRange: [Date, Date]) => {
-    // find all days that have data
-    for (var year = 2023; year <= new Date().getFullYear(); year++) {
-      _dateRange = await collectMonths(year, _dateRange);
-    }
-    return _dateRange;
-  };
 
   const handleDateChanged = (value: moment.Moment) => {
 
@@ -210,26 +149,20 @@ const ChartApp = () => {
     setChartRefX(_datePick.getTime());
 
     const file = `${value.year()}/${String(value.month() + 1).padStart(2, '0')}/${value.year()}${String(value.month() + 1).padStart(2, '0')}${String(value.date()).padStart(2, '0')}.dat`;
-    new CsvToJsonLoader().load(`${boxUrl}/datcsv?file=${file}`).then(dataset1 => {
-      updateDataset(dataset1);
-      if (toLocalDate(Date.now()) === toLocalDate(_datePick.getTime())) {
-        new CsvToJsonLoader().load(`${boxUrl}/valcsv`).then(dataset2 => {
-          const extraData = dataset2.filter(data => data.instant > dataset1[dataset1.length - 1].instant);
-          updateDataset([
-            ...dataset1,
-            ...extraData
-          ]);
-        }).catch(e => {
-          console.error(e);
-        });
-      }
-    }).catch(e => {
-      console.error(e);
+    let urls: string[] = [
+      `${boxUrl}/datout?file=${file}`
+    ];
+    if (TimeUtil.toLocalDate(Date.now()) === TimeUtil.toLocalDate(_datePick.getTime())) {
+      urls.push(`${boxUrl}/valout`);
+    }
+
+    new ByteLoader().loadAll(urls).then(records => {
+      updateDataset(records);
     });
 
   };
 
-  const updateDataset = (dataset: any[]) => {
+  const updateDataset = (dataset: IRecord[]) => {
     setChartData(dataset);
     setChartMinX(dataset[0].instant);
     setChartMaxX(dataset[dataset.length - 1].instant);
@@ -241,8 +174,7 @@ const ChartApp = () => {
 
     console.debug('✨ building chartapp component');
 
-    const _dateRange: [Date, Date] = [new Date('2100-01-01'), new Date('2000-01-01')];
-    collectYears(_dateRange).then(() => {
+    TimeUtil.collectYears(boxUrl).then(_dateRange => {
 
       setDateRange(_dateRange);
       handleDateChanged(moment(_dateRange[1]));
@@ -390,15 +322,15 @@ const ChartApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domain]);
 
-  const toLocalDate = (instant: number) => {
+  // const toLocalDate = (instant: number) => {
 
-    return new Date(instant).toLocaleDateString(window.navigator.language, { // you can use undefined as first argument
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
+  //   return new Date(instant).toLocaleDateString(window.navigator.language, { // you can use undefined as first argument
+  //     year: "numeric",
+  //     month: "2-digit",
+  //     day: "2-digit",
+  //   })
 
-  };
+  // };
 
   const toDomainFraction = (val: number, domain: [number, number]) => {
     if (val > domain[1]) {
@@ -411,18 +343,10 @@ const ChartApp = () => {
   }
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <TooltipR title="moth-api">
-        <Fab href='server.html' variant="circular" size='small' sx={{ position: 'fixed', right: 10, top: 10 }} >
-          <ConstructionIcon />
-        </Fab>
-      </TooltipR>
+    <div style={{ height: '100%' }}>
 
-      <Typography variant="h4" component="h4" sx={{ padding: '0px 10px' }}>
-        <IconButton><ShowChartIcon sx={{ width: '1.5em', height: '1.5em' }} /></IconButton> moth-chart
-      </Typography>
-      <Card sx={{ width: '100%', padding: '0px', margin: '12px 0px' }}>
+      <iframe title="mockframe" id="mockframe" src='' style={{ height: '10px', border: 'none' }} />
+      <Card sx={{ padding: '0px' }}>
 
         <CardContent>
           <LocalizationProvider dateAdapter={AdapterMoment}>
@@ -467,7 +391,7 @@ const ChartApp = () => {
           </LocalizationProvider>
         </CardContent>
       </Card>
-      <Card sx={{ width: '100%', height: '100%', padding: '0px', margin: '0px' }} onWheel={handleMouseWheel}>
+      <Card sx={{ height: '100%', padding: '0px' }} onWheel={handleMouseWheel}>
         <CardContent style={{ width: 'inherit', height: 'inherit', padding: '0px', margin: '0px' }}>
 
           <ResponsiveContainer >
@@ -492,7 +416,7 @@ const ChartApp = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="instant" tickFormatter={formatDate} ticks={chartTicks} >
-                <Label value={toLocalDate(dispMinX)} dy={20} />
+                <Label value={TimeUtil.toLocalDate(dispMinX)} dy={20} />
               </XAxis>
               <YAxis tickFormatter={formatValue} domain={domain} >
                 <Label value={propertyLookup[chartProp].label} angle={270} dx={-40} />
@@ -505,9 +429,10 @@ const ChartApp = () => {
         </CardContent>
       </Card>
       <div style={{ height: '12px' }}></div>
-    </ThemeProvider>
+
+    </div>
   );
 
 };
 
-export default ChartApp;
+export default TabChart;

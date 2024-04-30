@@ -5,7 +5,8 @@
 
 #include "DatCsvResponse.h"
 #include "File32Response.h"
-#include "ValuesResponse.h"
+#include "ValcsvResponse.h"
+#include "ValoutResponse.h"
 #include "modules/ModuleCard.h"
 #include "modules/ModuleDisp.h"
 #include "modules/ModuleMqtt.h"
@@ -16,8 +17,6 @@
 
 AsyncWebServer ModuleHttp::server(80);
 bool ModuleHttp::hasBegun = false;
-// uint16_t ModuleHttp::requestedCo2Ref = 0;
-// bool ModuleHttp::requestedCo2Rst = false;
 std::function<void(config_t &config, values_t &values)> ModuleHttp::requestedReconfiguration = nullptr;
 int ModuleHttp::updateCode = -1;
 int ModuleHttp::uploadCode = -1;
@@ -25,11 +24,12 @@ int ModuleHttp::uploadCode = -1;
 void ModuleHttp::begin() {
     if (!ModuleHttp::hasBegun) {
         server.on("/api/latest", HTTP_GET, handleApiLatest);
-        server.on("/api/valcsv", HTTP_GET, handleApiValCsv);  // get csv from data measured in the last hour
-        server.on("/api/datcsv", HTTP_GET, handleApiDatCsv);  // get csv from data stored in dat files
+        server.on("/api/valcsv", HTTP_GET, handleApiValCsv);
+        server.on("/api/datcsv", HTTP_GET, handleApiDatCsv);
         server.on("/api/status", HTTP_GET, handleApiStatus);
         server.on("/api/dspset", HTTP_GET, handleApiDspSet);
         server.on("/api/dirout", HTTP_GET, handleApiDirOut);
+        server.on("/api/valout", HTTP_GET, handleApiValOut);
         server.on("/api/datout", HTTP_GET, handleApiDatOut);
         server.on("/api/upload", HTTP_POST, handleApiUpload, ModuleHttp::handleUpload);
         server.on("/api/dirdel", HTTP_GET, handleApiDirDel);
@@ -77,7 +77,7 @@ void ModuleHttp::handleApiLatest(AsyncWebServerRequest *request) {
 
 void ModuleHttp::handleApiValCsv(AsyncWebServerRequest *request) {
     ModuleWifi::access();
-    ValuesResponse *response = new ValuesResponse();  // cache headers in ValuesResponse
+    ValcsvResponse *response = new ValcsvResponse();  // cache headers in ValcsvResponse
     request->send(response);
 }
 
@@ -87,7 +87,7 @@ void ModuleHttp::handleApiDatCsv(AsyncWebServerRequest *request) {
         String datFileName = "/" + request->getParam("file")->value();
         String csvLine;
         if (ModuleCard::existsPath(datFileName)) {
-            DatCsvResponse *response = new DatCsvResponse(datFileName);  // cache headers in ValuesResponse
+            DatCsvResponse *response = new DatCsvResponse(datFileName);  // cache headers in ValcsvResponse
             if (request->hasHeader("If-Modified-Since")) {
                 String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
                 if (!response->wasModifiedSince(ifModifiedSince)) {
@@ -132,6 +132,11 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     root["dneo"] = true;
 #else
     root["dneo"] = false;
+#endif
+#ifdef USE_PERIODIC
+    root["dper"] = true;
+#else
+    root["dper"] = false;
 #endif
 
     JsonObject &scd041Jo = root.createNestedObject("scd041");
@@ -299,6 +304,12 @@ void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
     folder.close();
 
     root.printTo(*response);
+    request->send(response);
+}
+
+void ModuleHttp::handleApiValOut(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    ValoutResponse *response = new ValoutResponse();  // cache headers in ValoutResponse
     request->send(response);
 }
 
@@ -514,7 +525,9 @@ void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String file) {
     if (ModuleCard::existsPath(file)) {
 
         String fileType = file.substring(file.indexOf("."));
-        if (fileType == ".html") {
+        if (fileType == ".dat") {
+            fileType = "application/octet-stream";
+        } else if (fileType == ".html") {
             fileType = "text/html";
         } else if (fileType == ".js") {
             fileType = "application/javascript";

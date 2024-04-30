@@ -196,10 +196,6 @@ gpio_num_t ButtonAction::getPressedPin() {
  */
 void ButtonAction::calibrateToCo2Refer(config_t& config) {
 
-#ifdef USE___SERIAL
-    Serial.printf("config.sco2.calibrationCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
-#endif
-
     config.sco2.requestedCo2Ref = config.sco2.calibrationCo2Ref;
 }
 

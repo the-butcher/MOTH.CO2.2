@@ -5,7 +5,7 @@ export interface IRecord {
     hum: number;
     co2Raw: number;
     hpa: number;
-    nrg: number;
+    bat: number;
 }
 
 export interface IDataset {

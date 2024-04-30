@@ -1,14 +1,13 @@
-#include "ValuesResponse.h"
-
 #include "ModuleCard.h"
 #include "ModuleHttp.h"
+#include "ValcsvResponse.h"
 #include "types/Define.h"
 
-ValuesResponse::~ValuesResponse() {
+ValcsvResponse::~ValcsvResponse() {
     // nothing
 }
 
-ValuesResponse::ValuesResponse() : AsyncAbstractResponse() {
+ValcsvResponse::ValcsvResponse() : AsyncAbstractResponse() {
 
     ModuleCard::begin();
 
@@ -25,7 +24,7 @@ ValuesResponse::ValuesResponse() : AsyncAbstractResponse() {
     addHeader("Cache-Control", maxAgeBuf);
 }
 
-size_t ValuesResponse::_fillBuffer(uint8_t *data, size_t maxLen) {
+size_t ValcsvResponse::_fillBuffer(uint8_t *data, size_t maxLen) {
     if (firstFill) {
         for (uint8_t charIndex = 0; charIndex < CSV_HEAD.length(); charIndex++) {
             data[charIndex] = CSV_HEAD[charIndex];

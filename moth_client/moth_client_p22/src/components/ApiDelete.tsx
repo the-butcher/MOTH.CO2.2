@@ -23,7 +23,7 @@ const ApiDelete = (props: IApiDeleteProps) => {
   const apiDesc = `delete ${apiProp}s from the device`;
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel, handleApiCall } = props;
 
   const [param, setParam] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -64,7 +64,7 @@ const ApiDelete = (props: IApiDeleteProps) => {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   return (
     <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
@@ -78,7 +78,6 @@ const ApiDelete = (props: IApiDeleteProps) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status === 'disconnected'}
               label={apiProp}
               id="outlined-start-adornment"
               size='small'
@@ -86,7 +85,7 @@ const ApiDelete = (props: IApiDeleteProps) => {
               required
               onKeyUp={handleKeyUp}
             />
-            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

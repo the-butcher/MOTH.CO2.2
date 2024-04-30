@@ -18,12 +18,10 @@ import { IResponseProps } from './IResponseProps';
 
 const ApiSimple = (props: IApiSimpleProperties) => {
 
-  const { apiName, apiDesc, boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { apiName, apiDesc, apiType, boxUrl, panels, handlePanel, handleApiCall } = props;
   const [responseProps, setResponseProps] = useState<IResponseProps>();
-  const apiType = 'json';
 
   const confirmOrCall = () => {
-    console.log('confirmOrCall');
     if (props.confirm) {
       handleClickOpen();
     } else {
@@ -42,7 +40,7 @@ const ApiSimple = (props: IApiSimpleProperties) => {
 
   useEffect(() => {
 
-    console.debug(`⚙ updating ${apiName} component`, status, props[apiName]);
+    console.debug(`⚙ updating ${apiName} component`, props[apiName]);
     if (props[apiName]) {
       setResponseProps({
         time: Date.now(),
@@ -54,7 +52,7 @@ const ApiSimple = (props: IApiSimpleProperties) => {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const [open, setOpen] = useState(false);
   const handleClickOpen = () => {
@@ -79,7 +77,7 @@ const ApiSimple = (props: IApiSimpleProperties) => {
       <AccordionDetails>
         <Card>
           <Stack>
-            <Button disabled={status === 'disconnected'} variant="contained" endIcon={props.confirm ? <WarningAmberIcon /> : <PlayCircleOutlineIcon />} onClick={confirmOrCall}>
+            <Button variant="contained" endIcon={props.confirm ? <WarningAmberIcon /> : <PlayCircleOutlineIcon />} onClick={confirmOrCall}>
               click to execute
             </Button>
             {

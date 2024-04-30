@@ -18,7 +18,7 @@ const ApiDatcsv = (props: IApiProperties) => {
   const apiDesc = 'get historic measurements as csv data';
   const apiType = 'csv';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel, handleApiCall } = props;
 
   const [file, setFile] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -57,7 +57,7 @@ const ApiDatcsv = (props: IApiProperties) => {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFile(event.target.value);
@@ -77,7 +77,6 @@ const ApiDatcsv = (props: IApiProperties) => {
           <Stack>
             <TextField
               required
-              disabled={status === 'disconnected'}
               label="file"
               id="outlined-start-adornment"
               size='small'
@@ -85,7 +84,7 @@ const ApiDatcsv = (props: IApiProperties) => {
               onKeyUp={handleKeyUp}
               helperText="dat file name. specifiy to get the content of a specific dat file."
             />
-            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

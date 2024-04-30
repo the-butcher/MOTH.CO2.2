@@ -129,7 +129,7 @@ const ApiDspSet = (props: IApiProperties) => {
   const apiDesc = 'toggles various display aspects';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel, handleApiCall } = props;
 
   const [propsIndexP, setPropsIndexP] = useState<number>(0);
   const [propsPropsP, setPropsPropsP] = useState<IDisplayProperty[]>(displayProperties[0].props);
@@ -137,9 +137,6 @@ const ApiDspSet = (props: IApiProperties) => {
   const [responseProps, setResponseProps] = useState<IResponseProps>();
 
   const issueApiCall = () => {
-
-    console.log('propsIndexP', propsIndexP, 'propsIndexV', propsIndexV);
-
     handleApiCall({
       href: boxUrl,
       call: apiName,
@@ -168,7 +165,7 @@ const ApiDspSet = (props: IApiProperties) => {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const handlePropsValuePChange = (propsValue: string) => {
     let _propsIndexP = 0;
@@ -209,7 +206,6 @@ const ApiDspSet = (props: IApiProperties) => {
             <FormControl variant="outlined">
               <InputLabel id="prop-label" size='small'>Display aspect</InputLabel>
               <Select
-                disabled={status === 'disconnected'}
                 size='small'
                 labelId="props-value"
                 id="demo-simple-select"
@@ -225,7 +221,6 @@ const ApiDspSet = (props: IApiProperties) => {
             <FormControl variant="outlined">
               <InputLabel id="prop-label" size='small'>Display aspect</InputLabel>
               <Select
-                disabled={status === 'disconnected'}
                 size='small'
                 labelId="props-value-value"
                 id="demo-simple-select"
@@ -238,7 +233,7 @@ const ApiDspSet = (props: IApiProperties) => {
                 }
               </Select>
             </FormControl>
-            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

@@ -1,6 +1,8 @@
+import { IRecord } from "./IRecord";
+
 export interface IChartProperty {
     label: string;
-    toDomain: (data: any[]) => [number, number];
+    toDomain: (data: IRecord[]) => [number, number];
     thresholds: {
         riskLo: number;
         warnLo: number;

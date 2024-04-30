@@ -24,7 +24,7 @@ const ApiUpdate = (props: IApiProperties) => {
   const apiDesc = 'firmware update';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel } = props;
   const [data, setData] = useState<string>();
   const apiHref = `${boxUrl}/${apiName}`;
 
@@ -48,7 +48,7 @@ const ApiUpdate = (props: IApiProperties) => {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const handleUpdateFilePicked = (event: React.ChangeEvent<HTMLInputElement>) => {
     setData(event.target.value);
@@ -85,7 +85,6 @@ const ApiUpdate = (props: IApiProperties) => {
                   id="outlined-start-adornment"
                   size='small'
                   label={data && data !== "" ? data : "file"}
-                  disabled={status === 'disconnected'}
                   InputProps={{
                     endAdornment: (
                       <IconButton component="label">
@@ -101,7 +100,7 @@ const ApiUpdate = (props: IApiProperties) => {
                     ),
                   }}
                 />
-                <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+                <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
                   click to execute
                 </Button>
                 <Dialog

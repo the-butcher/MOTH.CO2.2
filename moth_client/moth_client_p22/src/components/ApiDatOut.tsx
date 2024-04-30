@@ -16,9 +16,9 @@ const ApiDatOut = (props: IApiProperties) => {
 
   const apiName = 'datout';
   const apiDesc = 'get the contents of a file on the device';
-  const apiType = 'csv';
+  const apiType = 'dat';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel, handleApiCall } = props;
 
   const [file, setFile] = useState<string>();
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -59,7 +59,7 @@ const ApiDatOut = (props: IApiProperties) => {
 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFile(event.target.value);
@@ -77,7 +77,6 @@ const ApiDatOut = (props: IApiProperties) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status === 'disconnected'}
               label="file"
               id="outlined-start-adornment"
               size='small'
@@ -85,7 +84,7 @@ const ApiDatOut = (props: IApiProperties) => {
               onKeyUp={handleKeyUp}
               helperText="optional file name. specifiy to get the content of a specific file. leave empty to get most recent data"
             />
-            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
+            <Button variant="contained" endIcon={<PlayCircleOutlineIcon />} onClick={issueApiCall}>
               click to execute
             </Button>
             {

@@ -23,31 +23,28 @@ RTC_DATA_ATTR setup_mode_t setupMode = SETUP_BOOT;
 RTC_DATA_ATTR uint32_t secondstimeBoot;
 
 // configuration and display state
-RTC_DATA_ATTR config_t config;  // size: ~108
+RTC_DATA_ATTR config_t config;  // size: ~140
 
 // last hour of measurements and associated indices
-RTC_DATA_ATTR values_t values;  // size: ~1212
+RTC_DATA_ATTR values_t values;  // size: ~1220
 
 // device state
-RTC_DATA_ATTR device_t device;  // size: ~108
+RTC_DATA_ATTR device_t device;  // size: ~136
 
 // does not need to be RTC_DATA_ATTR, reset to 0 does not matter
 uint16_t actionNum = 0;
 
-const gpio_num_t PIN_PKK2_A = GPIO_NUM_16;
-
-// uint16_t sc = sizeof(values);
+// uint16_t sc = sizeof(device);
 
 /**
  * OK reimplement OTA update, TODO :: test
  * -- enable MQTT publishing of historic data from file?
  * -- add more info to status (maybe config needs to be made public after all)
- * -- update server files (co2tst to be removed, display modus calib needs to be added)
+ * -- rebuild and replace server files (after some more testing)
  * -- ISSUE: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
  * -- ISSUE: can not reconnect MQTT after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
- * -- TODO: reduce nrg precision in csv output to one digit
- * -- TODO: create some RecordLoader type that can be used by calcsv and chart to load records (will likely need another endpoint for the "last hour") aspect
- * -- TODO: maybe the UI can be rebuilt to give an app-like look and feel (but dont forget wifi power usage)
+ * -- TODO: maybe build a new client.html with an app-like appearance (could replace chart.html)
+ *    -- attempt to share code by having a single page
  */
 
 // schedule setting and display
@@ -101,11 +98,8 @@ void handleWakeupCause() {
 }
 
 void setup() {
-    esp_log_level_set("*", ESP_LOG_ERROR);
 
-    rtc_gpio_deinit(PIN_PKK2_A);
-    pinMode(PIN_PKK2_A, OUTPUT);
-    digitalWrite(PIN_PKK2_A, HIGH);
+    esp_log_level_set("*", ESP_LOG_ERROR);
 
     // turn on I2C power
     rtc_gpio_deinit((gpio_num_t)I2C_POWER);
@@ -219,7 +213,6 @@ void secondsSleep(uint32_t seconds) {
 #endif
 
     Wire.end();
-    digitalWrite(PIN_PKK2_A, LOW);
 
     ModuleSignal::setPixelColor(COLOR____OCEAN);
     esp_deep_sleep_start();  // waiting for powerup (up to ~50 seconds) -> deep sleep

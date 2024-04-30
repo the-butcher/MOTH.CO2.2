@@ -8,7 +8,6 @@ const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 // const safePostCssParser = require('postcss-safe-parser');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
@@ -150,8 +149,7 @@ module.exports = function (webpackEnv) {
     bail: isEnvProduction,
     devtool: 'source-map',
     entry: {
-      server: paths.appServerJs,
-      chart: paths.appChartJs,
+      root: paths.appRootJs,
     },
     output: {
       path: paths.appBuild,
@@ -417,22 +415,12 @@ module.exports = function (webpackEnv) {
     plugins: [
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin({
-        title: "moth-server",
-        template: paths.appServerHtml,
-        filename: "./server.html",
+        title: "moth-root",
+        template: paths.appRootHtml,
+        filename: "./root.html",
         chunksSortMode: "none",
         chunks: [
-          "server"
-        ],
-        inlineSource: ".(css)$"
-      }),
-      new HtmlWebpackPlugin({
-        title: "moth-chart",
-        template: paths.appChartHtml,
-        filename: "./chart.html",
-        chunksSortMode: "none",
-        chunks: [
-          "chart"
+          "root"
         ],
         inlineSource: ".(css)$"
       }),

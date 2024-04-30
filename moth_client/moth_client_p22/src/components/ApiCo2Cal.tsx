@@ -22,7 +22,7 @@ const ApiCo2Cal = (props: IApiProperties) => {
   const apiDesc = 'calibrate the CO₂ sensor to a given reference value';
   const apiType = 'json';
 
-  const { boxUrl, panels, pstate: status, handlePanel, handleApiCall } = props;
+  const { boxUrl, panels, handlePanel, handleApiCall } = props;
 
   const [ref, setRef] = useState<number>(0);
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -87,10 +87,10 @@ const ApiCo2Cal = (props: IApiProperties) => {
         setDevHeight(_devHeight * 2);
         setAvgValue(co2cal.avgValue);
         setDevValue(co2cal.devValue);
-        console.log('_devHeight', devHeight, '_avgHeight', _avgHeight);
+        let keyIndex = 0;
         co2cal.values.forEach((value: number) => {
           const barHeight = toBarHeight(value, min, max);
-          _calNodes.push(<div style={{ height: `${co2calHeight}px`, flexGrow: '3', display: 'flex', flexDirection: 'column', margin: '0px 5px' }}>
+          _calNodes.push(<div key={`idx_${String(keyIndex++).padStart(2, '0')}`} style={{ height: `${co2calHeight}px`, flexGrow: '3', display: 'flex', flexDirection: 'column', margin: '0px 5px' }}>
             <div style={{ flexGrow: '10' }}></div>
             <div style={{ minHeight: `${barHeight}px`, backgroundColor: '#999999', opacity: '0.95' }}></div>
           </div>);
@@ -101,11 +101,15 @@ const ApiCo2Cal = (props: IApiProperties) => {
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, props[apiName]]);
+  }, [props[apiName]]);
 
   const [open, setOpen] = useState(false);
   const handleClickOpen = () => {
-    setOpen(true);
+    if (ref === 0) {
+      issueApiCall();
+    } else {
+      setOpen(true);
+    }
   };
   const handleCancel = () => {
     setOpen(false);
@@ -149,7 +153,6 @@ const ApiCo2Cal = (props: IApiProperties) => {
         <Card>
           <Stack>
             <TextField
-              disabled={status === 'disconnected'}
               label="ref"
               value={ref}
               id="outlined-start-adornment"
@@ -158,7 +161,7 @@ const ApiCo2Cal = (props: IApiProperties) => {
               required
               onKeyUp={handleKeyUp}
             />
-            <Button disabled={status === 'disconnected'} variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+            <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
               click to execute
             </Button>
             <Dialog

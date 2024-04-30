@@ -1,5 +1,5 @@
-#ifndef ValuesResponse_h
-#define ValuesResponse_h
+#ifndef ValcsvResponse_h
+#define ValcsvResponse_h
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
@@ -9,14 +9,14 @@
 
 // from https://github.com/me-no-dev/ESPAsyncWebServer/blob/master/src/WebResponseImpl.h
 
-class ValuesResponse : public AsyncAbstractResponse {
+class ValcsvResponse : public AsyncAbstractResponse {
    private:
     bool firstFill;
     uint8_t lineLimit;
 
    public:
-    ValuesResponse();
-    ~ValuesResponse();
+    ValcsvResponse();
+    ~ValcsvResponse();
     bool _sourceValid() const {
         return true;
     }

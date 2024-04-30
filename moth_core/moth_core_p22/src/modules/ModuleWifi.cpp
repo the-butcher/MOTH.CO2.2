@@ -256,9 +256,9 @@ String ModuleWifi::getAddress() {
 String ModuleWifi::getRootUrl() {
     wifi_mode_t wifiMode = WiFi.getMode();
     if (wifiMode == WIFI_AP) {
-        return "http://" + WiFi.softAPIP().toString() + "/server/server.html";
+        return "http://" + WiFi.softAPIP().toString() + "/server/root.html";
     } else if (wifiMode == WIFI_STA) {
-        return "http://" + WiFi.localIP().toString() + "/server/server.html";
+        return "http://" + WiFi.localIP().toString() + "/server/root.html";
     } else {
         return "";
     }

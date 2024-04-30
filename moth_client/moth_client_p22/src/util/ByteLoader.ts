@@ -1,7 +1,57 @@
+import { IRecord } from "./IRecord";
+
 /**
  * helper type that that loads json-content
  */
 export class ByteLoader {
+
+    static readonly secondsFrom1970To2000 = 946684800;
+    static readonly valueScaleCo2Lpf = 8;
+    static readonly recordLength = 20;
+
+    toFloatDeg = (shortValue: number): number => {
+        return shortValue / 640.0 - 50.0;
+    }
+
+    toFloatHum = (shortValue: number): number => {
+        return shortValue / 640.0;
+    }
+
+    toFloatPercent = (shortValue: number): number => {
+        return shortValue / 640.0;
+    }
+
+    async loadDat(url: string): Promise<IRecord[]> {
+        const data = await this.load(url);
+        let secondstime: number;
+        const records: IRecord[] = [];
+        for (let i = 0; i < data.byteLength; i += ByteLoader.recordLength) {
+            secondstime = data.getUint32(i, true);
+            records.push({
+                instant: new Date((ByteLoader.secondsFrom1970To2000 + secondstime) * 1000).getTime(),
+                co2Lpf: data.getUint16(i + 4, true) / ByteLoader.valueScaleCo2Lpf,
+                deg: this.toFloatDeg(data.getUint16(i + 6, true)),
+                hum: this.toFloatHum(data.getUint16(i + 8, true)),
+                co2Raw: data.getUint16(i + 10, true),
+                hpa: data.getFloat32(i + 12, true),
+                bat: this.toFloatPercent(data.getUint16(i + 16, true))
+            });
+        }
+        return records;
+    }
+
+    async loadAll(urls: string[]): Promise<IRecord[]> {
+        const records: IRecord[] = [];
+        let _records: IRecord[];
+        for (let url of urls) {
+            _records = await this.loadDat(url);
+            if (records.length > 0) {
+                _records = _records.filter(r => r.instant > records[records.length - 1].instant);
+            }
+            records.push(..._records);
+        }
+        return records;
+    }
 
     /**
      * load from the given url and return a promise resolving to an instance of LfvEvent

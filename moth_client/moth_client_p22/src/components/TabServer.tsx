@@ -1,87 +1,25 @@
-import ConstructionIcon from '@mui/icons-material/Construction';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import { createTheme, CssBaseline, Fab, IconButton, ThemeProvider, Tooltip } from '@mui/material';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
-import './App.css';
-import ApiCo2Cal from './components/ApiCo2Cal';
-import ApiValcsv from './components/ApiValcsv';
-import ApiDelete from './components/ApiDelete';
-import ApiDspSet from './components/ApiDspSet';
-import ApiDatOut from './components/ApiDatOut';
-import ApiDirOut from './components/ApiDirOut';
-import ApiSimple from './components/ApiSimple';
-import ApiUpdate from './components/ApiUpdate';
-import ApiUpload from './components/ApiUpload';
-import { IApiCall } from './components/IApiCall';
-import { EStatus, IApiProperties } from './components/IApiProperties';
-import ApiDatcsv from './components/ApiDatcsv';
-import ApiCalcsv from './components/ApiCalcsv';
+import ApiCalcsv from './ApiCalcsv';
+import ApiCo2Cal from './ApiCo2Cal';
+import ApiDatOut from './ApiDatOut';
+import ApiDatcsv from './ApiDatcsv';
+import ApiDelete from './ApiDelete';
+import ApiDirOut from './ApiDirOut';
+import ApiDspSet from './ApiDspSet';
+import ApiSimple from './ApiSimple';
+import ApiUpdate from './ApiUpdate';
+import ApiUpload from './ApiUpload';
+import { IApiCall } from './IApiCall';
+import { IApiProperties } from './IApiProperties';
+import { ITabProperties } from './ITabProperties';
 
-const darkTheme = createTheme({
-  typography: {
-    fontFamily: [
-      'SimplyMono-Bold',
-    ].join(','),
-    button: {
-      textTransform: 'none'
-    }
-  },
-  components: {
-    MuiAccordion: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#eeeeee',
-        }
-      }
-    },
-    MuiAccordionSummary: {
-      styleOverrides: {
-        content: {
-          '&.Mui-expanded': {
-            margin: '6px 0px',
-          },
-          margin: '6px 0px',
-        }
-      }
-    },
-    MuiAccordionDetails: {
-      styleOverrides: {
-        root: {
-          paddingLeft: '40px',
-        }
-      }
-    },
-    MuiStack: {
-      defaultProps: {
-        spacing: 2
-      }
-    },
-    MuiCard: {
-      defaultProps: {
-        elevation: 3
-      },
-      styleOverrides: {
-        root: {
-          margin: '6px',
-          padding: '12px'
-        }
-      }
-    },
-  }
-});
+const TabServer = (props: ITabProperties) => {
 
-const ServerApp = () => {
+  const { boxUrl } = { ...props };
 
-  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  const boxUrl = `http://192.168.0.66/api`; // when running directly from device
-
-  const urlParams = new URLSearchParams(window.location.search);
-  // const boxUrlParamValue = `http://${urlParams.get("boxUrl")}/api`; // when not running directly from device
-
-  const panelParamValue = urlParams.get("panel");
   let messageTimeout: number = -1;
 
   const rebuildAndSetApiProps = () => {
@@ -89,7 +27,6 @@ const ServerApp = () => {
       ...apiProps,
       boxUrl,
       panels: panels.current,
-      pstate: status.current,
       handlePanel,
       handleApiCall
     });
@@ -127,30 +64,23 @@ const ServerApp = () => {
     clearTimeout(messageTimeout);
     messageTimeout = window.setTimeout(() => {
       iframe.src = iframeSrc;
-      status.current = 'disconnected';
       rebuildAndSetApiProps();
     }, 10000);
 
   }
 
-  const panels = useRef<string[]>(panelParamValue ? [panelParamValue] : []);
-  const status = useRef<EStatus>('disconnected');
+  const panels = useRef<string[]>([]);
 
   const [apiProps, setApiProps] = useState<IApiProperties>({
     boxUrl,
     panels: panels.current,
-    pstate: status.current,
     handlePanel,
     handleApiCall
   });
 
   useEffect(() => {
 
-    console.debug('✨ building app component', window.location);
-
-    window.setTimeout(() => {
-      document.getElementById(panelParamValue)?.scrollIntoView({ behavior: "smooth" });
-    }, 1000);
+    console.debug('✨ building tab server component', window.location);
 
     window.addEventListener('message', ({ data }) => {
 
@@ -160,7 +90,6 @@ const ServerApp = () => {
           ...apiProps,
           boxUrl,
           panels: panels.current,
-          pstate: status.current,
           handlePanel,
           handleApiCall
         };
@@ -168,7 +97,6 @@ const ServerApp = () => {
         setApiProps(_apiProps);
       }
       if (data.event && data.event === 'loaded') {
-        status.current = 'connected';
         rebuildAndSetApiProps();
       }
 
@@ -176,27 +104,13 @@ const ServerApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // const iframeSrc = `http://${boxUrlParamValue}/iframe`; //when not running directly from device
   const iframeSrc = 'iframe.html'; //when running directly from device
 
   return (
-    <ThemeProvider theme={darkTheme}>
+    <div style={{ height: '100%' }}>
 
-      <CssBaseline />
-      <Tooltip title="moth-chart">
-        <Fab href='chart.html' variant="circular" size='small' sx={{ position: 'fixed', right: 10, top: 10 }} >
-          <ShowChartIcon />
-        </Fab>
-      </Tooltip>
-
-      <Typography variant="h4" component="h4" sx={{ paddingLeft: '10px' }}>
-        <IconButton><ConstructionIcon sx={{ width: '1.5em', height: '1.5em' }} /></IconButton>moth-api <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '30px', border: 'none' }} />
-      </Typography>
-      <Typography variant="body1" sx={{ paddingLeft: '20px' }}>
-        {boxUrl ? boxUrl : "no box specified"} ({status.current})
-      </Typography>
+      <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '10px', border: 'none' }} />
       <Card sx={{ padding: '0px' }}>
-
         <CardContent>
           <Typography gutterBottom variant="subtitle1" component="div">
             data
@@ -204,29 +118,50 @@ const ServerApp = () => {
           <ApiSimple {...{
             ...apiProps,
             apiName: 'latest',
-            apiDesc: 'get the latest measurement'
+            apiDesc: 'get the latest measurement as json',
+            apiType: 'json'
           }} />
-          <ApiValcsv {...apiProps} />
+          {/* <ApiValcsv {...apiProps} /> */}
+          <ApiSimple {...{
+            ...apiProps,
+            apiName: 'valcsv',
+            apiDesc: 'get the last hour of data as csv data',
+            apiType: 'csv'
+          }} />
           <ApiDatcsv {...apiProps} />
+          <ApiSimple {...{
+            ...apiProps,
+            apiName: 'valout',
+            apiDesc: 'get the last hour of data as binary data',
+            apiType: 'dat'
+          }} />
+          <ApiDatOut {...apiProps} />
           <ApiCalcsv {...apiProps} />
         </CardContent>
       </Card>
       <Card sx={{ padding: '0px' }}>
         <CardContent>
           <Typography gutterBottom variant="subtitle1" component="div">
-            files, status
+            files, folders
+          </Typography>
+          <ApiDirOut {...apiProps} />
+          <ApiUpload {...apiProps} />
+          <ApiDelete {...apiProps} apiName='datdel' apiProp='file' />
+          <ApiDelete {...apiProps} apiName='dirdel' apiProp='folder' />
+        </CardContent>
+      </Card>
+      <Card sx={{ padding: '0px' }}>
+        <CardContent>
+          <Typography gutterBottom variant="subtitle1" component="div">
+            display, status
           </Typography>
           <ApiDspSet {...apiProps} />
           <ApiSimple {...{
             ...apiProps,
             apiName: 'status',
-            apiDesc: 'get details about device status'
+            apiDesc: 'get details about device status',
+            apiType: 'json'
           }} />
-          <ApiDirOut {...apiProps} />
-          <ApiDatOut {...apiProps} />
-          <ApiUpload  {...apiProps} />
-          <ApiDelete {...apiProps} apiName='datdel' apiProp='file' />
-          <ApiDelete {...apiProps} apiName='dirdel' apiProp='folder' />
         </CardContent>
       </Card>
       <Card sx={{ padding: '0px' }}>
@@ -237,12 +172,14 @@ const ServerApp = () => {
           <ApiSimple {...{
             ...apiProps,
             apiName: 'netout',
-            apiDesc: 'get a list of networks visible to the device'
+            apiDesc: 'get a list of networks visible to the device',
+            apiType: 'json'
           }} />
           <ApiSimple {...{
             ...apiProps,
             apiName: 'netoff',
-            apiDesc: 'disconnect the device'
+            apiDesc: 'disconnect the device',
+            apiType: 'json'
           }} />
         </CardContent>
       </Card>
@@ -256,6 +193,7 @@ const ServerApp = () => {
             ...apiProps,
             apiName: 'co2rst',
             apiDesc: 'reset the CO₂ sensor to factory',
+            apiType: 'json',
             confirm: {
               title: 'do you really want to reset?',
               content: 'this call will remove all calibration history from the box\'s CO₂ sensor. only use if the sensor appears to be stuck.'
@@ -265,6 +203,7 @@ const ServerApp = () => {
             ...apiProps,
             apiName: 'esprst',
             apiDesc: 'resets the device ',
+            apiType: 'json',
             confirm: {
               title: 'do you really want to reset?',
               content: 'this call will reset the decive, data not written to permanent storage may be lost.'
@@ -274,9 +213,9 @@ const ServerApp = () => {
         </CardContent>
         <div style={{ height: '12px' }}></div>
       </Card>
-    </ThemeProvider>
+    </div>
   );
 
 };
 
-export default ServerApp;
+export default TabServer;

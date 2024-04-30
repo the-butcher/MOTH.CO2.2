@@ -150,7 +150,7 @@ void ModuleMqtt::publish(config_t& config) {
                     uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
                     values_all_t datValue;
                     uint32_t dataIndex;
-                    for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {  // similar code in ValuesResponse
+                    for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {  // similar code in ValcsvResponse
                         dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
                         datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
                         if (datValue.publishable) {

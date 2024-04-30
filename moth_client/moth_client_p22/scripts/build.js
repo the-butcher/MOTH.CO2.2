@@ -39,10 +39,8 @@ const isInteractive = process.stdout.isTTY;
 
 // Warn and crash if required files are missing
 if (!checkRequiredFiles([
-  paths.appServerHtml,
-  paths.appServerJs,
-  paths.appChartHtml,
-  paths.appChartJs,
+  paths.appRootHtml,
+  paths.appRootJs,
 ])) {
   process.exit(1);
 }
@@ -210,6 +208,6 @@ function build(previousFileSizes) {
 function copyPublicFolder() {
   fs.copySync(paths.appPublic, paths.appBuild, {
     dereference: true,
-    filter: file => file !== paths.appClientHtml && file !== paths.appServerHtml,
+    filter: file => file !== paths.appRootHtml,
   });
 }
