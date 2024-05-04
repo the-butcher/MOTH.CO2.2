@@ -20,6 +20,7 @@ const float VALUE_SCALE_CO2LPF = 8.0f;
 const uint8_t MEASUREMENT_BUFFER_SIZE = 60;
 
 /**
+ * size of the history buffer (for table mode)
  * HISTORY_BUFFER_SIZE is identical to MEASUREMENT_BUFFER_SIZE by accident not by design, therefore redefined
  */
 const uint8_t HISTORY_____BUFFER_SIZE = 60;

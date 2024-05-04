@@ -1,98 +1,95 @@
-import { createTheme, CssBaseline, Stack, Tab, Tabs, ThemeProvider } from '@mui/material';
-import './App.css';
-import { useState } from 'react';
-import TabServer from './components/TabServer';
-import TabChart from './components/TabChart';
-import ConstructionIcon from '@mui/icons-material/Construction';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
-
-
-const darkTheme = createTheme({
-  typography: {
-    fontFamily: [
-      'SimplyMono-Bold',
-    ].join(','),
-    button: {
-      textTransform: 'none'
-    }
-  },
-  components: {
-    MuiAccordion: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#eeeeee',
-        }
-      }
-    },
-    MuiAccordionSummary: {
-      styleOverrides: {
-        content: {
-          '&.Mui-expanded': {
-            margin: '6px 0px',
-          },
-          margin: '6px 0px',
-        }
-      }
-    },
-    MuiAccordionDetails: {
-      styleOverrides: {
-        root: {
-          paddingLeft: '40px',
-        }
-      }
-    },
-    MuiStack: {
-      defaultProps: {
-        spacing: 2
-      }
-    },
-    MuiCard: {
-      defaultProps: {
-        elevation: 3
-      },
-      styleOverrides: {
-        root: {
-          margin: '6px',
-          padding: '12px'
-        }
-      }
-    },
-  }
-});
+import TuneIcon from '@mui/icons-material/Tune';
+import TocIcon from '@mui/icons-material/Toc';
+import { CssBaseline, IconButton, Paper, Stack, ThemeProvider } from '@mui/material';
+import { useEffect, useState } from 'react';
+import './App.css';
+import TabConfig from './components/TabConfig';
+import TabServer from './components/TabServer';
+import TabValues from './components/TabValues';
+import { ThemeUtil } from './util/ThemeUtil';
+import { ITabProperties } from './types/ITabProperties';
 
 const RootApp = () => {
 
-  const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  // const boxUrl = `http://192.168.0.73/api`; // when running directly from device
+  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  const boxUrl = `http://192.168.0.73/api`; // when running directly from device
 
-  const [value, setValue] = useState('server');
-  const handleValue = (event: React.SyntheticEvent, newValue: string) => {
-    setValue(newValue);
-  };
+  /**
+   * TODO :: colors for all seriesDefs
+   * TODO :: trigger data range change from date time picker
+   * TODO :: strategy for not having to re-evaluate (lots of http requests) date range often and for keeping historic data in cache
+   * TODO :: create form around device configuration (display, wifi, mqtt) and implement reassembly of those values for re-upload to device
+   */
+
+  const [tabProps] = useState<ITabProperties>({
+    boxUrl
+  });
+  const [value, setValue] = useState('values');
+
+
+  useEffect(() => {
+    console.debug('✨ building root component');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // const handleButtonPress = () => {
+
+  //   const str = JSON.stringify({
+  //     "key1": "value1",
+  //     "key2": "value2"
+  //   });
+  //   const bytes = new TextEncoder().encode(str);
+  //   const blob = new Blob([bytes], {
+  //     type: "application/json;charset=utf-8"
+  //   });
+
+  //   var file = new File([blob], "file_name", { lastModified: Date.now() });
+
+  //   console.log('file', file);
+
+  //   const request = new XMLHttpRequest();
+  //   const formData = new FormData();
+
+  //   request.open("POST", boxUrl + '/test', true);
+  //   request.onreadystatechange = () => {
+  //     if (request.readyState === 4 && request.status === 200) {
+  //       console.log(request.responseText);
+  //     }
+  //   };
+  //   formData.append("file", "config/test.json");
+  //   formData.append("content", file);
+  //   request.send(formData);
+
+  // }
 
   return (
-    <ThemeProvider theme={darkTheme}>
-
+    <ThemeProvider theme={ThemeUtil.createTheme()}>
       <CssBaseline />
-
-      <Stack direction={'row'}>
-        <Tabs value={value} onChange={handleValue}>
-          <Tab icon={<ConstructionIcon />} iconPosition="start" value="server" label="moth-api" sx={{ fontSize: '16px' }} />
-          <Tab icon={<ShowChartIcon />} iconPosition="start" value="chart" label="moth-chart" sx={{ fontSize: '16px' }} />
-          <Tab disabled label={boxUrl} sx={{ fontSize: '16px' }} />
-        </Tabs>
-        {/* {boxUrl} */}
-      </Stack>
-
-      <Stack sx={{ height: '100%' }}>
+      <Stack direction={'row'} spacing={0} sx={{ height: '100%' }}>
+        <Paper elevation={3} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', marginTop: '5px', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}>
+          <IconButton aria-label="values" onClick={() => setValue('values')}>
+            <ShowChartIcon />
+          </IconButton>
+          <IconButton aria-label="config" onClick={() => setValue('config')}>
+            <TuneIcon />
+          </IconButton>
+          <IconButton aria-label="api" onClick={() => setValue('api')}>
+            <TocIcon />
+          </IconButton>
+        </Paper>
+        <div style={{ minWidth: '45px' }}></div>
         {
-          value === 'server' ? <TabServer boxUrl={boxUrl} /> : null
+          value === 'values' ? <TabValues {...tabProps} /> : null
         }
         {
-          value === 'chart' ? <TabChart boxUrl={boxUrl} /> : null
+          value === 'config' ? <TabConfig {...tabProps} /> : null
         }
-      </Stack>
-    </ThemeProvider>
+        {
+          value === 'api' ? <TabServer {...tabProps} /> : null
+        }
+      </Stack >
+    </ThemeProvider >
   );
 
 };

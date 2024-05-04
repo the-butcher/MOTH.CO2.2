@@ -13,8 +13,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { Stack } from '@mui/system';
 import { useEffect, useState } from 'react';
 import ApiResponse from './ApiResponse';
-import { IApiSimpleProperties } from './IApiSimpleProperties';
-import { IResponseProps } from './IResponseProps';
+import { IApiSimpleProperties } from '../types/IApiSimpleProperties';
+import { IResponseProps } from '../types/IResponseProps';
 
 const ApiSimple = (props: IApiSimpleProperties) => {
 

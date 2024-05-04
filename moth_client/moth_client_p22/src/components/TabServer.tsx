@@ -12,9 +12,9 @@ import ApiDspSet from './ApiDspSet';
 import ApiSimple from './ApiSimple';
 import ApiUpdate from './ApiUpdate';
 import ApiUpload from './ApiUpload';
-import { IApiCall } from './IApiCall';
-import { IApiProperties } from './IApiProperties';
-import { ITabProperties } from './ITabProperties';
+import { IApiCall } from '../types/IApiCall';
+import { IApiProperties } from '../types/IApiProperties';
+import { ITabProperties } from '../types/ITabProperties';
 
 const TabServer = (props: ITabProperties) => {
 

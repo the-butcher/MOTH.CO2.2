@@ -109,7 +109,7 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=60");
+    response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 200;
@@ -558,7 +558,7 @@ void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String file) {
 
 void ModuleHttp::serve200Json(AsyncWebServerRequest *request, uint8_t p, uint8_t v) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=60");
+    response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 200;
@@ -570,7 +570,7 @@ void ModuleHttp::serve200Json(AsyncWebServerRequest *request, uint8_t p, uint8_t
 
 void ModuleHttp::serve400Json(AsyncWebServerRequest *request, String description) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=60");
+    response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 400;
@@ -581,7 +581,7 @@ void ModuleHttp::serve400Json(AsyncWebServerRequest *request, String description
 
 void ModuleHttp::serve404Json(AsyncWebServerRequest *request, String file) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=60");
+    response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
     root["code"] = 404;

@@ -40,18 +40,17 @@ uint16_t actionNum = 0;
  * OK reimplement OTA update, TODO :: test
  * -- enable MQTT publishing of historic data from file?
  * -- add more info to status (maybe config needs to be made public after all)
- * -- rebuild and replace server files (after some more testing)
  * -- ISSUE: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
  * -- ISSUE: can not reconnect MQTT after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
  * -- TODO: maybe build a new client.html with an app-like appearance (could replace chart.html)
- *    -- attempt to share code by having a single page
+ * -- TODO: better caching for a dirout request (can have the last modified date of the youngest file)
  */
 
 // schedule setting and display
 void scheduleDeviceActionSetting() {
     device.actionIndexMax = DEVICE_ACTION_DEPOWER;  // allow actions display and depower by index
     uint32_t secondstime = SensorTime::getSecondstime();
-    uint32_t secondswait = 60 - secondstime % 60;
+    uint32_t secondswait = 60 - secondstime % 60;  // CHECK_MEASURE_INTERVAL
     if (device.actionIndexCur == DEVICE_ACTION_POWERUP && secondswait > WAITTIME_DISPLAY_AND_DEPOWER) {
         device.actionIndexCur = DEVICE_ACTION_SETTING;
         device.deviceActions[DEVICE_ACTION_SETTING].secondsNext = SensorTime::getSecondstime();  // assign current time as due time

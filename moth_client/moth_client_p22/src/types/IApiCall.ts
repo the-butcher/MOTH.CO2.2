@@ -1,9 +1,9 @@
-import { TResponseType } from "./IResponseProps";
+import { TRequestMethod, TResponseType } from "./IResponseProps";
 
 export interface IApiCall {
     href: string;
     call: string;
-    meth: 'POST' | 'GET';
+    meth: TRequestMethod;
     type: TResponseType;
     qstr?: {}
 }

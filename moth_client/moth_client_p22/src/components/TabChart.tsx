@@ -12,10 +12,10 @@ import 'moment/locale/de';
 
 import { TimePicker } from '@mui/x-date-pickers';
 import { ByteLoader } from '../util/ByteLoader';
-import { IChartProperty } from '../util/IChartProperty';
-import { IRecord } from '../util/IRecord';
+import { IChartProperty } from '../types/IChartProperty';
+import { IRecord } from '../types/IRecord';
 import { TimeUtil } from '../util/TimeUtil';
-import { ITabProperties } from './ITabProperties';
+import { ITabProperties } from '../types/ITabProperties';
 
 const propertyLookup: { [K in string]: IChartProperty } = {
   'co2Lpf': {
@@ -29,10 +29,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       ];
     },
     thresholds: {
-      riskLo: 0,
-      warnLo: 0,
-      warnHi: 800,
-      riskHi: 1000
+      rLo: 0,
+      wLo: 0,
+      wHi: 800,
+      rHi: 1000
     }
   },
   'co2Raw': {
@@ -46,10 +46,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       ];
     },
     thresholds: {
-      riskLo: 0,
-      warnLo: 0,
-      warnHi: 800,
-      riskHi: 1000
+      rLo: 0,
+      wLo: 0,
+      wHi: 800,
+      rHi: 1000
     }
   },
   'deg': {
@@ -63,10 +63,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       ];
     },
     thresholds: {
-      riskLo: 14,
-      warnLo: 19,
-      warnHi: 25,
-      riskHi: 30
+      rLo: 14,
+      wLo: 19,
+      wHi: 25,
+      rHi: 30
     }
   },
   'hum': {
@@ -80,10 +80,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       ];
     },
     thresholds: {
-      riskLo: 25,
-      warnLo: 30,
-      warnHi: 60,
-      riskHi: 65
+      rLo: 25,
+      wLo: 30,
+      wHi: 60,
+      rHi: 65
     }
   },
   'hpa': {
@@ -99,10 +99,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       ];
     },
     thresholds: {
-      riskLo: 0,
-      warnLo: 0,
-      warnHi: 10000,
-      riskHi: 10000
+      rLo: 0,
+      wLo: 0,
+      wHi: 10000,
+      rHi: 10000
     }
   },
   'bat': {
@@ -114,10 +114,10 @@ const propertyLookup: { [K in string]: IChartProperty } = {
       ];
     },
     thresholds: {
-      riskLo: 10,
-      warnLo: 20,
-      warnHi: 100,
-      riskHi: 100
+      rLo: 10,
+      wLo: 20,
+      wHi: 100,
+      rHi: 100
     }
   }
 }
@@ -303,10 +303,10 @@ const TabChart = (props: ITabProperties) => {
 
     if (domain) {
 
-      const fracRiskHi = toDomainFraction(propertyLookup[chartProp].thresholds.riskHi, domain);
-      const fracWarnHi = toDomainFraction(propertyLookup[chartProp].thresholds.warnHi, domain);
-      const fracWarnLo = toDomainFraction(propertyLookup[chartProp].thresholds.warnLo, domain);
-      const fracRiskLo = toDomainFraction(propertyLookup[chartProp].thresholds.riskLo, domain);
+      const fracRiskHi = toDomainFraction(propertyLookup[chartProp].thresholds.rHi, domain);
+      const fracWarnHi = toDomainFraction(propertyLookup[chartProp].thresholds.wHi, domain);
+      const fracWarnLo = toDomainFraction(propertyLookup[chartProp].thresholds.wLo, domain);
+      const fracRiskLo = toDomainFraction(propertyLookup[chartProp].thresholds.rLo, domain);
       const _stops = [
         '0%',
         `${100 - fracRiskHi}%`,

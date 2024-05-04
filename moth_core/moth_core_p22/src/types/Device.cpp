@@ -52,7 +52,7 @@ device_t Device::load() {
         DEVICE_ACTION_DISPLAY,  // display refresh
         COLOR______RED,         // red while refreshing display
         WAKEUP_ACTION_BUTN,     // do NOT allow wakeup while display is redrawing
-        3,                      // 3 seconds delay which is a rather long and conservative estimation (buut the busy wakeup should take care of things at the best possible moment)
+        3,                      // 3 seconds delay which is a rather long and conservative estimation (but the busy wakeup should take care of things at the best possible moment)
         secondstime             // initially set, so the entry screen will render right after start
     };
     device.deviceActions[DEVICE_ACTION_DEPOWER] = {
@@ -103,7 +103,7 @@ std::function<device_action_e(config_t& config, device_action_e maxDeviceAction)
 }
 
 device_action_e Device::handleActionInvalid(config_t& config, device_action_e maxDeviceAction) {
-    // TODO :: should not be called, handle this condition
+    // TODO :: should never be called, handle this condition
     return DEVICE_ACTION_POWERUP;
 }
 
@@ -154,6 +154,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
 
     Values::values->nextMeasureIndex = nextMeasureIndex;
 
+    // is storing the measurement needed? (will be replaced a few lines further down)
     Values::values->measurements[currStorageIndex] = {
         SensorTime::getSecondstime(),  // secondstime as of RTC
         measurementCo2,                // sensorScd041 values
@@ -162,7 +163,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
         true                           // publishable
     };
 
-    // power down early sensors (will save around 2 sensor power seconds while the display is redrawing)
+    // early power down of sensors (will save around 2 sensor power seconds while the display is redrawing)
     SensorScd041::depower(config);
     SensorEnergy::depower();
 

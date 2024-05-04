@@ -2,13 +2,17 @@ import { JsonLoader } from "./JsonLoader";
 
 export class TimeUtil {
 
-    static readonly MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
+    static readonly MILLISECONDS_PER_MINUTE = 1000 * 60;
+    static readonly MILLISECONDS_PER_HOUR = TimeUtil.MILLISECONDS_PER_MINUTE * 60;
     static readonly MILLISECONDS_PER__DAY = TimeUtil.MILLISECONDS_PER_HOUR * 24;
 
     static formatValue(value: number, precision: number, length: number, pad: string): string {
         return value.toFixed(precision).replace('.', ',').padStart(length, pad);
     }
 
+    static getTimezoneOffsetSeconds() {
+        return new Date().getTimezoneOffset() * 60;
+    }
     /**
      * format the given date to 'yyyy-MM-dd HH:mm:ss'
      * @param date
@@ -23,7 +27,7 @@ export class TimeUtil {
      * @param date
      */
     static toUTCDate(date: Date) {
-        return `${date.getUTCFullYear()}${TimeUtil.formatValue(date.getUTCMonth() + 1, 0, 2, '0')}${TimeUtil.formatValue(date.getUTCDate(), 0, 2, '0')}`;
+        return `${date.getFullYear()}${TimeUtil.formatValue(date.getMonth() + 1, 0, 2, '0')}${TimeUtil.formatValue(date.getDate(), 0, 2, '0')}`;
     }
 
     static toLocalDate(instant: number) {
@@ -31,6 +35,13 @@ export class TimeUtil {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
+        });
+    };
+
+    static toLocalTime(instant: number) {
+        return new Date(instant).toLocaleTimeString(window.navigator.language, { // you can use undefined as first argument
+            hour: "2-digit",
+            minute: "2-digit"
         });
     };
 

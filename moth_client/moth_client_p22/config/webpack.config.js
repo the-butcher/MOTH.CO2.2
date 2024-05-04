@@ -244,15 +244,15 @@ module.exports = function (webpackEnv) {
         { parser: { requireEnsure: false } },
         {
           oneOf: [
-            {
-              test: [/\.avif$/],
-              loader: require.resolve('url-loader'),
-              options: {
-                limit: imageInlineSizeLimit,
-                mimetype: 'image/avif',
-                name: 'static/media/[name].[ext]',
-              },
-            },
+            // {
+            //   test: [/\.avif$/],
+            //   loader: require.resolve('url-loader'),
+            //   options: {
+            //     limit: imageInlineSizeLimit,
+            //     mimetype: 'image/avif',
+            //     name: 'static/media/[name].[ext]',
+            //   },
+            // },
             {
               test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
               loader: require.resolve('url-loader'),
@@ -260,6 +260,10 @@ module.exports = function (webpackEnv) {
                 limit: imageInlineSizeLimit,
                 name: 'static/media/[name].[ext]',
               },
+            },
+            {
+              test: /\.(woff|woff2|eot|ttf|otf)$/i,
+              type: 'asset/resource',
             },
             {
               test: /\.(js|mjs|jsx|ts|tsx)$/,

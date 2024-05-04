@@ -9,9 +9,9 @@
 #include "types/Config.h"
 #include "types/Values.h"
 
-const uint32_t MICROSECONDS_PER______SECOND = 1000000;
 const uint16_t MICROSECONDS_PER_MILLISECOND = 1000;
 const uint16_t MILLISECONDS_PER______SECOND = 1000;
+const uint32_t MICROSECONDS_PER______SECOND = MILLISECONDS_PER______SECOND * MICROSECONDS_PER_MILLISECOND;
 const uint8_t SECONDS_PER___________MINUTE = 60;
 const uint16_t SECONDS_PER_____________HOUR = SECONDS_PER___________MINUTE * 60;
 

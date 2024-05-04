@@ -8,11 +8,12 @@ body {
   bottom: 0;
   right: 0;
   left: 0;
-  padding: 12px;
+  padding: 10px;
 }
 
 
 @font-face {
-  font-family: "SimplyMono-Bold";
-  src: url("./fonts/smb.ttf");
+  font-family: "smb";
+  font-style: normal;
+  src: url("./fonts/smb.woff2");
 }

@@ -3,7 +3,7 @@ import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import SmartScreenIcon from '@mui/icons-material/SmartScreen';
 import Typography from '@mui/material/Typography';
 import { createRef, useEffect } from 'react';
-import { ICallProps } from './ICallProps';
+import { ICallProps } from '../types/ICallProps';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import DataArrayIcon from '@mui/icons-material/DataArray';
 

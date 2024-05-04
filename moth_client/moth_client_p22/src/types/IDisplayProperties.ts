@@ -1,10 +1,6 @@
+import { IDisplayProperty } from "./IDisplayProperty";
+
 export interface IDisplayProperties {
     label: string;
     props: IDisplayProperty[];
 }
-
-export interface IDisplayProperty {
-    value: number;
-    label: string;
-}
-

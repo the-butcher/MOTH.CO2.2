@@ -8,8 +8,8 @@ import TextField from '@mui/material/TextField';
 import { Stack } from '@mui/system';
 import { KeyboardEvent, useEffect, useState } from 'react';
 import ApiResponse from './ApiResponse';
-import { IApiProperties } from './IApiProperties';
-import { IResponseProps } from './IResponseProps';
+import { IApiProperties } from '../types/IApiProperties';
+import { IResponseProps } from '../types/IResponseProps';
 
 
 const ApiDatcsv = (props: IApiProperties) => {

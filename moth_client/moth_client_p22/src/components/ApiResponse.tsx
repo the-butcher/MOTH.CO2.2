@@ -5,7 +5,7 @@ import QueryBuilderIcon from '@mui/icons-material/QueryBuilder';
 import SmartScreenIcon from '@mui/icons-material/SmartScreen';
 import Typography from '@mui/material/Typography';
 import { useEffect } from 'react';
-import { IResponseProps } from './IResponseProps';
+import { IResponseProps } from '../types/IResponseProps';
 
 const ApiResponse = (props: IResponseProps) => {
 

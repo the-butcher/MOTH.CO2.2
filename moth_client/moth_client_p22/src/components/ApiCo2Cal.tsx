@@ -11,10 +11,10 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { Stack } from '@mui/system';
 import { KeyboardEvent, useEffect, useState } from 'react';
-import { IApiProperties } from './IApiProperties';
+import { IApiProperties } from '../types/IApiProperties';
 
 import ApiResponse from './ApiResponse';
-import { IResponseProps } from './IResponseProps';
+import { IResponseProps } from '../types/IResponseProps';
 
 const ApiCo2Cal = (props: IApiProperties) => {
 

@@ -6,10 +6,11 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import Card from '@mui/material/Card';
 import { Stack } from '@mui/system';
 import { useEffect, useState } from 'react';
-import { IDisplayProperties, IDisplayProperty } from '../util/IDisplayProperties';
+import { IDisplayProperties } from '../types/IDisplayProperties';
 import ApiResponse from './ApiResponse';
-import { IApiProperties } from './IApiProperties';
-import { IResponseProps } from './IResponseProps';
+import { IApiProperties } from '../types/IApiProperties';
+import { IResponseProps } from '../types/IResponseProps';
+import { IDisplayProperty } from '../types/IDisplayProperty';
 
 /**
  * - state (table|chart)

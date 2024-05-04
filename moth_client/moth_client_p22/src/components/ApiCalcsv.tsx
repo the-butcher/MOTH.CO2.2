@@ -14,8 +14,8 @@ import { useEffect, useState } from 'react';
 import { ByteLoader } from '../util/ByteLoader';
 import { TimeUtil } from '../util/TimeUtil';
 import ApiResponse from './ApiResponse';
-import { IApiProperties } from './IApiProperties';
-import { IResponseProps } from './IResponseProps';
+import { IApiProperties } from '../types/IApiProperties';
+import { IResponseProps } from '../types/IResponseProps';
 
 
 const ApiCalcsv = (props: IApiProperties) => {
