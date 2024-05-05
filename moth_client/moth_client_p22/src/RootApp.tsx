@@ -1,14 +1,14 @@
 import ShowChartIcon from '@mui/icons-material/ShowChart';
-import TuneIcon from '@mui/icons-material/Tune';
 import TocIcon from '@mui/icons-material/Toc';
+import TuneIcon from '@mui/icons-material/Tune';
 import { CssBaseline, IconButton, Paper, Stack, ThemeProvider } from '@mui/material';
 import { useEffect, useState } from 'react';
 import './App.css';
 import TabConfig from './components/TabConfig';
 import TabServer from './components/TabServer';
 import TabValues from './components/TabValues';
-import { ThemeUtil } from './util/ThemeUtil';
 import { ITabProperties } from './types/ITabProperties';
+import { ThemeUtil } from './util/ThemeUtil';
 
 const RootApp = () => {
 
@@ -67,14 +67,14 @@ const RootApp = () => {
     <ThemeProvider theme={ThemeUtil.createTheme()}>
       <CssBaseline />
       <Stack direction={'row'} spacing={0} sx={{ height: '100%' }}>
-        <Paper elevation={3} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', marginTop: '5px', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}>
-          <IconButton aria-label="values" onClick={() => setValue('values')}>
+        <Paper elevation={4} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', marginTop: '5px', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}>
+          <IconButton size='small' aria-label="values" onClick={() => setValue('values')}>
             <ShowChartIcon />
           </IconButton>
-          <IconButton aria-label="config" onClick={() => setValue('config')}>
+          <IconButton size='small' aria-label="config" onClick={() => setValue('config')}>
             <TuneIcon />
           </IconButton>
-          <IconButton aria-label="api" onClick={() => setValue('api')}>
+          <IconButton size='small' aria-label="api" onClick={() => setValue('api')}>
             <TocIcon />
           </IconButton>
         </Paper>

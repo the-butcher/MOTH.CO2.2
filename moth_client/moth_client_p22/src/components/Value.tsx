@@ -23,13 +23,13 @@ const Value = (props: IValueProps) => {
             onMouseUp={handleMouseOver}
             onMouseOver={handleMouseOver}
             onMouseOut={handleMouseOut}
-            elevation={elevation}
-            sx={{ cursor: 'pointer', flexGrow: props.grow, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '5px', padding: '5px 10px 2px 5px', height: '48px', alignItems: 'center', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}
+            elevation={props.active ? elevation : elevation + 2}
+            sx={{ cursor: 'pointer', flexGrow: props.grow, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '5px', padding: '4px 6px 2px 5px', height: '36px', alignItems: 'center', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}
         >
-            <Avatar sx={{ verticalAlign: 'middle', margin: '0px 10px 4px 0px', width: '38px', height: '38px' }} >
+            <Avatar sx={{ verticalAlign: 'middle', margin: '0px 10px 4px 0px', width: '26px', height: '26px' }} >
                 {props.icon}
             </Avatar>
-            <div style={{ display: 'flex', fontSize: '20px', alignItems: 'baseline' }}>
+            <div style={{ display: 'flex', fontSize: '0.8em', alignItems: 'baseline' }}>
                 <span style={{ fontSize: '1.3em' }}>{props.value}</span>
                 <span>&nbsp;{props.unit}</span>
             </div>

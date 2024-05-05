@@ -3,5 +3,6 @@ export interface IValueProps {
     unit: string;
     grow: string;
     icon: JSX.Element;
+    active: boolean;
     handleClick: () => void;
 }

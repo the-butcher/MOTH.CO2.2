@@ -1,15 +1,18 @@
 import Co2Icon from '@mui/icons-material/Co2';
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat';
+import ImageIcon from '@mui/icons-material/Image';
 import SpeedIcon from '@mui/icons-material/Speed';
+import TableRowsIcon from '@mui/icons-material/TableRows';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
-import { Stack } from '@mui/material';
+import { IconButton, Stack } from '@mui/material';
+import { axisClasses } from '@mui/x-charts/ChartsAxis';
 import { LineChart } from '@mui/x-charts/LineChart';
 import { DateTimePicker, renderDateViewCalendar, renderTimeViewClock } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import moment from 'moment';
 import 'moment/locale/de';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ILatest } from '../types/ILatest';
 import { IRecord, TRecordKey } from '../types/IRecord';
 import { ISeriesDef } from '../types/ISeriesDef';
@@ -17,6 +20,7 @@ import { ITabProperties, TOrientation } from '../types/ITabProperties';
 import { ByteLoader } from '../util/ByteLoader';
 import { JsonLoader } from '../util/JsonLoader';
 import { TimeUtil } from '../util/TimeUtil';
+
 import Value from './Value';
 
 const COLOR_G = '#0ec600';
@@ -25,24 +29,25 @@ const COLOR_R = '#e20e00';
 
 const seriesDefs: { [K in TRecordKey]: ISeriesDef } = {
   instant: {
-    dataKey: 'instant',
+    id: 'instant',
     label: 'time',
-    valueFormatter: value => value ? value.toString() : 'NA'
+    valueFormatter: value => Number.isFinite(value) ? value.toString() : 'NA'
   },
   co2Lpf: {
-    dataKey: 'co2Lpf',
+    id: 'co2Lpf',
     label: 'CO₂ ppm (filtered)',
-    valueFormatter: value => value ? value.toFixed(0) : 'NA',
+    valueFormatter: value => Number.isFinite(value) ? value.toFixed(0) : 'NA',
     colorMap: {
       type: 'piecewise',
       thresholds: [800, 1000],
       colors: [COLOR_G, COLOR_Y, COLOR_R]
-    }
+    },
+    min: 0
   },
   deg: {
-    dataKey: 'deg',
+    id: 'deg',
     label: 'Temperature °C',
-    valueFormatter: value => value.toFixed(1),
+    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
     colorMap: {
       type: 'piecewise',
       thresholds: [14, 19, 25, 30],
@@ -50,9 +55,9 @@ const seriesDefs: { [K in TRecordKey]: ISeriesDef } = {
     }
   },
   hum: {
-    dataKey: 'hum',
+    id: 'hum',
     label: 'Humidity %RH',
-    valueFormatter: value => value.toFixed(1),
+    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
     colorMap: {
       type: 'piecewise',
       thresholds: [25, 30, 60, 65],
@@ -60,25 +65,26 @@ const seriesDefs: { [K in TRecordKey]: ISeriesDef } = {
     }
   },
   co2Raw: {
-    dataKey: 'co2Lpf',
+    id: 'co2Lpf',
     label: 'CO₂ ppm (filtered)',
-    valueFormatter: value => value.toFixed(0),
+    valueFormatter: value => Number.isFinite(value) ? value.toFixed(0) : 'NA',
     colorMap: {
       type: 'continuous',
       min: 600,
       max: 1000,
       color: ['green', 'red']
-    }
+    },
+    min: 0
   },
   hpa: {
-    dataKey: 'hpa',
+    id: 'hpa',
     label: 'Pressure hPa',
-    valueFormatter: value => value.toFixed(1),
+    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
   },
   bat: {
-    dataKey: 'bat',
+    id: 'bat',
     label: 'Battery %',
-    valueFormatter: value => value.toFixed(1),
+    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
   }
 }
 
@@ -102,35 +108,58 @@ const TabValues = (props: ITabProperties) => {
   const [records, setRecords] = useState<IRecord[]>([]);
   const [seriesDef, setSeriesDef] = useState<ISeriesDef>(seriesDefs.co2Lpf);
 
-  let latestTo: number = -1;
-  const getLatestValues = () => {
+  let latestToRef = useRef<number>(-1);
 
+  const getLatestValues = () => {
     new JsonLoader().load(`${boxUrl}/latest`).then((_latest: ILatest) => {
       setLatest(_latest);
-      const seconds = (Date.now() / 1000) % 60;
-      const secwait = 70 - seconds;
-      window.clearTimeout(latestTo);
-      latestTo = window.setTimeout(() => {
-        getLatestValues();
-      }, secwait * 1000);
-      // TODO :: think about recovery in case of stray error
+    }).catch(e => {
+      console.log('e', e);
+    });
+  }
+
+  const loadDateRange = () => {
+
+    TimeUtil.collectYears(boxUrl).then(_dateRange => {
+      const dateMaxMisc = new Date(); // new Date(_dateRange[1].getTime() + TimeUtil.MILLISECONDS_PER_HOUR * 23 + TimeUtil.MILLISECONDS_PER_MINUTE * 59);
+      const dateMinData = _dateRange[0];
+      const dateMinUser = _dateRange[1];
+      setDateRangeData([dateMinData, dateMaxMisc]);
+      setDateRangeUser([dateMinUser, dateMaxMisc]);
     }).catch(e => {
       console.log('e', e);
     });
 
   }
 
-  const getDateRange = () => {
+  const loadRecords = () => {
 
-    TimeUtil.collectYears(boxUrl).then(_dateRange => {
+    const minInstant = dateRangeUser[0].getTime(); // + TimeUtil.MILLISECONDS_PER_HOUR * 6;
+    const maxInstant = dateRangeUser[1].getTime(); // + TimeUtil.MILLISECONDS_PER_HOUR * 18;
 
-      const dateMaxMisc = new Date(_dateRange[1].getTime() + TimeUtil.MILLISECONDS_PER_HOUR * 23 + TimeUtil.MILLISECONDS_PER_MINUTE * 59);
-      const dateMinData = _dateRange[0];
-      const dateMinUser = _dateRange[1];
-      setDateRangeData([dateMinData, dateMaxMisc]);
-      setDateRangeUser([dateMinUser, dateMaxMisc]);
+    const curDate = new Date();
+    const urlset = new Set<string>();
+    const pushInstant = (instant: number) => {
+      const urlDate = new Date(instant);
+      const url = `${boxUrl}/datout?file=${urlDate.getFullYear()}/${String(urlDate.getMonth() + 1).padStart(2, '0')}/${TimeUtil.toUTCDate(urlDate)}.dat`;
+      // console.log('urlDate', urlDate, url);
+      urlset.add(url);
+      if (TimeUtil.toLocalDate(urlDate.getTime()) === TimeUtil.toLocalDate(curDate.getTime())) {
+        urlset.add(`${boxUrl}/valout`);
+      }
+    };
+    for (let instant = minInstant; instant < maxInstant; instant += TimeUtil.MILLISECONDS_PER__DAY) {
+      pushInstant(instant);
+    }
+    pushInstant(maxInstant);
+
+    // console.log('urlset', urlset);
+
+    new ByteLoader().loadAll(Array.from(urlset)).then(_records => {
+      _records = _records.filter(r => r.instant >= minInstant && r.instant <= maxInstant);
+      setRecords(_records);
     }).catch(e => {
-      console.log(e);
+      console.log('e', e);
     });
 
   }
@@ -143,29 +172,35 @@ const TabValues = (props: ITabProperties) => {
 
   useEffect(() => {
 
-    console.debug(`⚙ updating tab values component (dateRangeUser)`, dateRangeUser);
+    console.debug(`⚙ updating tab values component (latest)`, latest);
 
-    const minInstant = dateRangeUser[0].getTime(); // + TimeUtil.MILLISECONDS_PER_HOUR * 6;
-    const maxInstant = dateRangeUser[1].getTime(); // + TimeUtil.MILLISECONDS_PER_HOUR * 18;
-
-    let urlDate: Date;
-    const curDate = new Date();
-    let urls: string[] = [];
-    for (let instant = minInstant; instant <= maxInstant; instant += TimeUtil.MILLISECONDS_PER__DAY) {
-      urlDate = new Date(instant);
-      console.log('urlDate', urlDate);
-      urls.push(`${boxUrl}/datout?file=${urlDate.getFullYear()}/${String(urlDate.getMonth() + 1).padStart(2, '0')}/${TimeUtil.toUTCDate(urlDate)}.dat`);
-      if (TimeUtil.toLocalDate(urlDate.getTime()) === TimeUtil.toLocalDate(curDate.getTime())) {
-        urls.push(`${boxUrl}/valout`);
-      }
+    setDateRangeData([dateRangeData[0], new Date()]);
+    // if the user range is close to "now" adjust user range to include the newest records
+    if (Math.abs(dateRangeUser[1].getTime() - new Date().getTime()) <= TimeUtil.MILLISECONDS_PER_MINUTE * 5) {
+      setDateRangeUser([dateRangeUser[0], new Date()]);
     }
 
-    console.log('urls', urls);
+    const seconds = (Date.now() / 1000) % 60;
+    const secwait = 70 - seconds;
+    window.clearTimeout(latestToRef.current);
+    latestToRef.current = window.setTimeout(() => getLatestValues(), secwait * 1000);
 
-    new ByteLoader().loadAll(urls).then(_records => {
-      _records = _records.filter(r => r.instant >= minInstant && r.instant <= maxInstant);
-      setRecords(_records);
-    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latest]);
+
+  useEffect(() => {
+
+    console.debug(`⚙ updating tab values component (dateRangeUser)`, dateRangeUser);
+
+    if (dateRangeUser) {
+
+      if (latest.time === '') {
+        getLatestValues();
+      }
+      loadRecords();
+
+    }
+
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRangeUser]);
@@ -175,128 +210,181 @@ const TabValues = (props: ITabProperties) => {
     console.debug('✨ building tab values component');
 
     window.addEventListener('resize', handleResize);
-
     handleResize();
-    getLatestValues();
-    getDateRange();
+
+    // getLatestValues();
+    loadDateRange();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const customize = {
-    legend: { hidden: true },
-    margin: { top: 25, right: 25, bottom: 25, left: 55 }
-  };
+
 
   const handleValueClick = (value: TRecordKey) => {
     setSeriesDef(seriesDefs[value]);
   }
 
   const handleDateMinChanged = (value: moment.Moment) => {
+
+    console.debug(`📞 handling date min change`, value);
+
     const dateMin = new Date(value.year(), value.month(), value.date(), value.hour(), value.minute());
     setDateRangeUser([dateMin, dateRangeUser[1]]);
+
   };
 
   const handleDateMaxChanged = (value: moment.Moment) => {
+
+    console.debug(`📞 handling date max change`, value);
+
     const dateMax = new Date(value.year(), value.month(), value.date(), value.hour(), value.minute());
     setDateRangeUser([dateRangeUser[0], dateMax]);
+
+  };
+
+  const customize = {
+    legend: { hidden: true },
   };
 
   return (
-    <Stack spacing={0} sx={{ padding: '0px', flexGrow: 10, display: 'flex' }}>
-      <LocalizationProvider dateAdapter={AdapterMoment}>
-        <div id="valuebar" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '0px', flexGrow: 10 }}>
-          <Value
-            icon={<Co2Icon />}
-            value={latest.co2_lpf.toFixed(0)}
-            unit='ppm'
-            grow='1'
-            handleClick={() => handleValueClick('co2Lpf')}
-          ></Value>
-          <Value
-            icon={<DeviceThermostatIcon />}
-            value={latest.deg.toFixed(1)}
-            unit='°C'
-            grow='1'
-            handleClick={() => handleValueClick('deg')}
-          ></Value>
-          <Value
-            icon={<WaterDropIcon />}
-            value={latest.hum.toFixed(1)}
-            unit='%'
-            grow='1'
-            handleClick={() => handleValueClick('hum')}
-          ></Value>
-          <Value
-            icon={<SpeedIcon />}
-            value={latest.hpa.toFixed(1)}
-            unit='hPa'
-            grow='1'
-            handleClick={() => handleValueClick('hpa')}
-          ></Value>
-        </div>
+    <>
+      <Stack spacing={1} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', left: '14px', top: '170px' }}>
+        <IconButton
+          sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
+          aria-label="export csv"
+          size='small'
+        >
+          <TableRowsIcon sx={{ fontSize: '1.0em' }} />
+        </IconButton>
+        <IconButton
+          sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
+          aria-label="export png"
+          size='small'
+        >
+          <ImageIcon sx={{ fontSize: '1.0em' }} />
+        </IconButton>
+      </Stack>
+      <Stack spacing={0} sx={{ padding: '0px', flexGrow: 10, display: 'flex' }}>
 
-        {/* <div style={{ width: '100%', flexGrow: 1000, backgroundColor: 'red', display: 'flex', flexDirection: 'column' }}> */}
-        <Stack direction={'column'} spacing={2} sx={{ flexGrow: 1000 }}>
-          <LineChart
-            height={height}
-            xAxis={[{
-              dataKey: 'instant',
-              valueFormatter: (instant) => TimeUtil.toLocalTime(instant),
-              min: dateRangeUser[0],
-              max: dateRangeUser[1]
-            }]}
-            yAxis={[{
-              colorMap: seriesDef.colorMap,
-              valueFormatter: seriesDef.valueFormatter
-            }]}
-            series={[{
-              dataKey: seriesDef.dataKey,
-              label: seriesDef.label,
-              showMark: false,
-              type: 'line',
-              curve: 'linear',
-              valueFormatter: seriesDef.valueFormatter
-            }]}
-            dataset={records}
-            {...customize}
-          />
-          <Stack direction={'row'} spacing={0} sx={{ flexGrow: 10 }}>
-            {orientation === 'landscape' ? <div style={{ width: '50px' }}></div> : null}
-            <DateTimePicker
-              value={moment(dateRangeUser[0])}
-              minDateTime={moment(dateRangeData[0])} // lowest possible value
-              maxDateTime={moment(dateRangeUser[1])}
-              onAccept={(newValue) => handleDateMinChanged(newValue)}
-              label="from"
-              orientation={orientation}
-              desktopModeMediaQuery='(min-width:300px)'
-              viewRenderers={{
-                hours: renderTimeViewClock,
-                minutes: renderTimeViewClock
+        <LocalizationProvider dateAdapter={AdapterMoment}>
+          <div id="valuebar" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '0px', flexGrow: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', flexGrow: 10 }}>
+              <Value
+                icon={<Co2Icon sx={{ fontSize: '0.8em' }} />}
+                value={latest.co2_lpf.toFixed(0)}
+                unit='ppm'
+                grow='5'
+                active={seriesDef.id === 'co2Lpf'}
+                handleClick={() => handleValueClick('co2Lpf')}
+              ></Value>
+              <Value
+                icon={<DeviceThermostatIcon sx={{ fontSize: '0.8em' }} />}
+                value={latest.deg.toFixed(1)}
+                unit='°C'
+                grow='5'
+                active={seriesDef.id === 'deg'}
+                handleClick={() => handleValueClick('deg')}
+              ></Value>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', flexGrow: 10 }}>
+              <Value
+                icon={<WaterDropIcon sx={{ fontSize: '0.8em' }} />}
+                value={latest.hum.toFixed(1)}
+                unit='%'
+                grow='5'
+                active={seriesDef.id === 'hum'}
+                handleClick={() => handleValueClick('hum')}
+              ></Value>
+              <Value
+                icon={<SpeedIcon sx={{ fontSize: '0.8em' }} />}
+                value={latest.hpa.toFixed(1)}
+                unit='hPa'
+                grow='5'
+                active={seriesDef.id === 'hpa'}
+                handleClick={() => handleValueClick('hpa')}
+              ></Value>
+              {/* <Value
+              icon={<BatteryStdIcon />}
+              value={latest.bat.toFixed(1)}
+              unit='%'
+              grow='5'
+              handleClick={() => handleValueClick('bat')}
+            ></Value> */}
+            </div>
+          </div>
+          <Stack direction={'column'} spacing={2} sx={{ flexGrow: 1000 }}>
+            <LineChart
+              height={height}
+              xAxis={[{
+                dataKey: 'instant',
+                valueFormatter: (instant) => TimeUtil.toLocalTime(instant),
+                min: records.length > 0 ? (records[0].instant - TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
+                max: records.length > 0 ? (records[records.length - 1].instant + TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
+                label: 'time'
+              }]}
+              yAxis={[{
+                colorMap: seriesDef.colorMap,
+                valueFormatter: seriesDef.valueFormatter,
+                min: seriesDef.min,
+                label: `${seriesDef.label}`
+              }]}
+              series={[{
+                dataKey: seriesDef.id,
+                label: seriesDef.label,
+                showMark: false,
+                type: 'line',
+                curve: 'linear',
+                valueFormatter: seriesDef.valueFormatter
+              }]}
+              dataset={records}
+              grid={{ vertical: true, horizontal: true }}
+              margin={{ top: 15, right: 25, bottom: 40, left: 60 }}
+              sx={{
+                [`& .${axisClasses.left} .${axisClasses.label}`]: {
+                  transform: 'translateX(-20px)',
+                },
               }}
-              sx={{ maxWidth: '300px', marginRight: '5px' }}
-            />
-            <div style={{ flexGrow: 15 }}></div>
-            <DateTimePicker
-              value={moment(dateRangeUser[1])}
-              minDateTime={moment(dateRangeUser[0])}
-              maxDateTime={moment(dateRangeData[1])} // highest possible value
-              onAccept={(newValue) => handleDateMaxChanged(newValue)}
-              label="to"
-              orientation={orientation}
-              desktopModeMediaQuery='(min-width:300px)'
-              viewRenderers={{
-                day: renderDateViewCalendar,
-                hours: renderTimeViewClock,
-                minutes: renderTimeViewClock
+              {...{
+                legend: { hidden: true }
               }}
-              sx={{ maxWidth: '300px', marginLeft: '5px' }}
             />
-            {orientation === 'landscape' ? <div style={{ width: '10px' }}></div> : null}
+            <Stack direction={'row'} spacing={0} sx={{ flexGrow: 10 }}>
+              {orientation === 'landscape' ? <div style={{ width: '50px' }}></div> : null}
+              <DateTimePicker
+                value={moment(dateRangeUser[0])}
+                minDateTime={moment(dateRangeData[0])} // lowest possible value
+                maxDateTime={moment(dateRangeUser[1])}
+                onAccept={(newValue) => handleDateMinChanged(newValue)}
+                label="from"
+                orientation={orientation}
+                desktopModeMediaQuery='(min-width:300px)'
+                viewRenderers={{
+                  hours: renderTimeViewClock,
+                  minutes: renderTimeViewClock
+                }}
+                sx={{ maxWidth: '300px', marginRight: '5px' }}
+              />
+              <div style={{ flexGrow: 15 }}></div>
+              <DateTimePicker
+                value={moment(dateRangeUser[1])}
+                minDateTime={moment(dateRangeUser[0])}
+                maxDateTime={moment(dateRangeData[1])} // highest possible value
+                onAccept={(newValue) => handleDateMaxChanged(newValue)}
+                label="to"
+                orientation={orientation}
+                desktopModeMediaQuery='(min-width:300px)'
+                viewRenderers={{
+                  day: renderDateViewCalendar,
+                  hours: renderTimeViewClock,
+                  minutes: renderTimeViewClock
+                }}
+                sx={{ maxWidth: '300px', marginLeft: '5px' }}
+              />
+              {orientation === 'landscape' ? <div style={{ width: '10px' }}></div> : null}
+            </Stack>
+
           </Stack>
-        </Stack>
-        {/* <Stack spacing={0} sx={{ minHeight: '48px', flexDirection: 'row', alignItems: 'center' }}>
+          {/* <Stack spacing={0} sx={{ minHeight: '48px', flexDirection: 'row', alignItems: 'center' }}>
         <Typography sx={{ flexGrow: 100, padding: '5px' }}>{boxUrl}</Typography>
         <Value
           icon={<BatteryStdIcon />}
@@ -305,8 +393,9 @@ const TabValues = (props: ITabProperties) => {
           grow='1'
         ></Value>
       </Stack> */}
-      </LocalizationProvider>
-    </Stack >
+        </LocalizationProvider>
+      </Stack >
+    </>
   );
 
 };
