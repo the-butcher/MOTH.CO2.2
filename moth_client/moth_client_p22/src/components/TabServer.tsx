@@ -14,9 +14,9 @@ import ApiUpdate from './ApiUpdate';
 import ApiUpload from './ApiUpload';
 import { IApiCall } from '../types/IApiCall';
 import { IApiProperties } from '../types/IApiProperties';
-import { ITabProperties } from '../types/ITabProperties';
+import { ITabProps } from '../types/ITabProps';
 
-const TabServer = (props: ITabProperties) => {
+const TabServer = (props: ITabProps) => {
 
   const { boxUrl } = { ...props };
 

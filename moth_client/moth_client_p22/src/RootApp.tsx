@@ -2,12 +2,13 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TocIcon from '@mui/icons-material/Toc';
 import TuneIcon from '@mui/icons-material/Tune';
 import { CssBaseline, IconButton, Paper, Stack, ThemeProvider } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import TabConfig from './components/TabConfig';
 import TabServer from './components/TabServer';
 import TabValues from './components/TabValues';
-import { ITabProperties } from './types/ITabProperties';
+import { SERIES_DEFS } from './types/ISeriesDef';
+import { ITabValuesProps } from './types/ITabValuesProps';
 import { ThemeUtil } from './util/ThemeUtil';
 
 const RootApp = () => {
@@ -22,11 +23,38 @@ const RootApp = () => {
    * TODO :: create form around device configuration (display, wifi, mqtt) and implement reassembly of those values for re-upload to device
    */
 
-  const [tabProps] = useState<ITabProperties>({
-    boxUrl
-  });
-  const [value, setValue] = useState('values');
+  const [value, setValue] = useState<string>('values');
 
+  const tabValuesUpdate = (updates: Partial<ITabValuesProps>) => {
+
+    console.debug(`📞 handling tab values update`, updates);
+
+    tabValuesPropsRef.current = {
+      ...tabValuesPropsRef.current,
+      ...updates
+    };
+    setTabValuesProps(tabValuesPropsRef.current);
+
+  };
+
+  const tabValuesPropsRef = useRef<ITabValuesProps>({
+    boxUrl,
+    dateRangeData: [new Date(), new Date()],
+    dateRangeUser: [new Date(), new Date()],
+    latest: {
+      time: '',
+      co2_lpf: 0,
+      deg: 0,
+      hum: 0,
+      co2_raw: 0,
+      hpa: 0,
+      bat: 0
+    },
+    records: [],
+    seriesDef: SERIES_DEFS.co2Lpf,
+    handleUpdate: tabValuesUpdate
+  })
+  const [tabValuesProps, setTabValuesProps] = useState<ITabValuesProps>(tabValuesPropsRef.current);
 
   useEffect(() => {
     console.debug('✨ building root component');
@@ -79,14 +107,10 @@ const RootApp = () => {
           </IconButton>
         </Paper>
         <div style={{ minWidth: '45px' }}></div>
+        <TabValues {...tabValuesProps} style={{ display: value === 'values' ? 'block' : 'none' }} />
+        <TabConfig boxUrl={boxUrl} style={{ display: value === 'config' ? 'block' : 'none' }} />
         {
-          value === 'values' ? <TabValues {...tabProps} /> : null
-        }
-        {
-          value === 'config' ? <TabConfig {...tabProps} /> : null
-        }
-        {
-          value === 'api' ? <TabServer {...tabProps} /> : null
+          value === 'api' ? <TabServer boxUrl={boxUrl} /> : null
         }
       </Stack >
     </ThemeProvider >

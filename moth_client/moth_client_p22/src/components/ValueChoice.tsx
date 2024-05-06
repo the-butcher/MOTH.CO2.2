@@ -1,10 +1,8 @@
 import { Avatar, Paper } from '@mui/material';
-import { IValueProps } from '../types/IValueProps';
+import { IValueChoiceProps } from '../types/IValueChoiceProps';
 import { useState } from 'react';
 
-const Value = (props: IValueProps) => {
-
-    // const { value, unit, grow, icon } = { ...props };
+const ValueChoice = (props: IValueChoiceProps) => {
 
     const [elevation, setElevation] = useState<number>(1);
 
@@ -38,4 +36,4 @@ const Value = (props: IValueProps) => {
 
 };
 
-export default Value;
+export default ValueChoice;

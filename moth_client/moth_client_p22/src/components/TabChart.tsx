@@ -15,7 +15,7 @@ import { ByteLoader } from '../util/ByteLoader';
 import { IChartProperty } from '../types/IChartProperty';
 import { IRecord } from '../types/IRecord';
 import { TimeUtil } from '../util/TimeUtil';
-import { ITabProperties } from '../types/ITabProperties';
+import { ITabProps } from '../types/ITabProps';
 
 const propertyLookup: { [K in string]: IChartProperty } = {
   'co2Lpf': {
@@ -123,7 +123,7 @@ const propertyLookup: { [K in string]: IChartProperty } = {
 }
 
 
-const TabChart = (props: ITabProperties) => {
+const TabChart = (props: ITabProps) => {
 
   const { boxUrl } = { ...props };
 

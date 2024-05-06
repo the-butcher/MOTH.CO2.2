@@ -12,107 +12,39 @@ import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import moment from 'moment';
 import 'moment/locale/de';
-import { useEffect, useRef, useState } from 'react';
+import { createRef, useEffect, useRef, useState } from 'react';
 import { ILatest } from '../types/ILatest';
-import { IRecord, TRecordKey } from '../types/IRecord';
-import { ISeriesDef } from '../types/ISeriesDef';
-import { ITabProperties, TOrientation } from '../types/ITabProperties';
+import { TRecordKey } from '../types/IRecord';
+import { TOrientation } from '../types/ITabProps';
 import { ByteLoader } from '../util/ByteLoader';
 import { JsonLoader } from '../util/JsonLoader';
 import { TimeUtil } from '../util/TimeUtil';
 
-import Value from './Value';
+import { ITabValuesProps } from '../types/ITabValuesProps';
+import ValueChoice from './ValueChoice';
+import { SERIES_DEFS } from '../types/ISeriesDef';
 
-const COLOR_G = '#0ec600';
-const COLOR_Y = '#c9b800';
-const COLOR_R = '#e20e00';
+// const DIV_ID_VALUES = 'valuediv';
 
-const seriesDefs: { [K in TRecordKey]: ISeriesDef } = {
-  instant: {
-    id: 'instant',
-    label: 'time',
-    valueFormatter: value => Number.isFinite(value) ? value.toString() : 'NA'
-  },
-  co2Lpf: {
-    id: 'co2Lpf',
-    label: 'CO₂ ppm (filtered)',
-    valueFormatter: value => Number.isFinite(value) ? value.toFixed(0) : 'NA',
-    colorMap: {
-      type: 'piecewise',
-      thresholds: [800, 1000],
-      colors: [COLOR_G, COLOR_Y, COLOR_R]
-    },
-    min: 0
-  },
-  deg: {
-    id: 'deg',
-    label: 'Temperature °C',
-    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
-    colorMap: {
-      type: 'piecewise',
-      thresholds: [14, 19, 25, 30],
-      colors: [COLOR_R, COLOR_Y, COLOR_G, COLOR_Y, COLOR_R]
-    }
-  },
-  hum: {
-    id: 'hum',
-    label: 'Humidity %RH',
-    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
-    colorMap: {
-      type: 'piecewise',
-      thresholds: [25, 30, 60, 65],
-      colors: [COLOR_R, COLOR_Y, COLOR_G, COLOR_Y, COLOR_R]
-    }
-  },
-  co2Raw: {
-    id: 'co2Lpf',
-    label: 'CO₂ ppm (filtered)',
-    valueFormatter: value => Number.isFinite(value) ? value.toFixed(0) : 'NA',
-    colorMap: {
-      type: 'continuous',
-      min: 600,
-      max: 1000,
-      color: ['green', 'red']
-    },
-    min: 0
-  },
-  hpa: {
-    id: 'hpa',
-    label: 'Pressure hPa',
-    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
-  },
-  bat: {
-    id: 'bat',
-    label: 'Battery %',
-    valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
-  }
-}
 
-const TabValues = (props: ITabProperties) => {
+const TabValues = (props: ITabValuesProps) => {
 
-  const { boxUrl } = { ...props };
+  const { boxUrl, latest, dateRangeData, dateRangeUser, records, seriesDef, handleUpdate } = { ...props };
 
   const [orientation, setOrientation] = useState<TOrientation>('landscape');
   const [height, setHeight] = useState<number>(400);
-  const [latest, setLatest] = useState<ILatest>({
-    time: '',
-    co2_lpf: 0,
-    deg: 0,
-    hum: 0,
-    co2_raw: 0,
-    hpa: 0,
-    bat: 0
-  });
-  const [dateRangeData, setDateRangeData] = useState<[Date, Date]>([new Date(), new Date()]);
-  const [dateRangeUser, setDateRangeUser] = useState<[Date, Date]>([new Date(), new Date()]);
-  const [records, setRecords] = useState<IRecord[]>([]);
-  const [seriesDef, setSeriesDef] = useState<ISeriesDef>(seriesDefs.co2Lpf);
+  const [resizeCount, setResizeCount] = useState<number>();
 
-  let latestToRef = useRef<number>(-1);
+  const latestToRef = useRef<number>(-1);
+
+  const chartRef = createRef<SVGElement>();
+  const valueRef = createRef<HTMLDivElement>();
 
   const getLatestValues = () => {
-    new JsonLoader().load(`${boxUrl}/latest`).then((_latest: ILatest) => {
-      setLatest(_latest);
+    new JsonLoader().load(`${boxUrl}/latest`).then((latest: ILatest) => {
+      handleUpdate({
+        latest
+      });
     }).catch(e => {
       console.log('e', e);
     });
@@ -121,11 +53,13 @@ const TabValues = (props: ITabProperties) => {
   const loadDateRange = () => {
 
     TimeUtil.collectYears(boxUrl).then(_dateRange => {
-      const dateMaxMisc = new Date(); // new Date(_dateRange[1].getTime() + TimeUtil.MILLISECONDS_PER_HOUR * 23 + TimeUtil.MILLISECONDS_PER_MINUTE * 59);
+      const dateMaxMisc = new Date();
       const dateMinData = _dateRange[0];
       const dateMinUser = _dateRange[1];
-      setDateRangeData([dateMinData, dateMaxMisc]);
-      setDateRangeUser([dateMinUser, dateMaxMisc]);
+      handleUpdate({
+        dateRangeData: [dateMinData, dateMaxMisc],
+        dateRangeUser: [dateMinUser, dateMaxMisc]
+      });
     }).catch(e => {
       console.log('e', e);
     });
@@ -155,9 +89,11 @@ const TabValues = (props: ITabProperties) => {
 
     // console.log('urlset', urlset);
 
-    new ByteLoader().loadAll(Array.from(urlset)).then(_records => {
-      _records = _records.filter(r => r.instant >= minInstant && r.instant <= maxInstant);
-      setRecords(_records);
+    new ByteLoader().loadAll(Array.from(urlset)).then(records => {
+      records = records.filter(r => r.instant >= minInstant && r.instant <= maxInstant);
+      handleUpdate({
+        records
+      });
     }).catch(e => {
       console.log('e', e);
     });
@@ -165,20 +101,115 @@ const TabValues = (props: ITabProperties) => {
   }
 
   const handleResize = () => {
-    setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
-    const offY = 80 + document.getElementById('valuebar').getBoundingClientRect().height;
-    setHeight(window.innerHeight - offY);
+    setResizeCount(Math.random());
   }
+
+
+  /**
+   * https://gist.github.com/SunPj/14fe4f10db43be2d84751f5595d48246
+   * @param stylesheet
+   * @returns
+   */
+  const stringifyStylesheet = (stylesheet) => {
+    // @ts-ignore
+    const stringified = stylesheet.cssRules ? Array.from(stylesheet.cssRules).map(rule => rule.cssText || '').join('\n') : '';
+    return stringified;
+  }
+  const getStyles = () => {
+    return Array.from(document.styleSheets).map(s => stringifyStylesheet(s)).join("\n");
+  }
+  const getDefs = () => {
+    const styles = getStyles()
+    console.log('styles', styles);
+    return `<defs><style type="text/css"><![CDATA[${styles}]]></style></defs>`
+  }
+
+  const exportToPng = () => {
+
+    const chart = chartRef.current;
+    const defs = getDefs()
+    chart.insertAdjacentHTML("afterbegin", defs);
+
+    const chartOuterHTML = (new XMLSerializer()).serializeToString(chart);
+    const chartBlob = new Blob([chartOuterHTML], {
+      type: 'image/svg+xml;charset=utf-8'
+    });
+
+    console.log('chartOuterHTML', chartOuterHTML);
+
+    const { width, height } = chart.getBoundingClientRect();
+
+    // const chartClone: SVGElement = chart.cloneNode(true) as SVGElement;
+    // const chartOuterHTML = chartClone.outerHTML;
+    // const chartBlob = new Blob([chartOuterHTML], { type: 'image/svg+xml;charset=utf-8' });
+
+    // let URL = window.URL || window.webkitURL || window;
+    const chartBlobUrl = URL.createObjectURL(chartBlob);
+
+    const image = new Image();
+    image.onload = () => {
+
+      // https://dev.to/thehomelessdev/how-to-add-a-custom-font-to-an-html-canvas-1m3g
+      var fontDefinition = new FontFace('smb', 'url(/24aaf6d1f714bee11145.ttf)');
+      fontDefinition.load().then(fontInstance => {
+
+        console.log('fontInstance', fontInstance);
+        document.fonts.add(fontInstance);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext('2d');
+        context.font = '12px Consolas';
+        context.fillStyle = 'white';
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+
+        const pngUrl = canvas.toDataURL();
+        const link = document.createElement('a');
+        link.setAttribute('href', pngUrl);
+        link.setAttribute('download', "chart"); // TODO format more unique
+        link.click();
+
+      });
+
+
+
+    };
+    image.onerror = (e) => {
+      console.error('e', e);
+    };
+    image.src = chartBlobUrl;
+
+
+  }
+
+  useEffect(() => {
+
+    console.debug(`⚙ updating tab values component (resizeCount)`, resizeCount);
+
+    if (valueRef.current) {
+      setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+      const offY = 80 + valueRef.current.getBoundingClientRect().height;
+      setHeight(window.innerHeight - offY);
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resizeCount]);
 
   useEffect(() => {
 
     console.debug(`⚙ updating tab values component (latest)`, latest);
 
-    setDateRangeData([dateRangeData[0], new Date()]);
+    const updates: Partial<ITabValuesProps> = {
+      dateRangeData: [dateRangeData[0], new Date()]
+    };
     // if the user range is close to "now" adjust user range to include the newest records
     if (Math.abs(dateRangeUser[1].getTime() - new Date().getTime()) <= TimeUtil.MILLISECONDS_PER_MINUTE * 5) {
-      setDateRangeUser([dateRangeUser[0], new Date()]);
+      updates.dateRangeUser = [dateRangeUser[0], new Date()];
     }
+    handleUpdate(updates);
 
     const seconds = (Date.now() / 1000) % 60;
     const secwait = 70 - seconds;
@@ -193,14 +224,12 @@ const TabValues = (props: ITabProperties) => {
     console.debug(`⚙ updating tab values component (dateRangeUser)`, dateRangeUser);
 
     if (dateRangeUser) {
-
       if (latest.time === '') {
         getLatestValues();
       }
       loadRecords();
 
     }
-
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRangeUser]);
@@ -212,16 +241,15 @@ const TabValues = (props: ITabProperties) => {
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // getLatestValues();
     loadDateRange();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
-
   const handleValueClick = (value: TRecordKey) => {
-    setSeriesDef(seriesDefs[value]);
+    handleUpdate({
+      seriesDef: SERIES_DEFS[value]
+    });
   }
 
   const handleDateMinChanged = (value: moment.Moment) => {
@@ -229,7 +257,9 @@ const TabValues = (props: ITabProperties) => {
     console.debug(`📞 handling date min change`, value);
 
     const dateMin = new Date(value.year(), value.month(), value.date(), value.hour(), value.minute());
-    setDateRangeUser([dateMin, dateRangeUser[1]]);
+    handleUpdate({
+      dateRangeUser: [dateMin, dateRangeUser[1]]
+    })
 
   };
 
@@ -238,12 +268,10 @@ const TabValues = (props: ITabProperties) => {
     console.debug(`📞 handling date max change`, value);
 
     const dateMax = new Date(value.year(), value.month(), value.date(), value.hour(), value.minute());
-    setDateRangeUser([dateRangeUser[0], dateMax]);
+    handleUpdate({
+      dateRangeUser: [dateRangeUser[0], dateMax]
+    })
 
-  };
-
-  const customize = {
-    legend: { hidden: true },
   };
 
   return (
@@ -260,49 +288,49 @@ const TabValues = (props: ITabProperties) => {
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
           aria-label="export png"
           size='small'
+          onClick={exportToPng}
         >
           <ImageIcon sx={{ fontSize: '1.0em' }} />
         </IconButton>
       </Stack>
-      <Stack spacing={0} sx={{ padding: '0px', flexGrow: 10, display: 'flex' }}>
-
+      <Stack spacing={0} sx={{ padding: '0px', flexGrow: 10, display: 'flex', ...props.style }}>
         <LocalizationProvider dateAdapter={AdapterMoment}>
-          <div id="valuebar" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '0px', flexGrow: 10 }}>
+          <div ref={valueRef} style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '0px', flexGrow: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', flexGrow: 10 }}>
-              <Value
+              <ValueChoice
                 icon={<Co2Icon sx={{ fontSize: '0.8em' }} />}
                 value={latest.co2_lpf.toFixed(0)}
                 unit='ppm'
                 grow='5'
                 active={seriesDef.id === 'co2Lpf'}
                 handleClick={() => handleValueClick('co2Lpf')}
-              ></Value>
-              <Value
+              ></ValueChoice>
+              <ValueChoice
                 icon={<DeviceThermostatIcon sx={{ fontSize: '0.8em' }} />}
                 value={latest.deg.toFixed(1)}
                 unit='°C'
                 grow='5'
                 active={seriesDef.id === 'deg'}
                 handleClick={() => handleValueClick('deg')}
-              ></Value>
+              ></ValueChoice>
             </div>
             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', flexGrow: 10 }}>
-              <Value
+              <ValueChoice
                 icon={<WaterDropIcon sx={{ fontSize: '0.8em' }} />}
                 value={latest.hum.toFixed(1)}
                 unit='%'
                 grow='5'
                 active={seriesDef.id === 'hum'}
                 handleClick={() => handleValueClick('hum')}
-              ></Value>
-              <Value
+              ></ValueChoice>
+              <ValueChoice
                 icon={<SpeedIcon sx={{ fontSize: '0.8em' }} />}
                 value={latest.hpa.toFixed(1)}
                 unit='hPa'
                 grow='5'
                 active={seriesDef.id === 'hpa'}
                 handleClick={() => handleValueClick('hpa')}
-              ></Value>
+              ></ValueChoice>
               {/* <Value
               icon={<BatteryStdIcon />}
               value={latest.bat.toFixed(1)}
@@ -313,41 +341,44 @@ const TabValues = (props: ITabProperties) => {
             </div>
           </div>
           <Stack direction={'column'} spacing={2} sx={{ flexGrow: 1000 }}>
-            <LineChart
-              height={height}
-              xAxis={[{
-                dataKey: 'instant',
-                valueFormatter: (instant) => TimeUtil.toLocalTime(instant),
-                min: records.length > 0 ? (records[0].instant - TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
-                max: records.length > 0 ? (records[records.length - 1].instant + TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
-                label: 'time'
-              }]}
-              yAxis={[{
-                colorMap: seriesDef.colorMap,
-                valueFormatter: seriesDef.valueFormatter,
-                min: seriesDef.min,
-                label: `${seriesDef.label}`
-              }]}
-              series={[{
-                dataKey: seriesDef.id,
-                label: seriesDef.label,
-                showMark: false,
-                type: 'line',
-                curve: 'linear',
-                valueFormatter: seriesDef.valueFormatter
-              }]}
-              dataset={records}
-              grid={{ vertical: true, horizontal: true }}
-              margin={{ top: 15, right: 25, bottom: 40, left: 60 }}
-              sx={{
-                [`& .${axisClasses.left} .${axisClasses.label}`]: {
-                  transform: 'translateX(-20px)',
-                },
-              }}
-              {...{
-                legend: { hidden: true }
-              }}
-            />
+            <div>
+              <LineChart
+                ref={chartRef}
+                height={height}
+                xAxis={[{
+                  dataKey: 'instant',
+                  valueFormatter: (instant) => TimeUtil.toLocalTime(instant),
+                  min: records.length > 0 ? (records[0].instant - TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
+                  max: records.length > 0 ? (records[records.length - 1].instant + TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
+                  label: 'time'
+                }]}
+                yAxis={[{
+                  colorMap: seriesDef.colorMap,
+                  valueFormatter: seriesDef.valueFormatter,
+                  min: seriesDef.min,
+                  label: `${seriesDef.label}`
+                }]}
+                series={[{
+                  dataKey: seriesDef.id,
+                  label: seriesDef.label,
+                  showMark: false,
+                  type: 'line',
+                  curve: 'linear',
+                  valueFormatter: seriesDef.valueFormatter
+                }]}
+                dataset={records}
+                grid={{ vertical: true, horizontal: true }}
+                margin={{ top: 15, right: 25, bottom: 40, left: 60 }}
+                sx={{
+                  [`& .${axisClasses.left} .${axisClasses.label}`]: {
+                    transform: 'translateX(-20px)',
+                  },
+                }}
+                {...{
+                  legend: { hidden: true }
+                }}
+              />
+            </div>
             <Stack direction={'row'} spacing={0} sx={{ flexGrow: 10 }}>
               {orientation === 'landscape' ? <div style={{ width: '50px' }}></div> : null}
               <DateTimePicker
@@ -393,7 +424,7 @@ const TabValues = (props: ITabProperties) => {
           grow='1'
         ></Value>
       </Stack> */}
-        </LocalizationProvider>
+        </LocalizationProvider >
       </Stack >
     </>
   );

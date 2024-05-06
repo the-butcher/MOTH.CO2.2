@@ -1,4 +1,4 @@
-export interface IValueProps {
+export interface IValueChoiceProps {
     value: string;
     unit: string;
     grow: string;
