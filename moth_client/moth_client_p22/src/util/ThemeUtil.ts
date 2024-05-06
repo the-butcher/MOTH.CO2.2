@@ -40,7 +40,7 @@ export class ThemeUtil {
                 },
                 MuiStack: {
                     defaultProps: {
-                        spacing: 2
+                        spacing: 2,
                     }
                 },
                 MuiCard: {
@@ -97,6 +97,13 @@ export class ThemeUtil {
                         }
                     }
                 }
+                // MuiDivider: {
+                //     styleOverrides: {
+                //         root: {
+                //             marginTop: '5px !important'
+                //         }
+                //     }
+                // }
             }
 
             // .css-1w301fc-MuiFormLabel-root-MuiInputLabel-root

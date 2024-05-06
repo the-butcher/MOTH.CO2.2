@@ -110,77 +110,58 @@ const TabValues = (props: ITabValuesProps) => {
    * @param stylesheet
    * @returns
    */
-  const stringifyStylesheet = (stylesheet) => {
-    // @ts-ignore
-    const stringified = stylesheet.cssRules ? Array.from(stylesheet.cssRules).map(rule => rule.cssText || '').join('\n') : '';
-    return stringified;
+  const stringifyStylesheet = (stylesheet: CSSStyleSheet): string => {
+    return stylesheet.cssRules ? Array.from(stylesheet.cssRules).map(rule => rule.cssText || '').join('\n') : '';
   }
-  const getStyles = () => {
+  const collectStyles = (): string => {
     return Array.from(document.styleSheets).map(s => stringifyStylesheet(s)).join("\n");
   }
-  const getDefs = () => {
-    const styles = getStyles()
+  const collectDefs = (): string => {
+    const styles = collectStyles()
     console.log('styles', styles);
     return `<defs><style type="text/css"><![CDATA[${styles}]]></style></defs>`
   }
 
   const exportToPng = () => {
 
-    const chart = chartRef.current;
-    const defs = getDefs()
-    chart.insertAdjacentHTML("afterbegin", defs);
+    const chartSvg = chartRef.current;
+    const { width, height } = chartSvg.getBoundingClientRect();
 
-    const chartOuterHTML = (new XMLSerializer()).serializeToString(chart);
+    const chartSvgClone: SVGElement = chartSvg.cloneNode(true) as SVGElement;
+
+    const defs = collectDefs()
+    chartSvgClone.insertAdjacentHTML("afterbegin", defs);
+
+    const chartOuterHTML = (new XMLSerializer()).serializeToString(chartSvgClone);
     const chartBlob = new Blob([chartOuterHTML], {
       type: 'image/svg+xml;charset=utf-8'
     });
-
-    console.log('chartOuterHTML', chartOuterHTML);
-
-    const { width, height } = chart.getBoundingClientRect();
-
-    // const chartClone: SVGElement = chart.cloneNode(true) as SVGElement;
-    // const chartOuterHTML = chartClone.outerHTML;
-    // const chartBlob = new Blob([chartOuterHTML], { type: 'image/svg+xml;charset=utf-8' });
-
-    // let URL = window.URL || window.webkitURL || window;
     const chartBlobUrl = URL.createObjectURL(chartBlob);
 
     const image = new Image();
     image.onload = () => {
 
-      // https://dev.to/thehomelessdev/how-to-add-a-custom-font-to-an-html-canvas-1m3g
-      var fontDefinition = new FontFace('smb', 'url(/24aaf6d1f714bee11145.ttf)');
-      fontDefinition.load().then(fontInstance => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
 
-        console.log('fontInstance', fontInstance);
-        document.fonts.add(fontInstance);
+      const context = canvas.getContext('2d');
+      context.fillStyle = 'white';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const context = canvas.getContext('2d');
-        context.font = '12px Consolas';
-        context.fillStyle = 'white';
-        context.fillRect(0, 0, width, height);
-        context.drawImage(image, 0, 0, width, height);
-
-        const pngUrl = canvas.toDataURL();
-        const link = document.createElement('a');
-        link.setAttribute('href', pngUrl);
-        link.setAttribute('download', "chart"); // TODO format more unique
-        link.click();
-
-      });
-
-
+      const pngDataUrl = canvas.toDataURL();
+      const pngDownloadLink = document.createElement('a');
+      pngDownloadLink.setAttribute('href', pngDataUrl);
+      pngDownloadLink.setAttribute('download', "chart"); // TODO format with dates
+      pngDownloadLink.click();
 
     };
     image.onerror = (e) => {
       console.error('e', e);
     };
     image.src = chartBlobUrl;
+
 
 
   }
@@ -276,7 +257,7 @@ const TabValues = (props: ITabValuesProps) => {
 
   return (
     <>
-      <Stack spacing={1} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', left: '14px', top: '170px' }}>
+      <Stack spacing={1} sx={{ flexDirection: 'column', position: 'fixed', left: '14px', top: '170px', ...props.style }}>
         <IconButton
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
           aria-label="export csv"

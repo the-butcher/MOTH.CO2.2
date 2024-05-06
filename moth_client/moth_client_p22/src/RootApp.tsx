@@ -3,7 +3,6 @@ import TocIcon from '@mui/icons-material/Toc';
 import TuneIcon from '@mui/icons-material/Tune';
 import { CssBaseline, IconButton, Paper, Stack, ThemeProvider } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
-import './App.css';
 import TabConfig from './components/TabConfig';
 import TabServer from './components/TabServer';
 import TabValues from './components/TabValues';
@@ -107,8 +106,8 @@ const RootApp = () => {
           </IconButton>
         </Paper>
         <div style={{ minWidth: '45px' }}></div>
-        <TabValues {...tabValuesProps} style={{ display: value === 'values' ? 'block' : 'none' }} />
-        <TabConfig boxUrl={boxUrl} style={{ display: value === 'config' ? 'block' : 'none' }} />
+        <TabValues {...tabValuesProps} style={{ display: value === 'values' ? 'flex' : 'none' }} />
+        <TabConfig boxUrl={boxUrl} style={{ display: value === 'config' ? 'flex' : 'none' }} />
         {
           value === 'api' ? <TabServer boxUrl={boxUrl} /> : null
         }

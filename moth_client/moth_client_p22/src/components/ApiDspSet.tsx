@@ -6,7 +6,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import Card from '@mui/material/Card';
 import { Stack } from '@mui/system';
 import { useEffect, useState } from 'react';
-import { IDisplayProperties } from '../types/IDisplayProperties';
+import { IDispAspects } from '../types/IDispAspects';
 import ApiResponse from './ApiResponse';
 import { IApiProperties } from '../types/IApiProperties';
 import { IResponseProps } from '../types/IResponseProps';
@@ -20,7 +20,7 @@ import { IDisplayProperty } from '../types/IDisplayProperty';
  * - hours (chart) > (1|3|6|12|24)
  */
 
-const displayProperties: IDisplayProperties[] = [
+const displayProperties: IDispAspects[] = [
   {
     label: 'state',
     props: [

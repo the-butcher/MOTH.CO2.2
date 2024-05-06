@@ -1,6 +1,6 @@
 import { IThresholds } from "./IThresholds";
 
-export interface IDisplayConfigCo2 {
+export interface IDispConfigCo2 {
     wHi: number;
     rHi: number;
     /**
@@ -18,7 +18,7 @@ export interface IDisplayConfigCo2 {
     lpa: number;
 }
 
-export interface IDisplayConfigDeg extends IThresholds {
+export interface IDispConfigDeg extends IThresholds {
     /**
      * temperature offset for the co2 temperature sensor
      */
@@ -29,7 +29,7 @@ export interface IDisplayConfigDeg extends IThresholds {
     c2f: boolean;
 }
 
-export interface IDisplayConfigBme {
+export interface IDispConfigBme {
     /**
      * base altitude of the sensor
      */
@@ -40,7 +40,7 @@ export interface IDisplayConfigBme {
     lpa: number;
 }
 
-export interface IDisplayConfig {
+export interface IDispConfig {
     /**
      * display update minutes
      */
@@ -54,8 +54,8 @@ export interface IDisplayConfig {
      * example: "CET-1CEST,M3.5.0,M10.5.0/3"
      */
     tzn: string;
-    co2: IDisplayConfigCo2;
-    deg: IDisplayConfigDeg;
+    co2: IDispConfigCo2;
+    deg: IDispConfigDeg;
     hum: IThresholds;
-    bme: IDisplayConfigBme;
+    bme: IDispConfigBme;
 }
