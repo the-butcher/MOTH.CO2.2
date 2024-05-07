@@ -1,5 +1,5 @@
-import { Divider, Stack, Typography } from "@mui/material";
-import { ILabelledDividerProps } from "../types/ILabelledDividerProps";
+import { Divider, Stack, Typography } from '@mui/material';
+import { ILabelledDividerProps } from '../types/ILabelledDividerProps';
 
 const LabelledDivider = (props: ILabelledDividerProps) => {
 
@@ -8,12 +8,12 @@ const LabelledDivider = (props: ILabelledDividerProps) => {
     return (
         <Stack direction={'row'} sx={{ alignItems: 'center', paddingTop: style?.paddingTop ? style.paddingTop : 'unset' }}>
             {
-                style?.width ? <div style={{ flexGrow: 5 }}></div> : null
+                style?.minWidth ? <div style={{ flexGrow: 1 }}></div> : null
             }
-            <Stack direction={'row'} sx={{ alignItems: 'center', width: style?.width ? style.width : '100%' }}>
+            <Stack direction={'row'} sx={{ alignItems: 'center', minWidth: style?.minWidth ? style.minWidth : '100%', maxWidth: style?.maxWidth ? style.maxWidth : '100%', flexGrow: 5 }}>
                 <Divider sx={{ flexGrow: 5 }} />
                 <Typography variant='caption' sx={{ whiteSpace: 'nowrap' }}>{label}</Typography>
-                <Divider sx={{ minWidth: '20px' }} />
+                <Divider sx={{ minWidth: '32px' }} />
             </Stack>
         </Stack>
     );

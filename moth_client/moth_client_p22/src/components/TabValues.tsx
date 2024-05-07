@@ -114,7 +114,7 @@ const TabValues = (props: ITabValuesProps) => {
     return stylesheet.cssRules ? Array.from(stylesheet.cssRules).map(rule => rule.cssText || '').join('\n') : '';
   }
   const collectStyles = (): string => {
-    return Array.from(document.styleSheets).map(s => stringifyStylesheet(s)).join("\n");
+    return Array.from(document.styleSheets).map(s => stringifyStylesheet(s)).join('\n');
   }
   const collectDefs = (): string => {
     const styles = collectStyles()
@@ -130,7 +130,7 @@ const TabValues = (props: ITabValuesProps) => {
     const chartSvgClone: SVGElement = chartSvg.cloneNode(true) as SVGElement;
 
     const defs = collectDefs()
-    chartSvgClone.insertAdjacentHTML("afterbegin", defs);
+    chartSvgClone.insertAdjacentHTML('afterbegin', defs);
 
     const chartOuterHTML = (new XMLSerializer()).serializeToString(chartSvgClone);
     const chartBlob = new Blob([chartOuterHTML], {
@@ -153,7 +153,7 @@ const TabValues = (props: ITabValuesProps) => {
       const pngDataUrl = canvas.toDataURL();
       const pngDownloadLink = document.createElement('a');
       pngDownloadLink.setAttribute('href', pngDataUrl);
-      pngDownloadLink.setAttribute('download', "chart"); // TODO format with dates
+      pngDownloadLink.setAttribute('download', 'chart'); // TODO format with dates
       pngDownloadLink.click();
 
     };
@@ -161,8 +161,6 @@ const TabValues = (props: ITabValuesProps) => {
       console.error('e', e);
     };
     image.src = chartBlobUrl;
-
-
 
   }
 
@@ -260,14 +258,14 @@ const TabValues = (props: ITabValuesProps) => {
       <Stack spacing={1} sx={{ flexDirection: 'column', position: 'fixed', left: '14px', top: '170px', ...props.style }}>
         <IconButton
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
-          aria-label="export csv"
+          title='export csv'
           size='small'
         >
           <TableRowsIcon sx={{ fontSize: '1.0em' }} />
         </IconButton>
         <IconButton
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
-          aria-label="export png"
+          title='export png'
           size='small'
           onClick={exportToPng}
         >
@@ -331,7 +329,7 @@ const TabValues = (props: ITabValuesProps) => {
                   valueFormatter: (instant) => TimeUtil.toLocalTime(instant),
                   min: records.length > 0 ? (records[0].instant - TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
                   max: records.length > 0 ? (records[records.length - 1].instant + TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
-                  label: 'time'
+                  label: 'time (HH:MM)'
                 }]}
                 yAxis={[{
                   colorMap: seriesDef.colorMap,
@@ -367,7 +365,7 @@ const TabValues = (props: ITabValuesProps) => {
                 minDateTime={moment(dateRangeData[0])} // lowest possible value
                 maxDateTime={moment(dateRangeUser[1])}
                 onAccept={(newValue) => handleDateMinChanged(newValue)}
-                label="from"
+                label='from'
                 orientation={orientation}
                 desktopModeMediaQuery='(min-width:300px)'
                 viewRenderers={{
@@ -382,7 +380,7 @@ const TabValues = (props: ITabValuesProps) => {
                 minDateTime={moment(dateRangeUser[0])}
                 maxDateTime={moment(dateRangeData[1])} // highest possible value
                 onAccept={(newValue) => handleDateMaxChanged(newValue)}
-                label="to"
+                label='to'
                 orientation={orientation}
                 desktopModeMediaQuery='(min-width:300px)'
                 viewRenderers={{

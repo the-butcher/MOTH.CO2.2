@@ -1,5 +1,5 @@
-import { ContinuousColorConfig, PiecewiseColorConfig } from "@mui/x-charts/models/colorMapping";
-import { TRecordKey } from "./IRecord";
+import { ContinuousColorConfig, PiecewiseColorConfig } from '@mui/x-charts/models/colorMapping';
+import { TRecordKey } from './IRecord';
 
 export interface ISeriesDef {
     id: TRecordKey;
@@ -16,7 +16,7 @@ export const COLOR_R = '#e20e00';
 export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
     instant: {
         id: 'instant',
-        label: 'time',
+        label: 'time (HH:MM)',
         valueFormatter: value => Number.isFinite(value) ? value.toString() : 'NA'
     },
     co2Lpf: {

@@ -90,18 +90,21 @@ const RootApp = () => {
 
   // }
 
+  // TODO :: consider actual device thresholds in TabValues --> think about loading in a place and a variable location to make this work
+  // TODO :: is there a way to properly overlay mui icons?
+
   return (
     <ThemeProvider theme={ThemeUtil.createTheme()}>
       <CssBaseline />
       <Stack direction={'row'} spacing={0} sx={{ height: '100%' }}>
         <Paper elevation={4} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', marginTop: '5px', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}>
-          <IconButton size='small' aria-label="values" onClick={() => setValue('values')}>
+          <IconButton size='small' title='data' onClick={() => setValue('values')}>
             <ShowChartIcon />
           </IconButton>
-          <IconButton size='small' aria-label="config" onClick={() => setValue('config')}>
+          <IconButton size='small' title='configuration' onClick={() => setValue('config')}>
             <TuneIcon />
           </IconButton>
-          <IconButton size='small' aria-label="api" onClick={() => setValue('api')}>
+          <IconButton size='small' title='api' onClick={() => setValue('api')}>
             <TocIcon />
           </IconButton>
         </Paper>

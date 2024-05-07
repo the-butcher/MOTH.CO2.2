@@ -4,21 +4,26 @@ export interface IValueToggleConfig {
     handleUpdate: (value: boolean) => void;
 }
 
-export interface IValueNumberConfig {
+export interface IValueConfig<T = number | string> {
+    value: T;
+    items?: { [K: string]: T };
+    handleUpdate: (value: T) => void;
+}
+
+export interface IValueNumberConfig<T = number> extends IValueConfig<T> {
     type: 'number';
-    value: number;
     fixed: boolean;
     unit?: string;
     help?: string;
-    items?: { [K: string]: number };
-    handleUpdate: (value: number) => void;
+    step?: T;
+    min?: T,
+    max?: T,
 }
 
-export interface IValueStringConfig {
+export interface IValueStringConfig<T = string> extends IValueConfig<T> {
     type: 'string';
-    value: string;
-    items?: { [K: string]: string };
-    handleUpdate: (value: string) => void;
+    help?: string;
+    pwd?: boolean,
 }
 
 export interface IConfigChoiceProps {
