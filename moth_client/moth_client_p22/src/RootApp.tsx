@@ -13,7 +13,7 @@ import { ThemeUtil } from './util/ThemeUtil';
 const RootApp = () => {
 
   // const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  const boxUrl = `http://192.168.0.73/api`; // when running directly from device
+  const boxUrl = `http://192.168.0.66/api`; // when running directly from device
 
   /**
    * TODO :: colors for all seriesDefs
@@ -111,9 +111,7 @@ const RootApp = () => {
         <div style={{ minWidth: '45px' }}></div>
         <TabValues {...tabValuesProps} style={{ display: value === 'values' ? 'flex' : 'none' }} />
         <TabConfig boxUrl={boxUrl} style={{ display: value === 'config' ? 'flex' : 'none' }} />
-        {
-          value === 'api' ? <TabServer boxUrl={boxUrl} /> : null
-        }
+        <TabServer boxUrl={boxUrl} style={{ display: value === 'api' ? 'flex' : 'none' }} />
       </Stack >
     </ThemeProvider >
   );

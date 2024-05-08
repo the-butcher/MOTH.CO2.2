@@ -2,99 +2,50 @@ import SouthIcon from '@mui/icons-material/South';
 import VideoLabelIcon from '@mui/icons-material/VideoLabel';
 import { Badge, IconButton, Stack } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { IDispConfig } from '../types/IDispConfig';
-import { IMqttConfig } from '../types/IMqttConfig';
+import { DISP_CONFIG_DEFAULT, IDispConfig } from '../types/IDispConfig';
+import { IMqttConfig, MQTT_CONFIG_DEFAULT } from '../types/IMqttConfig';
 import { ITabProps } from '../types/ITabProps';
-import { IWifiConfig } from '../types/IWifiConfig';
+import { IWifiConfig, WIFI_CONFIG_DEFAULT } from '../types/IWifiConfig';
 import ConfigChoice from './ConfigChoice';
 import LabelledDivider from './LabelledDivider';
 import NetworkChoice from './NetworkChoice';
+import { JsonLoader } from '../util/JsonLoader';
 
 type DeepPartial<T> = T extends object ? {
   [P in keyof T]?: DeepPartial<T[P]>;
 } : T;
 
+type FLAG_CONFIG = 'DEFAULT' | 'LOADED' | 'MODIFIED';
+
+interface IFlagConfig {
+  disp: FLAG_CONFIG;
+  wifi: FLAG_CONFIG;
+  mqtt: FLAG_CONFIG;
+}
+
 const TabConfig = (props: ITabProps) => {
 
   const { boxUrl } = { ...props };
 
-  const [dispConfig, setDispConfig] = useState<IDispConfig>({
-    min: 3,
-    ssc: true,
-    tzn: 'CET-1CEST,M3.5.0,M10.5.0/3',
-    co2: {
-      wHi: 1000,
-      rHi: 1500,
-      ref: 425,
-      cal: 400,
-      lpa: 0.5
-    },
-    deg: {
-      rLo: 14,
-      wLo: 19,
-      wHi: 25,
-      rHi: 30,
-      off: 0.7,
-      c2f: false
-    },
-    hum: {
-      rLo: 25,
-      wLo: 30,
-      wHi: 60,
-      rHi: 65
-    },
-    bme: {
-      alt: 153,
-      lpa: 0.25
-    }
-  });
+  const [dispConfig, setDispConfig] = useState<IDispConfig>(DISP_CONFIG_DEFAULT);
+  const [wifiConfig, setWifiConfig] = useState<IWifiConfig>(WIFI_CONFIG_DEFAULT);
+  const [mqttConfig, setMqttConfig] = useState<IMqttConfig>(MQTT_CONFIG_DEFAULT);
+  const [flagConfig, setFlagConfig] = useState<IFlagConfig>({
+    disp: 'DEFAULT',
+    wifi: 'DEFAULT',
+    mqtt: 'DEFAULT',
+  })
 
-  const [wifiConfig, setWifiConfig] = useState<IWifiConfig>({
-    min: 5,
-    ntw: [
-      {
-        key: 'testkey1',
-        pwd: 'testpwd1'
-      },
-      {
-        key: 'testkey2',
-        pwd: 'testpwd2'
-      }
-    ]
-  });
-
-  const [mqttConfig, setMqttConfig] = useState<IMqttConfig>({
-    srv: '192.168.0.115',
-    prt: 8883,
-    crt: '/config/ca.crt',
-    usr: 'hannes',
-    pwd: 'fleischer',
-    cli: 'moth__66',
-    min: 3
-  });
-
-  const getDispConfig = () => {
-
-    setDispConfig({
-      ...dispConfig
-    });
-
+  const loadDispConfig = async (): Promise<IDispConfig> => {
+    return await new JsonLoader().load(`${boxUrl}/datout?file=config/disp.json`);
   };
 
-  const getWifiConfig = () => {
-
-    setWifiConfig({
-      ...wifiConfig
-    });
-
+  const loadWifiConfig = async (): Promise<IWifiConfig> => {
+    return await new JsonLoader().load(`${boxUrl}/datout?file=config/wifi.json`);
   }
 
-  const getMqttConfig = () => {
-
-    setMqttConfig({
-      ...mqttConfig
-    });
-
+  const loadMqttConfig = async (): Promise<IMqttConfig> => {
+    return await new JsonLoader().load(`${boxUrl}/datout?file=config/mqtt.json`);
   }
 
   useEffect(() => {
@@ -113,9 +64,42 @@ const TabConfig = (props: ITabProps) => {
 
   useEffect(() => {
 
+    console.debug(`⚙ updating tab config component (mqttConfig)`, mqttConfig);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mqttConfig]);
+
+  useEffect(() => {
+
     console.debug('✨ building tab config component');
 
-    getDispConfig();
+    loadDispConfig().then(_dispConfig => {
+      setDispConfig(_dispConfig);
+      setFlagConfig({
+        ...flagConfig,
+        disp: 'LOADED'
+      });
+      loadWifiConfig().then(_wifiConfig => {
+        setWifiConfig(_wifiConfig);
+        setFlagConfig({
+          ...flagConfig,
+          wifi: 'LOADED'
+        });
+        loadMqttConfig().then(_mqttConfig => {
+          setMqttConfig(_mqttConfig);
+          setFlagConfig({
+            ...flagConfig,
+            mqtt: 'LOADED'
+          });
+        }).catch(e => {
+          console.error('e', e);
+        });
+      }).catch(e => {
+        console.error('e', e);
+      });
+    }).catch(e => {
+      console.error('e', e);
+    });
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -141,12 +125,20 @@ const TabConfig = (props: ITabProps) => {
         ...update.bme
       },
     });
+    setFlagConfig({
+      ...flagConfig,
+      disp: 'MODIFIED'
+    });
   };
 
   const handleWifiUpdate = (update: Partial<IWifiConfig>) => {
     setWifiConfig({
       ...wifiConfig,
       ...update
+    });
+    setFlagConfig({
+      ...flagConfig,
+      wifi: 'MODIFIED'
     });
   };
 
@@ -182,6 +174,10 @@ const TabConfig = (props: ITabProps) => {
     } else {
       // invalid
     }
+    setFlagConfig({
+      ...flagConfig,
+      wifi: 'MODIFIED'
+    });
   }
 
   const handleMqttUpdate = (update: Partial<IMqttConfig>) => {
@@ -189,32 +185,45 @@ const TabConfig = (props: ITabProps) => {
       ...mqttConfig,
       ...update
     });
+    setFlagConfig({
+      ...flagConfig,
+      mqtt: 'MODIFIED'
+    });
   };
+
+  const getModifiedFlag = (): number => {
+    let modifiedFlag = 0;
+    if (flagConfig.disp === 'MODIFIED') {
+      modifiedFlag++;
+    }
+    if (flagConfig.wifi === 'MODIFIED') {
+      modifiedFlag++;
+    }
+    if (flagConfig.mqtt === 'MODIFIED') {
+      modifiedFlag++;
+    }
+    return modifiedFlag;
+  }
 
   return (
     <>
       <Stack spacing={1} sx={{ flexDirection: 'column', position: 'fixed', left: '14px', top: '170px', ...props.style }}>
-
-        <Badge
-          color='error'
-          variant='dot'
-          overlap='circular'
-          badgeContent={3}
-
+        <IconButton
+          sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)', width: '28px' }}
+          size='small'
+          title='synchronize to device'
         >
-          <IconButton
-            sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)', width: '28px' }}
-            size='small'
-            title='synchronize to device'
+          <Badge
+            color='error'
+            // variant='dot'
+            overlap='rectangular'
+            badgeContent={getModifiedFlag()}
           >
             <VideoLabelIcon sx={{ fontSize: '0.8em', position: 'relative', left: '6px' }} />
             <SouthIcon sx={{ fontSize: '0.7em', position: 'relative', left: '-7px', top: '-4px' }} />
-          </IconButton>
-        </Badge>
-
+          </Badge>
+        </IconButton>
       </Stack>
-
-
       <Stack direction={'column'} sx={{ margin: '5px', width: '800px', ...props.style }}>
 
         <Stack direction={'column'} sx={{

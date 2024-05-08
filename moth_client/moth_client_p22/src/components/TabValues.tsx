@@ -24,9 +24,6 @@ import { ITabValuesProps } from '../types/ITabValuesProps';
 import ValueChoice from './ValueChoice';
 import { SERIES_DEFS } from '../types/ISeriesDef';
 
-// const DIV_ID_VALUES = 'valuediv';
-
-
 const TabValues = (props: ITabValuesProps) => {
 
   const { boxUrl, latest, dateRangeData, dateRangeUser, records, seriesDef, handleUpdate } = { ...props };
@@ -46,7 +43,7 @@ const TabValues = (props: ITabValuesProps) => {
         latest
       });
     }).catch(e => {
-      console.log('e', e);
+      console.error('e', e);
     });
   }
 
@@ -61,7 +58,7 @@ const TabValues = (props: ITabValuesProps) => {
         dateRangeUser: [dateMinUser, dateMaxMisc]
       });
     }).catch(e => {
-      console.log('e', e);
+      console.error('e', e);
     });
 
   }
@@ -132,11 +129,11 @@ const TabValues = (props: ITabValuesProps) => {
     const defs = collectDefs()
     chartSvgClone.insertAdjacentHTML('afterbegin', defs);
 
-    const chartOuterHTML = (new XMLSerializer()).serializeToString(chartSvgClone);
-    const chartBlob = new Blob([chartOuterHTML], {
+    const svgContent = (new XMLSerializer()).serializeToString(chartSvgClone);
+    const svgBlob = new Blob([svgContent], {
       type: 'image/svg+xml;charset=utf-8'
     });
-    const chartBlobUrl = URL.createObjectURL(chartBlob);
+    const svgDataUrl = URL.createObjectURL(svgBlob);
 
     const image = new Image();
     image.onload = () => {
@@ -153,15 +150,43 @@ const TabValues = (props: ITabValuesProps) => {
       const pngDataUrl = canvas.toDataURL();
       const pngDownloadLink = document.createElement('a');
       pngDownloadLink.setAttribute('href', pngDataUrl);
-      pngDownloadLink.setAttribute('download', 'chart'); // TODO format with dates
+      pngDownloadLink.setAttribute('download', getExportName('png')); // TODO format with dates
       pngDownloadLink.click();
 
     };
     image.onerror = (e) => {
       console.error('e', e);
     };
-    image.src = chartBlobUrl;
+    image.src = svgDataUrl;
 
+  }
+
+  const exportToCsv = () => {
+
+    let date: Date;
+    let csvLines: string[] = [
+      'time;co2_lpf;co2_raw;deg;hum;hpa;bat'
+    ];
+
+    for (let record of records) {
+      date = new Date(record.instant);
+      csvLines.push(`${TimeUtil.toCsvDate(date)};${TimeUtil.formatValue(record.co2Lpf, 0, 4, ' ')};${TimeUtil.formatValue(record.co2Raw, 0, 4, ' ')};${TimeUtil.formatValue(record.deg, 1, 5, ' ')};${TimeUtil.formatValue(record.hum, 1, 4, ' ')};${TimeUtil.formatValue(record.hpa, 2, 7, ' ')};${TimeUtil.formatValue(record.bat, 1, 5, ' ')}`);
+    }
+
+    let csvContent: string = csvLines.join('\r\n');
+    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8,' });
+    const csvDataUrl = URL.createObjectURL(csvBlob);
+    const csvDownloadLink = document.createElement('a');
+    csvDownloadLink.setAttribute('href', csvDataUrl);
+    csvDownloadLink.setAttribute('download', getExportName('csv')); // TODO format more unique
+    csvDownloadLink.click();
+
+  }
+
+  const getExportName = (type: string) => {
+    const minInstant = records[0].instant;
+    const maxInstant = records[records.length - 1].instant;
+    return `mothdat_${TimeUtil.toUTCDate(new Date(minInstant))}_${TimeUtil.toUTCDate(new Date(maxInstant))}.${type}`;
   }
 
   useEffect(() => {
@@ -260,6 +285,7 @@ const TabValues = (props: ITabValuesProps) => {
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
           title='export csv'
           size='small'
+          onClick={exportToCsv}
         >
           <TableRowsIcon sx={{ fontSize: '1.0em' }} />
         </IconButton>

@@ -1,7 +1,8 @@
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Typography from '@mui/material/Typography';
+import { Stack } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
+import { IApiCall } from '../types/IApiCall';
+import { IApiProperties } from '../types/IApiProperties';
+import { ITabProps } from '../types/ITabProps';
 import ApiCalcsv from './ApiCalcsv';
 import ApiCo2Cal from './ApiCo2Cal';
 import ApiDatOut from './ApiDatOut';
@@ -12,9 +13,7 @@ import ApiDspSet from './ApiDspSet';
 import ApiSimple from './ApiSimple';
 import ApiUpdate from './ApiUpdate';
 import ApiUpload from './ApiUpload';
-import { IApiCall } from '../types/IApiCall';
-import { IApiProperties } from '../types/IApiProperties';
-import { ITabProps } from '../types/ITabProps';
+import LabelledDivider from './LabelledDivider';
 
 const TabServer = (props: ITabProps) => {
 
@@ -107,113 +106,88 @@ const TabServer = (props: ITabProps) => {
   const iframeSrc = 'iframe.html'; //when running directly from device
 
   return (
-    <div style={{ height: '100%' }}>
+    <Stack direction={'column'} spacing={0} sx={{ height: '100%', margin: '5px', ...props.style }}>
 
-      <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '10px', border: 'none' }} />
-      <Card sx={{ padding: '0px' }}>
-        <CardContent>
-          <Typography gutterBottom variant="subtitle1" component="div">
-            data
-          </Typography>
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'latest',
-            apiDesc: 'get the latest measurement as json',
-            apiType: 'json'
-          }} />
-          {/* <ApiValcsv {...apiProps} /> */}
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'valcsv',
-            apiDesc: 'get the last hour of data as csv data',
-            apiType: 'csv'
-          }} />
-          <ApiDatcsv {...apiProps} />
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'valout',
-            apiDesc: 'get the last hour of data as binary data',
-            apiType: 'dat'
-          }} />
-          <ApiDatOut {...apiProps} />
-          <ApiCalcsv {...apiProps} />
-        </CardContent>
-      </Card>
-      <Card sx={{ padding: '0px' }}>
-        <CardContent>
-          <Typography gutterBottom variant="subtitle1" component="div">
-            files, folders
-          </Typography>
-          <ApiDirOut {...apiProps} />
-          <ApiUpload {...apiProps} />
-          <ApiDelete {...apiProps} apiName='datdel' apiProp='file' />
-          <ApiDelete {...apiProps} apiName='dirdel' apiProp='folder' />
-        </CardContent>
-      </Card>
-      <Card sx={{ padding: '0px' }}>
-        <CardContent>
-          <Typography gutterBottom variant="subtitle1" component="div">
-            display, status
-          </Typography>
-          <ApiDspSet {...apiProps} />
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'status',
-            apiDesc: 'get details about device status',
-            apiType: 'json'
-          }} />
-        </CardContent>
-      </Card>
-      <Card sx={{ padding: '0px' }}>
-        <CardContent>
-          <Typography gutterBottom variant="subtitle1" component="div">
-            connectivity
-          </Typography>
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'netout',
-            apiDesc: 'get a list of networks visible to the device',
-            apiType: 'json'
-          }} />
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'netoff',
-            apiDesc: 'disconnect the device',
-            apiType: 'json'
-          }} />
-        </CardContent>
-      </Card>
-      <Card sx={{ padding: '0px' }}>
-        <CardContent>
-          <Typography gutterBottom variant="subtitle1" component="div">
-            admin
-          </Typography>
-          <ApiCo2Cal {...apiProps} />
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'co2rst',
-            apiDesc: 'reset the CO₂ sensor to factory',
-            apiType: 'json',
-            confirm: {
-              title: 'do you really want to reset?',
-              content: 'this call will remove all calibration history from the box\'s CO₂ sensor. only use if the sensor appears to be stuck.'
-            }
-          }} />
-          <ApiSimple {...{
-            ...apiProps,
-            apiName: 'esprst',
-            apiDesc: 'resets the device ',
-            apiType: 'json',
-            confirm: {
-              title: 'do you really want to reset?',
-              content: 'this call will reset the decive, data not written to permanent storage may be lost.'
-            }
-          }} />
-          <ApiUpdate  {...apiProps} />
-        </CardContent>
-        <div style={{ height: '12px' }}></div>
-      </Card>
-    </div>
+      <LabelledDivider label='data' />
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'latest',
+        apiDesc: 'get the latest measurement as json',
+        apiType: 'json'
+      }} />
+      {/* <ApiValcsv {...apiProps} /> */}
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'valcsv',
+        apiDesc: 'get the last hour of data as csv data',
+        apiType: 'csv'
+      }} />
+      <ApiDatcsv {...apiProps} />
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'valout',
+        apiDesc: 'get the last hour of data as binary data',
+        apiType: 'dat'
+      }} />
+      <ApiDatOut {...apiProps} />
+      <ApiCalcsv {...apiProps} />
+
+      <LabelledDivider label='files, folders' style={{ paddingTop: '12px' }} />
+      <ApiDirOut {...apiProps} />
+      <ApiUpload {...apiProps} />
+      <ApiDelete {...apiProps} apiName='datdel' apiProp='file' />
+      <ApiDelete {...apiProps} apiName='dirdel' apiProp='folder' />
+
+      <LabelledDivider label='display, status' style={{ paddingTop: '12px' }} />
+      <ApiDspSet {...apiProps} />
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'status',
+        apiDesc: 'get details about device status',
+        apiType: 'json'
+      }} />
+
+      <LabelledDivider label='connectivity' style={{ paddingTop: '12px' }} />
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'netout',
+        apiDesc: 'get a list of networks visible to the device',
+        apiType: 'json'
+      }} />
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'netoff',
+        apiDesc: 'disconnect the device',
+        apiType: 'json'
+      }} />
+
+      <LabelledDivider label='admin' style={{ paddingTop: '12px' }} />
+      <ApiCo2Cal {...apiProps} />
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'co2rst',
+        apiDesc: 'reset the CO₂ sensor to factory',
+        apiType: 'json',
+        confirm: {
+          title: 'do you really want to reset?',
+          content: 'this call will remove all calibration history from the box\'s CO₂ sensor. only use if the sensor appears to be stuck.'
+        }
+      }} />
+      <ApiSimple {...{
+        ...apiProps,
+        apiName: 'esprst',
+        apiDesc: 'resets the device ',
+        apiType: 'json',
+        confirm: {
+          title: 'do you really want to reset?',
+          content: 'this call will reset the decive, data not written to permanent storage may be lost.'
+        }
+      }} />
+      <ApiUpdate  {...apiProps} />
+
+      <iframe title="callframe" id="callframe" src={iframeSrc} style={{ height: '12px', border: 'none' }} />
+
+    </Stack>
   );
 
 };

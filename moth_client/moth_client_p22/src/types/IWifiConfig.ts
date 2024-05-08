@@ -13,3 +13,8 @@ export interface IWifiConfig {
      */
     ntw: INetwork[];
 }
+
+export const WIFI_CONFIG_DEFAULT: IWifiConfig = {
+    min: 5,
+    ntw: []
+};
