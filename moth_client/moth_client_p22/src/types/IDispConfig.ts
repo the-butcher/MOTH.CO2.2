@@ -1,3 +1,4 @@
+import { IConfig } from "./IConfig";
 import { IThresholds } from "./IThresholds";
 
 export interface IDispConfigCo2 {
@@ -40,7 +41,7 @@ export interface IDispConfigBme {
     lpa: number;
 }
 
-export interface IDispConfig {
+export interface IDispConfig extends IConfig {
     /**
      * display update minutes
      */
@@ -61,6 +62,7 @@ export interface IDispConfig {
 }
 
 export const DISP_CONFIG_DEFAULT: IDispConfig = {
+    status: 'DEFAULT',
     min: 3,
     ssc: true,
     tzn: 'CET-1CEST,M3.5.0,M10.5.0/3',

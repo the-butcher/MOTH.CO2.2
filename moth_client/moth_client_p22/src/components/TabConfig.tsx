@@ -1,40 +1,24 @@
 import SouthIcon from '@mui/icons-material/South';
 import VideoLabelIcon from '@mui/icons-material/VideoLabel';
 import { Badge, IconButton, Stack } from '@mui/material';
-import { useEffect, useState } from 'react';
-import { DISP_CONFIG_DEFAULT, IDispConfig } from '../types/IDispConfig';
-import { IMqttConfig, MQTT_CONFIG_DEFAULT } from '../types/IMqttConfig';
-import { ITabProps } from '../types/ITabProps';
-import { IWifiConfig, WIFI_CONFIG_DEFAULT } from '../types/IWifiConfig';
+import { useEffect } from 'react';
+import { IDispConfig } from '../types/IDispConfig';
+import { IMqttConfig } from '../types/IMqttConfig';
+import { ITabConfigProps } from '../types/ITabConfigProps';
+import { IWifiConfig } from '../types/IWifiConfig';
+import { JsonLoader } from '../util/JsonLoader';
 import ConfigChoice from './ConfigChoice';
 import LabelledDivider from './LabelledDivider';
 import NetworkChoice from './NetworkChoice';
-import { JsonLoader } from '../util/JsonLoader';
 
 type DeepPartial<T> = T extends object ? {
   [P in keyof T]?: DeepPartial<T[P]>;
 } : T;
 
-type FLAG_CONFIG = 'DEFAULT' | 'LOADED' | 'MODIFIED';
 
-interface IFlagConfig {
-  disp: FLAG_CONFIG;
-  wifi: FLAG_CONFIG;
-  mqtt: FLAG_CONFIG;
-}
+const TabConfig = (props: ITabConfigProps) => {
 
-const TabConfig = (props: ITabProps) => {
-
-  const { boxUrl } = { ...props };
-
-  const [dispConfig, setDispConfig] = useState<IDispConfig>(DISP_CONFIG_DEFAULT);
-  const [wifiConfig, setWifiConfig] = useState<IWifiConfig>(WIFI_CONFIG_DEFAULT);
-  const [mqttConfig, setMqttConfig] = useState<IMqttConfig>(MQTT_CONFIG_DEFAULT);
-  const [flagConfig, setFlagConfig] = useState<IFlagConfig>({
-    disp: 'DEFAULT',
-    wifi: 'DEFAULT',
-    mqtt: 'DEFAULT',
-  })
+  const { boxUrl, disp, wifi, mqtt, handleUpdate } = { ...props };
 
   const loadDispConfig = async (): Promise<IDispConfig> => {
     return await new JsonLoader().load(`${boxUrl}/datout?file=config/disp.json`);
@@ -50,46 +34,45 @@ const TabConfig = (props: ITabProps) => {
 
   useEffect(() => {
 
-    console.debug(`⚙ updating tab config component (configDisp)`, dispConfig);
+    console.debug(`⚙ updating tab config component (disp)`, disp);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispConfig]);
+  }, [disp]);
 
   useEffect(() => {
 
-    console.debug(`⚙ updating tab config component (wifiConfig)`, wifiConfig);
+    console.debug(`⚙ updating tab config component (wifi)`, wifi);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wifiConfig]);
+  }, [wifi]);
 
   useEffect(() => {
 
-    console.debug(`⚙ updating tab config component (mqttConfig)`, mqttConfig);
+    console.debug(`⚙ updating tab config component (mqtt)`, mqtt);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mqttConfig]);
+  }, [mqtt]);
 
   useEffect(() => {
 
     console.debug('✨ building tab config component');
 
-    loadDispConfig().then(_dispConfig => {
-      setDispConfig(_dispConfig);
-      setFlagConfig({
-        ...flagConfig,
-        disp: 'LOADED'
-      });
-      loadWifiConfig().then(_wifiConfig => {
-        setWifiConfig(_wifiConfig);
-        setFlagConfig({
-          ...flagConfig,
-          wifi: 'LOADED'
-        });
+    loadDispConfig().then(_disp => {
+      loadWifiConfig().then(_wifi => {
         loadMqttConfig().then(_mqttConfig => {
-          setMqttConfig(_mqttConfig);
-          setFlagConfig({
-            ...flagConfig,
-            mqtt: 'LOADED'
+          handleUpdate({
+            disp: {
+              ..._disp,
+              status: 'LOADED'
+            },
+            wifi: {
+              ..._wifi,
+              status: 'LOADED'
+            },
+            mqtt: {
+              ..._mqttConfig,
+              status: 'LOADED'
+            }
           });
         }).catch(e => {
           console.error('e', e);
@@ -105,101 +88,103 @@ const TabConfig = (props: ITabProps) => {
   }, []);
 
   const handleDispUpdate = (update: DeepPartial<IDispConfig>) => {
-    setDispConfig({
-      ...dispConfig,
-      ...update,
-      co2: {
-        ...dispConfig.co2,
-        ...update.co2
-      },
-      deg: {
-        ...dispConfig.deg,
-        ...update.deg
-      },
-      hum: {
-        ...dispConfig.hum,
-        ...update.hum
-      },
-      bme: {
-        ...dispConfig.bme,
-        ...update.bme
-      },
-    });
-    setFlagConfig({
-      ...flagConfig,
-      disp: 'MODIFIED'
+    handleUpdate({
+      disp: {
+        ...disp,
+        ...update,
+        status: 'MODIFIED',
+        co2: {
+          ...disp.co2,
+          ...update.co2
+        },
+        deg: {
+          ...disp.deg,
+          ...update.deg
+        },
+        hum: {
+          ...disp.hum,
+          ...update.hum
+        },
+        bme: {
+          ...disp.bme,
+          ...update.bme
+        },
+      }
     });
   };
 
   const handleWifiUpdate = (update: Partial<IWifiConfig>) => {
-    setWifiConfig({
-      ...wifiConfig,
-      ...update
-    });
-    setFlagConfig({
-      ...flagConfig,
-      wifi: 'MODIFIED'
+    handleUpdate({
+      wifi: {
+        ...wifi,
+        ...update,
+        status: 'MODIFIED',
+      }
     });
   };
 
   const handleNetworkUpdate = (idx: number, key: string, pwd: string) => {
     if (idx >= 0) { // update
       if (key !== '' && pwd !== '') { // update
-        setWifiConfig({
-          ...wifiConfig,
-          ntw: wifiConfig.ntw.map((value, index) => {
-            return index === idx ? {
-              key,
-              pwd
-            } : value;
-          })
+        handleUpdate({
+          wifi: {
+            ...wifi,
+            status: 'MODIFIED',
+            ntw: wifi.ntw.map((value, index) => {
+              return index === idx ? {
+                key,
+                pwd
+              } : value;
+            })
+          }
         });
       } else { // delete
-        setWifiConfig({
-          ...wifiConfig,
-          ntw: wifiConfig.ntw.filter((value, index) => index !== idx)
+        handleUpdate({
+          wifi: {
+            ...wifi,
+            status: 'MODIFIED',
+            ntw: wifi.ntw.filter((value, index) => index !== idx)
+          }
         });
       }
     } else if (key !== '' && pwd !== '') { // create
-      setWifiConfig({
-        ...wifiConfig,
-        ntw: [
-          ...wifiConfig.ntw,
-          {
-            key,
-            pwd
-          }
-        ]
+      handleUpdate({
+        wifi: {
+          ...wifi,
+          status: 'MODIFIED',
+          ntw: [
+            ...wifi.ntw,
+            {
+              key,
+              pwd
+            }
+          ]
+        }
       });
     } else {
       // invalid
     }
-    setFlagConfig({
-      ...flagConfig,
-      wifi: 'MODIFIED'
-    });
   }
 
   const handleMqttUpdate = (update: Partial<IMqttConfig>) => {
-    setMqttConfig({
-      ...mqttConfig,
-      ...update
-    });
-    setFlagConfig({
-      ...flagConfig,
-      mqtt: 'MODIFIED'
+    handleUpdate({
+      mqtt: {
+        ...mqtt,
+        ...update,
+        status: 'MODIFIED'
+      }
     });
   };
 
   const getModifiedFlag = (): number => {
     let modifiedFlag = 0;
-    if (flagConfig.disp === 'MODIFIED') {
+    if (disp.status === 'MODIFIED') {
       modifiedFlag++;
     }
-    if (flagConfig.wifi === 'MODIFIED') {
+    if (wifi.status === 'MODIFIED') {
       modifiedFlag++;
     }
-    if (flagConfig.mqtt === 'MODIFIED') {
+    if (mqtt.status === 'MODIFIED') {
       modifiedFlag++;
     }
     return modifiedFlag;
@@ -238,7 +223,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.min,
+              value: disp.min,
               unit: 'minutes',
               min: 1,
               handleUpdate: value => handleDispUpdate({ min: value })
@@ -248,7 +233,7 @@ const TabConfig = (props: ITabProps) => {
             caption='update on significant change'
             value={{
               type: 'toggle',
-              value: dispConfig.ssc,
+              value: disp.ssc,
               handleUpdate: value => handleDispUpdate({ ssc: value })
             }}
           />
@@ -256,7 +241,7 @@ const TabConfig = (props: ITabProps) => {
             caption='timezone'
             value={{
               type: 'string',
-              value: dispConfig.tzn,
+              value: disp.tzn,
               items: {
                 'London (GMT/BST)': 'GMT0BST,M3.5.0/1,M10.5.0',
                 'Berlin, Vienna (CET/CEST)': 'CET-1CEST,M3.5.0,M10.5.0/3'
@@ -270,11 +255,11 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.co2.wHi,
+              value: disp.co2.wHi,
               unit: 'ppm',
               step: 100,
               min: 400,
-              max: dispConfig.co2.rHi,
+              max: disp.co2.rHi,
               handleUpdate: value => handleDispUpdate({ co2: { wHi: value } })
             }}
           />
@@ -283,10 +268,10 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.co2.rHi,
+              value: disp.co2.rHi,
               unit: 'ppm',
               step: 100,
-              min: dispConfig.co2.wHi,
+              min: disp.co2.wHi,
               handleUpdate: value => handleDispUpdate({ co2: { rHi: value } })
             }}
           />
@@ -295,7 +280,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.co2.ref,
+              value: disp.co2.ref,
               unit: 'ppm',
               step: 5,
               min: 400,
@@ -308,7 +293,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.co2.cal,
+              value: disp.co2.cal,
               unit: 'ppm',
               step: 5,
               min: 400,
@@ -320,7 +305,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: false,
-              value: dispConfig.co2.lpa,
+              value: disp.co2.lpa,
               items: {
                 'none (1.00)': 1.00,
                 'light (0.75)': 0.75,
@@ -337,9 +322,9 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.deg.rLo,
+              value: disp.deg.rLo,
               unit: '°C',
-              max: dispConfig.deg.wLo,
+              max: disp.deg.wLo,
               handleUpdate: value => handleDispUpdate({ deg: { rLo: value } })
             }}
           />
@@ -348,10 +333,10 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.deg.wLo,
+              value: disp.deg.wLo,
               unit: '°C',
-              min: dispConfig.deg.rLo,
-              max: dispConfig.deg.wHi,
+              min: disp.deg.rLo,
+              max: disp.deg.wHi,
               handleUpdate: value => handleDispUpdate({ deg: { wLo: value } })
             }}
           />
@@ -360,9 +345,9 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.deg.wHi,
-              min: dispConfig.deg.wLo,
-              max: dispConfig.deg.rHi,
+              value: disp.deg.wHi,
+              min: disp.deg.wLo,
+              max: disp.deg.rHi,
               unit: '°C',
               handleUpdate: value => handleDispUpdate({ deg: { wHi: value } })
             }}
@@ -372,8 +357,8 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.deg.rHi,
-              min: dispConfig.deg.wHi,
+              value: disp.deg.rHi,
+              min: disp.deg.wHi,
               unit: '°C',
               handleUpdate: value => handleDispUpdate({ deg: { rHi: value } })
             }}
@@ -383,7 +368,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: false,
-              value: dispConfig.deg.off,
+              value: disp.deg.off,
               step: 0.1,
               unit: '°C',
               help: 'a higher value yields lower measurements',
@@ -394,7 +379,7 @@ const TabConfig = (props: ITabProps) => {
             caption='display as fahrenheit'
             value={{
               type: 'toggle',
-              value: dispConfig.deg.c2f,
+              value: disp.deg.c2f,
               handleUpdate: value => handleDispUpdate({ deg: { c2f: value } })
             }}
           />
@@ -404,8 +389,8 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.hum.rLo,
-              max: dispConfig.hum.wLo,
+              value: disp.hum.rLo,
+              max: disp.hum.wLo,
               unit: '%',
               step: 5,
               handleUpdate: value => handleDispUpdate({ hum: { rLo: value } })
@@ -416,9 +401,9 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.hum.wLo,
-              min: dispConfig.hum.rLo,
-              max: dispConfig.hum.wHi,
+              value: disp.hum.wLo,
+              min: disp.hum.rLo,
+              max: disp.hum.wHi,
               unit: '%',
               step: 5,
               handleUpdate: value => handleDispUpdate({ hum: { wLo: value } })
@@ -429,9 +414,9 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.hum.wHi,
-              min: dispConfig.hum.wLo,
-              max: dispConfig.hum.rHi,
+              value: disp.hum.wHi,
+              min: disp.hum.wLo,
+              max: disp.hum.rHi,
               unit: '%',
               step: 5,
               handleUpdate: value => handleDispUpdate({ hum: { wHi: value } })
@@ -442,8 +427,8 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.hum.rHi,
-              min: dispConfig.hum.wHi,
+              value: disp.hum.rHi,
+              min: disp.hum.wHi,
               unit: '%',
               step: 5,
               handleUpdate: value => handleDispUpdate({ hum: { rHi: value } })
@@ -455,7 +440,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: dispConfig.bme.alt,
+              value: disp.bme.alt,
               min: 0,
               max: 10000,
               unit: 'm',
@@ -468,7 +453,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: false,
-              value: dispConfig.bme.lpa,
+              value: disp.bme.lpa,
               items: {
                 'none (1.00)': 1.00,
                 'light (0.75)': 0.75,
@@ -485,17 +470,17 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: wifiConfig.min,
+              value: wifi.min,
               unit: 'minutes',
               min: 1,
               handleUpdate: value => handleWifiUpdate({ min: value })
             }}
           />
           {
-            wifiConfig.ntw.length > 0 ? <LabelledDivider label='configured connections' style={{ minWidth: '200px', maxWidth: '450px' }} /> : null
+            wifi.ntw.length > 0 ? <LabelledDivider label='configured connections' style={{ minWidth: '200px', maxWidth: '450px' }} /> : null
           }
           {
-            wifiConfig.ntw.map((ntw, index) =>
+            wifi.ntw.map((ntw, index) =>
               <NetworkChoice
                 key={index}
                 idx={index}
@@ -517,7 +502,7 @@ const TabConfig = (props: ITabProps) => {
             caption='broker address'
             value={{
               type: 'string',
-              value: mqttConfig.srv,
+              value: mqtt.srv,
               help: 'i.e. 192.186.1.1 or mybroker.mynetwork.com',
               handleUpdate: value => handleMqttUpdate({ srv: value })
             }}
@@ -527,7 +512,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: mqttConfig.prt,
+              value: mqtt.prt,
               step: 1000,
               min: 1,
               max: 65535,
@@ -538,7 +523,7 @@ const TabConfig = (props: ITabProps) => {
             caption='certificate path'
             value={{
               type: 'string',
-              value: mqttConfig.crt,
+              value: mqtt.crt,
               help: 'certificate must be uploaded to this path',
               handleUpdate: value => handleMqttUpdate({ crt: value })
             }}
@@ -547,7 +532,7 @@ const TabConfig = (props: ITabProps) => {
             caption='username'
             value={{
               type: 'string',
-              value: mqttConfig.usr,
+              value: mqtt.usr,
               handleUpdate: value => handleMqttUpdate({ usr: value })
             }}
           />
@@ -555,7 +540,7 @@ const TabConfig = (props: ITabProps) => {
             caption='password'
             value={{
               type: 'string',
-              value: mqttConfig.pwd,
+              value: mqtt.pwd,
               pwd: true,
               handleUpdate: value => handleMqttUpdate({ pwd: value })
             }}
@@ -564,7 +549,7 @@ const TabConfig = (props: ITabProps) => {
             caption='client'
             value={{
               type: 'string',
-              value: mqttConfig.cli,
+              value: mqtt.cli,
               help: 'mqtt message client id',
               handleUpdate: value => handleMqttUpdate({ cli: value })
             }}
@@ -574,7 +559,7 @@ const TabConfig = (props: ITabProps) => {
             value={{
               type: 'number',
               fixed: true,
-              value: mqttConfig.min,
+              value: mqtt.min,
               unit: 'minutes',
               min: 1,
               handleUpdate: value => handleMqttUpdate({ min: value })

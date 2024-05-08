@@ -1,9 +1,11 @@
+import { IConfig } from "./IConfig";
+
 export interface INetwork {
     key: string,
     pwd: string
 }
 
-export interface IWifiConfig {
+export interface IWifiConfig extends IConfig {
     /**
      * wifi timeout minutes
      */
@@ -15,6 +17,7 @@ export interface IWifiConfig {
 }
 
 export const WIFI_CONFIG_DEFAULT: IWifiConfig = {
+    status: 'DEFAULT',
     min: 5,
     ntw: []
 };

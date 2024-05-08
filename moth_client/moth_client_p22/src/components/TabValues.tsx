@@ -20,9 +20,10 @@ import { ByteLoader } from '../util/ByteLoader';
 import { JsonLoader } from '../util/JsonLoader';
 import { TimeUtil } from '../util/TimeUtil';
 
-import { ITabValuesProps } from '../types/ITabValuesProps';
-import ValueChoice from './ValueChoice';
 import { SERIES_DEFS } from '../types/ISeriesDef';
+import { ITabValuesProps } from '../types/ITabValuesProps';
+import { TICK_DEFINITIONS } from '../types/ITickDefinition';
+import ValueChoice from './ValueChoice';
 
 const TabValues = (props: ITabValuesProps) => {
 
@@ -31,6 +32,7 @@ const TabValues = (props: ITabValuesProps) => {
   const [orientation, setOrientation] = useState<TOrientation>('landscape');
   const [height, setHeight] = useState<number>(400);
   const [resizeCount, setResizeCount] = useState<number>();
+  const [tickInterval, setTickInterval] = useState<number[]>();
 
   const latestToRef = useRef<number>(-1);
 
@@ -92,7 +94,7 @@ const TabValues = (props: ITabValuesProps) => {
         records
       });
     }).catch(e => {
-      console.log('e', e);
+      console.error('e', e);
     });
 
   }
@@ -100,7 +102,6 @@ const TabValues = (props: ITabValuesProps) => {
   const handleResize = () => {
     setResizeCount(Math.random());
   }
-
 
   /**
    * https://gist.github.com/SunPj/14fe4f10db43be2d84751f5595d48246
@@ -115,7 +116,7 @@ const TabValues = (props: ITabValuesProps) => {
   }
   const collectDefs = (): string => {
     const styles = collectStyles()
-    console.log('styles', styles);
+    // console.log('styles', styles);
     return `<defs><style type="text/css"><![CDATA[${styles}]]></style></defs>`
   }
 
@@ -186,21 +187,10 @@ const TabValues = (props: ITabValuesProps) => {
   const getExportName = (type: string) => {
     const minInstant = records[0].instant;
     const maxInstant = records[records.length - 1].instant;
-    return `mothdat_${TimeUtil.toUTCDate(new Date(minInstant))}_${TimeUtil.toUTCDate(new Date(maxInstant))}.${type}`;
+    return `mothdat_${TimeUtil.toExportDateTime(new Date(minInstant))}_${TimeUtil.toExportDateTime(new Date(maxInstant))}.${type}`;
   }
 
-  useEffect(() => {
 
-    console.debug(`⚙ updating tab values component (resizeCount)`, resizeCount);
-
-    if (valueRef.current) {
-      setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
-      const offY = 80 + valueRef.current.getBoundingClientRect().height;
-      setHeight(window.innerHeight - offY);
-    }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resizeCount]);
 
   useEffect(() => {
 
@@ -225,6 +215,60 @@ const TabValues = (props: ITabValuesProps) => {
 
   useEffect(() => {
 
+    console.debug(`⚙ updating tab values component (records, resizeCount)`, records, resizeCount);
+
+    if (valueRef.current) {
+      setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
+      const offY = 80 + valueRef.current.getBoundingClientRect().height;
+      setHeight(window.innerHeight - offY);
+    }
+
+    if (chartRef.current && records.length > 0) {
+
+      const chartWidth = chartRef.current.getBoundingClientRect().width - 85; // 85 measured from
+      if (chartWidth > 0) {
+
+        let minInstant = records[0].instant; // - TimeUtil.getTimezoneOffsetSeconds();
+        let maxInstant = records[records.length - 1].instant; // - TimeUtil.getTimezoneOffsetSeconds();
+
+        const difInstant = maxInstant - minInstant;
+        const maxTickCount = chartWidth / 15;
+        // console.log('chartWidth', chartWidth, 'maxTickCount', maxTickCount, 'dpr', window.devicePixelRatio);
+
+        let tickDefinitionIndex = 0;
+        for (; tickDefinitionIndex < TICK_DEFINITIONS.length; tickDefinitionIndex++) {
+          const curTickCount = difInstant / TICK_DEFINITIONS[tickDefinitionIndex].step;
+          if (curTickCount < maxTickCount) {
+            // console.log('using definition', TICK_DEFINITIONS[tickDefinitionIndex].step / (1000 * 60 * 60));
+            break;
+          }
+        }
+
+        minInstant = getTickInstant(records[0].instant, TICK_DEFINITIONS[tickDefinitionIndex].step);
+        maxInstant = getTickInstant(records[records.length - 1].instant, TICK_DEFINITIONS[tickDefinitionIndex].step);
+
+        const _tickInterval: number[] = [];
+        for (let instant = minInstant; instant < maxInstant; instant += TICK_DEFINITIONS[tickDefinitionIndex].step) {
+          _tickInterval.push(instant);
+        }
+        setTickInterval(_tickInterval);
+
+      }
+
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, resizeCount]);
+
+  const getTickInstant = (instant: number, step: number) => {
+    const offsetInstant = instant - TimeUtil.getTimezoneOffsetSeconds() * 1000;
+    const moduloInstant = offsetInstant - offsetInstant % step + step
+    return moduloInstant + TimeUtil.getTimezoneOffsetSeconds() * 1000;
+  }
+
+
+  useEffect(() => {
+
     console.debug(`⚙ updating tab values component (dateRangeUser)`, dateRangeUser);
 
     if (dateRangeUser) {
@@ -232,7 +276,6 @@ const TabValues = (props: ITabValuesProps) => {
         getLatestValues();
       }
       loadRecords();
-
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -251,6 +294,7 @@ const TabValues = (props: ITabValuesProps) => {
   }, []);
 
   const handleValueClick = (value: TRecordKey) => {
+    // console.log('handleValueClick', value, SERIES_DEFS[value]);
     handleUpdate({
       seriesDef: SERIES_DEFS[value]
     });
@@ -277,6 +321,24 @@ const TabValues = (props: ITabValuesProps) => {
     })
 
   };
+
+  const getXAxisMin = () => {
+    if (records.length > 0) {
+      return records[0].instant;
+    } else {
+      return undefined;
+    }
+  }
+
+  const getXAxisMax = () => {
+    if (records.length > 0) {
+      return records[records.length - 1].instant;
+    } else {
+      return undefined;
+    }
+  }
+
+
 
   return (
     <>
@@ -352,10 +414,19 @@ const TabValues = (props: ITabValuesProps) => {
                 height={height}
                 xAxis={[{
                   dataKey: 'instant',
-                  valueFormatter: (instant) => TimeUtil.toLocalTime(instant),
-                  min: records.length > 0 ? (records[0].instant - TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
-                  max: records.length > 0 ? (records[records.length - 1].instant + TimeUtil.MILLISECONDS_PER_MINUTE * 5) : undefined,
-                  label: 'time (HH:MM)'
+                  valueFormatter: (instant, context) => {
+                    return TimeUtil.toLocalTime(instant)
+                  },
+                  min: getXAxisMin(),
+                  max: getXAxisMax(),
+                  label: 'time (HH:MM)',
+                  tickInterval,
+                  tickLabelStyle: {
+                    angle: -90,
+                    translate: -4,
+                    textAnchor: 'end',
+                    fontSize: 12,
+                  },
                 }]}
                 yAxis={[{
                   colorMap: seriesDef.colorMap,
@@ -373,16 +444,20 @@ const TabValues = (props: ITabValuesProps) => {
                 }]}
                 dataset={records}
                 grid={{ vertical: true, horizontal: true }}
-                margin={{ top: 15, right: 25, bottom: 40, left: 60 }}
+                margin={{ top: 15, right: 10, bottom: 65, left: 60 }}
                 sx={{
                   [`& .${axisClasses.left} .${axisClasses.label}`]: {
                     transform: 'translateX(-20px)',
+                  },
+                  [`& .${axisClasses.bottom} .${axisClasses.label}`]: {
+                    transform: 'translateY(25px)',
                   },
                 }}
                 {...{
                   legend: { hidden: true }
                 }}
-              />
+              >
+              </LineChart>
             </div>
             <Stack direction={'row'} spacing={0} sx={{ flexGrow: 10 }}>
               {orientation === 'landscape' ? <div style={{ width: '50px' }}></div> : null}

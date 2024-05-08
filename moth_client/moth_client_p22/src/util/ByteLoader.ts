@@ -25,12 +25,12 @@ export class ByteLoader {
     async loadDat(url: string): Promise<IRecord[]> {
         const data = await this.load(url);
         let secondstime: number;
-        const timezonOffsetSeconds = TimeUtil.getTimezoneOffsetSeconds();
+        const timezoneOffsetSeconds = TimeUtil.getTimezoneOffsetSeconds();
         const records: IRecord[] = [];
         for (let i = 0; i < data.byteLength; i += ByteLoader.recordLength) {
             secondstime = data.getUint32(i, true);
             records.push({
-                instant: new Date((ByteLoader.secondsFrom1970To2000 + secondstime + timezonOffsetSeconds) * 1000).getTime(),
+                instant: new Date((ByteLoader.secondsFrom1970To2000 + secondstime + timezoneOffsetSeconds) * 1000).getTime(),
                 co2Lpf: data.getUint16(i + 4, true) / ByteLoader.valueScaleCo2Lpf,
                 deg: this.toFloatDeg(data.getUint16(i + 6, true)),
                 hum: this.toFloatHum(data.getUint16(i + 8, true)),

@@ -55,10 +55,9 @@ export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
         label: 'CO₂ ppm (filtered)',
         valueFormatter: value => Number.isFinite(value) ? value.toFixed(0) : 'NA',
         colorMap: {
-            type: 'continuous',
-            min: 600,
-            max: 1000,
-            color: ['green', 'red']
+            type: 'piecewise',
+            thresholds: [800, 1000],
+            colors: [COLOR_G, COLOR_Y, COLOR_R]
         },
         min: 0
     },

@@ -12,31 +12,6 @@ const NetworkChoice = (props: INetworkChoiceProperties) => {
 
     const isCreate = lbl === '' && pwd === '';
 
-    const [lblCreate, setLblCreate] = useState<string>(lbl);
-    const [pwdCreate, setPwdCreate] = useState<string>(pwd);
-    const [pwdProps, setPwdProps] = useState<IValueStringConfig>();
-
-    useEffect(() => {
-
-        console.debug(`⚙ updating tab config component (lbl, pwd)`, lbl, pwd);
-        setLblCreate(lbl);
-        setPwdCreate(pwd);
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [idx, lbl, pwd]);
-
-    useEffect(() => {
-
-        console.debug(`⚙ updating tab config component (pwdCreate)`, pwdCreate);
-        setPwdProps({
-            type: 'string',
-            value: pwdCreate,
-            handleUpdate: handlePwdEdit
-        });
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pwdCreate]);
-
     const handleLblEdit = (value: string) => {
         if (isCreate) {
             setLblCreate(value);
@@ -61,6 +36,37 @@ const NetworkChoice = (props: INetworkChoiceProperties) => {
     const handleNetworkDelete = () => {
         handleNetworkUpdate(idx, '', '');
     }
+
+    const [lblCreate, setLblCreate] = useState<string>(lbl);
+    const [pwdCreate, setPwdCreate] = useState<string>(pwd);
+    const [pwdProps, setPwdProps] = useState<IValueStringConfig>({
+        type: 'string',
+        value: '',
+        handleUpdate: handlePwdEdit
+    });
+
+    useEffect(() => {
+
+        console.debug(`⚙ updating tab config component (lbl, pwd)`, lbl, pwd);
+        setLblCreate(lbl);
+        setPwdCreate(pwd);
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [idx, lbl, pwd]);
+
+    useEffect(() => {
+
+        console.debug(`⚙ updating tab config component (pwdCreate)`, pwdCreate);
+        setPwdProps({
+            type: 'string',
+            value: pwdCreate,
+            handleUpdate: handlePwdEdit
+        });
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pwdCreate]);
+
+
 
     return (
         <Stack direction={'row'} sx={{ alignItems: 'center', padding: '0px' }}>

@@ -19,16 +19,21 @@ export class TimeUtil {
      * @returns
      */
     static toCsvDate(date: Date) {
-        return `${date.getUTCFullYear()}-${TimeUtil.formatValue(date.getUTCMonth() + 1, 0, 2, '0')}-${TimeUtil.formatValue(date.getUTCDate(), 0, 2, '0')} ${TimeUtil.formatValue(date.getUTCHours(), 0, 2, '0')}:${TimeUtil.formatValue(date.getUTCMinutes(), 0, 2, '0')}:${TimeUtil.formatValue(date.getUTCSeconds(), 0, 2, '0')}`;
+        return `${date.getFullYear()}-${TimeUtil.formatValue(date.getMonth() + 1, 0, 2, '0')}-${TimeUtil.formatValue(date.getDate(), 0, 2, '0')} ${TimeUtil.formatValue(date.getHours(), 0, 2, '0')}:${TimeUtil.formatValue(date.getMinutes(), 0, 2, '0')}:${TimeUtil.formatValue(date.getSeconds(), 0, 2, '0')}`;
     };
 
     /**
      * format the given date to 'yyyyMMdd'
+     * TODO :: find a better name and remove the 'UTC' from signature
      * @param date
      */
     static toUTCDate(date: Date) {
         return `${date.getFullYear()}${TimeUtil.formatValue(date.getMonth() + 1, 0, 2, '0')}${TimeUtil.formatValue(date.getDate(), 0, 2, '0')}`;
     }
+
+    static toExportDateTime(date: Date) {
+        return `${date.getFullYear()}${TimeUtil.formatValue(date.getMonth() + 1, 0, 2, '0')}${TimeUtil.formatValue(date.getDate(), 0, 2, '0')}${TimeUtil.formatValue(date.getHours(), 0, 2, '0')}${TimeUtil.formatValue(date.getMinutes(), 0, 2, '0')}`;
+    };
 
     static toLocalDate(instant: number) {
         return new Date(instant).toLocaleDateString(window.navigator.language, { // you can use undefined as first argument
