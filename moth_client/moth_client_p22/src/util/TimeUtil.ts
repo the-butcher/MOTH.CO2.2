@@ -6,6 +6,10 @@ export class TimeUtil {
     static readonly MILLISECONDS_PER_HOUR = TimeUtil.MILLISECONDS_PER_MINUTE * 60;
     static readonly MILLISECONDS_PER__DAY = TimeUtil.MILLISECONDS_PER_HOUR * 24;
 
+    static getExportName(type: string, instantA: number, instantB: number) {
+        return `mothdat_${TimeUtil.toExportDateTime(new Date(instantA))}_${TimeUtil.toExportDateTime(new Date(instantB))}.${type}`;
+    }
+
     static formatValue(value: number, precision: number, length: number, pad: string): string {
         return value.toFixed(precision).replace('.', ',').padStart(length, pad);
     }
@@ -23,31 +27,29 @@ export class TimeUtil {
     };
 
     /**
-     * format the given date to 'yyyyMMdd'
-     * TODO :: find a better name and remove the 'UTC' from signature
+     * format the given date to 'yyyyMMddHHmm'
      * @param date
      */
-    static toUTCDate(date: Date) {
-        return `${date.getFullYear()}${TimeUtil.formatValue(date.getMonth() + 1, 0, 2, '0')}${TimeUtil.formatValue(date.getDate(), 0, 2, '0')}`;
-    }
-
     static toExportDateTime(date: Date) {
         return `${date.getFullYear()}${TimeUtil.formatValue(date.getMonth() + 1, 0, 2, '0')}${TimeUtil.formatValue(date.getDate(), 0, 2, '0')}${TimeUtil.formatValue(date.getHours(), 0, 2, '0')}${TimeUtil.formatValue(date.getMinutes(), 0, 2, '0')}`;
     };
 
-    static toLocalDate(instant: number) {
-        return new Date(instant).toLocaleDateString(window.navigator.language, { // you can use undefined as first argument
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-        });
+    /**
+     * format the given instant to 'yyyyMMdd'
+     * @param date
+     */
+    static toExportDate(instant: number) {
+        const date = new Date(instant);
+        return `${date.getFullYear()}${TimeUtil.formatValue(date.getMonth() + 1, 0, 2, '0')}${TimeUtil.formatValue(date.getDate(), 0, 2, '0')}`;
     };
 
+    /**
+     * format the given instant to 'HH:mm'
+     * @param date
+     */
     static toLocalTime(instant: number) {
-        return new Date(instant).toLocaleTimeString(window.navigator.language, { // you can use undefined as first argument
-            hour: "2-digit",
-            minute: "2-digit"
-        });
+        const date = new Date(instant);
+        return `${TimeUtil.formatValue(date.getHours(), 0, 2, '0')}:${TimeUtil.formatValue(date.getMinutes(), 0, 2, '0')}`;
     };
 
     static async collectDays(boxUrl: string, year: number, month: number, dateRange: [Date, Date]): Promise<void> {

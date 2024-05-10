@@ -39,10 +39,10 @@ const ApiCalcsv = (props: IApiProperties) => {
     let urlDate: Date;
     const curDate = new Date();
     let urls: string[] = [];
-    for (let instant = minInstant; instant <= maxInstant; instant += TimeUtil.MILLISECONDS_PER__DAY) {
-      urlDate = new Date(instant);
-      urls.push(`${boxUrl}/datout?file=${urlDate.getUTCFullYear()}/${String(urlDate.getUTCMonth() + 1).padStart(2, '0')}/${TimeUtil.toUTCDate(urlDate)}.dat`);
-      if (TimeUtil.toLocalDate(urlDate.getTime()) === TimeUtil.toLocalDate(curDate.getTime())) {
+    for (let urlInstant = minInstant; urlInstant <= maxInstant; urlInstant += TimeUtil.MILLISECONDS_PER__DAY) {
+      urlDate = new Date(urlInstant);
+      urls.push(`${boxUrl}/datout?file=${urlDate.getUTCFullYear()}/${String(urlDate.getUTCMonth() + 1).padStart(2, '0')}/${TimeUtil.toExportDate(urlInstant)}.dat`);
+      if (TimeUtil.toExportDate(urlDate.getTime()) === TimeUtil.toExportDate(curDate.getTime())) {
         urls.push(`${boxUrl}/valout`);
       }
     }
@@ -58,7 +58,7 @@ const ApiCalcsv = (props: IApiProperties) => {
       }
       let csvFile: string = csvLines.join('\r\n');
       const blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8,' });
-      const downloadName = `mothdat_${TimeUtil.toUTCDate(new Date(minInstant))}_${TimeUtil.toUTCDate(new Date(maxInstant))}.dat`
+      const downloadName = `mothdat_${TimeUtil.toExportDate(minInstant)}_${TimeUtil.toExportDate(maxInstant)}.dat`
       const objUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', objUrl);

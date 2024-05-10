@@ -42,8 +42,12 @@ uint16_t actionNum = 0;
  * -- add more info to status (maybe config needs to be made public after all)
  * -- ISSUE: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
  * -- ISSUE: can not reconnect MQTT after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
- * -- TODO: maybe build a new client.html with an app-like appearance (could replace chart.html)
+ * -- ISSUE: wifi connection code is not stable (switches to APSTA, maybe when a connection takes long to establish)
+ *    -- possible fix implemented in ModuleWifi::isPowered() after reading MODE_WIFI_APSTA code
  * -- TODO: better caching for a dirout request (can have the last modified date of the youngest file)
+ * -- ISSUE: in Siriushotel it was easliy possible to connect, but not to consume the large root.js file
+ *    -- in some situations the device would directly crash after connection
+ *    -- this resulted in a kind of live-lock, where the client was not accessible at all
  */
 
 // schedule setting and display

@@ -21,7 +21,7 @@ export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
     },
     co2Lpf: {
         id: 'co2Lpf',
-        label: 'CO₂ ppm (filtered)',
+        label: 'CO₂ ppm',
         valueFormatter: value => Number.isFinite(value) ? value.toFixed(0) : 'NA',
         colorMap: {
             type: 'piecewise',

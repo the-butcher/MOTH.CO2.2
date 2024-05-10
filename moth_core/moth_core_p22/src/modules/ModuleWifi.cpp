@@ -166,7 +166,8 @@ void ModuleWifi::scanNetworks(void* parameter) {
 
 bool ModuleWifi::isPowered() {
     wifi_mode_t wifiMode = WiFi.getMode();
-    return wifiMode == WIFI_AP || (wifiMode == WIFI_STA && WiFi.isConnected());
+    // return wifiMode == WIFI_AP || (wifiMode == WIFI_STA && WiFi.isConnected());
+    return wifiMode == WIFI_AP || WiFi.isConnected();  // WiFi.isConnected() includes both WIFI_MODE_STA and WIFI_MODE_APSTA
 }
 
 bool ModuleWifi::connectToNetwork(config_t& config, network_t& network) {
@@ -220,6 +221,12 @@ bool ModuleWifi::enableSoftAP(config_t& config) {
 void ModuleWifi::depower(config_t& config) {
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);
+    for (int i = 0; i < 10; i++) {
+        delay(200);
+        if (!ModuleWifi::isPowered()) {
+            break;
+        }
+    }
     WiFi.mode(WIFI_OFF);
     config.wifi.wifiValPower = WIFI____VAL_P__CUR_N;  // set flag to currently off
 }

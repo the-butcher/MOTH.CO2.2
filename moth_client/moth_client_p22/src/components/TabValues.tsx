@@ -5,8 +5,6 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import { IconButton, Stack } from '@mui/material';
-import { axisClasses } from '@mui/x-charts/ChartsAxis';
-import { LineChart } from '@mui/x-charts/LineChart';
 import { DateTimePicker, renderDateViewCalendar, renderTimeViewClock } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -22,8 +20,9 @@ import { TimeUtil } from '../util/TimeUtil';
 
 import { SERIES_DEFS } from '../types/ISeriesDef';
 import { ITabValuesProps } from '../types/ITabValuesProps';
-import { TICK_DEFINITIONS } from '../types/ITickDefinition';
+import ChartValues from './ChartValues';
 import ValueChoice from './ValueChoice';
+import { TExportTo } from '../types/IChartProps';
 
 const TabValues = (props: ITabValuesProps) => {
 
@@ -32,12 +31,15 @@ const TabValues = (props: ITabValuesProps) => {
   const [orientation, setOrientation] = useState<TOrientation>('landscape');
   const [height, setHeight] = useState<number>(400);
   const [resizeCount, setResizeCount] = useState<number>();
-  const [tickInterval, setTickInterval] = useState<number[]>();
+  const [exportTo, setExportTo] = useState<TExportTo>('');
 
   const latestToRef = useRef<number>(-1);
-
-  const chartRef = createRef<SVGElement>();
   const valueRef = createRef<HTMLDivElement>();
+
+
+  const handleExportComplete = () => {
+    setExportTo('');
+  }
 
   const getLatestValues = () => {
     new JsonLoader().load(`${boxUrl}/latest`).then((latest: ILatest) => {
@@ -72,12 +74,12 @@ const TabValues = (props: ITabValuesProps) => {
 
     const curDate = new Date();
     const urlset = new Set<string>();
-    const pushInstant = (instant: number) => {
-      const urlDate = new Date(instant);
-      const url = `${boxUrl}/datout?file=${urlDate.getFullYear()}/${String(urlDate.getMonth() + 1).padStart(2, '0')}/${TimeUtil.toUTCDate(urlDate)}.dat`;
+    const pushInstant = (urlInstant: number) => {
+      const urlDate = new Date(urlInstant);
+      const url = `${boxUrl}/datout?file=${urlDate.getFullYear()}/${String(urlDate.getMonth() + 1).padStart(2, '0')}/${TimeUtil.toExportDate(urlInstant)}.dat`;
       // console.log('urlDate', urlDate, url);
       urlset.add(url);
-      if (TimeUtil.toLocalDate(urlDate.getTime()) === TimeUtil.toLocalDate(curDate.getTime())) {
+      if (TimeUtil.toExportDate(urlDate.getTime()) === TimeUtil.toExportDate(curDate.getTime())) {
         urlset.add(`${boxUrl}/valout`);
       }
     };
@@ -103,94 +105,12 @@ const TabValues = (props: ITabValuesProps) => {
     setResizeCount(Math.random());
   }
 
-  /**
-   * https://gist.github.com/SunPj/14fe4f10db43be2d84751f5595d48246
-   * @param stylesheet
-   * @returns
-   */
-  const stringifyStylesheet = (stylesheet: CSSStyleSheet): string => {
-    return stylesheet.cssRules ? Array.from(stylesheet.cssRules).map(rule => rule.cssText || '').join('\n') : '';
-  }
-  const collectStyles = (): string => {
-    return Array.from(document.styleSheets).map(s => stringifyStylesheet(s)).join('\n');
-  }
-  const collectDefs = (): string => {
-    const styles = collectStyles()
-    // console.log('styles', styles);
-    return `<defs><style type="text/css"><![CDATA[${styles}]]></style></defs>`
-  }
+  useEffect(() => {
 
-  const exportToPng = () => {
+    console.debug(`⚙ updating tab values component (exportTo)`, exportTo);
 
-    const chartSvg = chartRef.current;
-    const { width, height } = chartSvg.getBoundingClientRect();
-
-    const chartSvgClone: SVGElement = chartSvg.cloneNode(true) as SVGElement;
-
-    const defs = collectDefs()
-    chartSvgClone.insertAdjacentHTML('afterbegin', defs);
-
-    const svgContent = (new XMLSerializer()).serializeToString(chartSvgClone);
-    const svgBlob = new Blob([svgContent], {
-      type: 'image/svg+xml;charset=utf-8'
-    });
-    const svgDataUrl = URL.createObjectURL(svgBlob);
-
-    const image = new Image();
-    image.onload = () => {
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-
-      const context = canvas.getContext('2d');
-      context.fillStyle = 'white';
-      context.fillRect(0, 0, width, height);
-      context.drawImage(image, 0, 0, width, height);
-
-      const pngDataUrl = canvas.toDataURL();
-      const pngDownloadLink = document.createElement('a');
-      pngDownloadLink.setAttribute('href', pngDataUrl);
-      pngDownloadLink.setAttribute('download', getExportName('png')); // TODO format with dates
-      pngDownloadLink.click();
-
-    };
-    image.onerror = (e) => {
-      console.error('e', e);
-    };
-    image.src = svgDataUrl;
-
-  }
-
-  const exportToCsv = () => {
-
-    let date: Date;
-    let csvLines: string[] = [
-      'time;co2_lpf;co2_raw;deg;hum;hpa;bat'
-    ];
-
-    for (let record of records) {
-      date = new Date(record.instant);
-      csvLines.push(`${TimeUtil.toCsvDate(date)};${TimeUtil.formatValue(record.co2Lpf, 0, 4, ' ')};${TimeUtil.formatValue(record.co2Raw, 0, 4, ' ')};${TimeUtil.formatValue(record.deg, 1, 5, ' ')};${TimeUtil.formatValue(record.hum, 1, 4, ' ')};${TimeUtil.formatValue(record.hpa, 2, 7, ' ')};${TimeUtil.formatValue(record.bat, 1, 5, ' ')}`);
-    }
-
-    let csvContent: string = csvLines.join('\r\n');
-    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8,' });
-    const csvDataUrl = URL.createObjectURL(csvBlob);
-    const csvDownloadLink = document.createElement('a');
-    csvDownloadLink.setAttribute('href', csvDataUrl);
-    csvDownloadLink.setAttribute('download', getExportName('csv')); // TODO format more unique
-    csvDownloadLink.click();
-
-  }
-
-  const getExportName = (type: string) => {
-    const minInstant = records[0].instant;
-    const maxInstant = records[records.length - 1].instant;
-    return `mothdat_${TimeUtil.toExportDateTime(new Date(minInstant))}_${TimeUtil.toExportDateTime(new Date(maxInstant))}.${type}`;
-  }
-
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exportTo]);
 
   useEffect(() => {
 
@@ -215,7 +135,7 @@ const TabValues = (props: ITabValuesProps) => {
 
   useEffect(() => {
 
-    console.debug(`⚙ updating tab values component (records, resizeCount)`, records, resizeCount);
+    console.debug(`⚙ updating tab values component (resizeCount)`, resizeCount);
 
     if (valueRef.current) {
       setOrientation(window.innerWidth > window.innerHeight ? 'landscape' : 'portrait');
@@ -223,49 +143,8 @@ const TabValues = (props: ITabValuesProps) => {
       setHeight(window.innerHeight - offY);
     }
 
-    if (chartRef.current && records.length > 0) {
-
-      const chartWidth = chartRef.current.getBoundingClientRect().width - 85; // 85 measured from
-      if (chartWidth > 0) {
-
-        let minInstant = records[0].instant; // - TimeUtil.getTimezoneOffsetSeconds();
-        let maxInstant = records[records.length - 1].instant; // - TimeUtil.getTimezoneOffsetSeconds();
-
-        const difInstant = maxInstant - minInstant;
-        const maxTickCount = chartWidth / 15;
-        // console.log('chartWidth', chartWidth, 'maxTickCount', maxTickCount, 'dpr', window.devicePixelRatio);
-
-        let tickDefinitionIndex = 0;
-        for (; tickDefinitionIndex < TICK_DEFINITIONS.length; tickDefinitionIndex++) {
-          const curTickCount = difInstant / TICK_DEFINITIONS[tickDefinitionIndex].step;
-          if (curTickCount < maxTickCount) {
-            // console.log('using definition', TICK_DEFINITIONS[tickDefinitionIndex].step / (1000 * 60 * 60));
-            break;
-          }
-        }
-
-        minInstant = getTickInstant(records[0].instant, TICK_DEFINITIONS[tickDefinitionIndex].step);
-        maxInstant = getTickInstant(records[records.length - 1].instant, TICK_DEFINITIONS[tickDefinitionIndex].step);
-
-        const _tickInterval: number[] = [];
-        for (let instant = minInstant; instant < maxInstant; instant += TICK_DEFINITIONS[tickDefinitionIndex].step) {
-          _tickInterval.push(instant);
-        }
-        setTickInterval(_tickInterval);
-
-      }
-
-    }
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [records, resizeCount]);
-
-  const getTickInstant = (instant: number, step: number) => {
-    const offsetInstant = instant - TimeUtil.getTimezoneOffsetSeconds() * 1000;
-    const moduloInstant = offsetInstant - offsetInstant % step + step
-    return moduloInstant + TimeUtil.getTimezoneOffsetSeconds() * 1000;
-  }
-
+  }, [resizeCount]);
 
   useEffect(() => {
 
@@ -322,23 +201,27 @@ const TabValues = (props: ITabValuesProps) => {
 
   };
 
-  const getXAxisMin = () => {
-    if (records.length > 0) {
-      return records[0].instant;
-    } else {
-      return undefined;
+  const exportToCsv = async (): Promise<void> => {
+
+    let date: Date;
+    let csvLines: string[] = [
+      'time;co2_lpf;co2_raw;deg;hum;hpa;bat'
+    ];
+
+    for (let record of records) {
+      date = new Date(record.instant);
+      csvLines.push(`${TimeUtil.toCsvDate(date)};${TimeUtil.formatValue(record.co2Lpf, 0, 4, ' ')};${TimeUtil.formatValue(record.co2Raw, 0, 4, ' ')};${TimeUtil.formatValue(record.deg, 1, 5, ' ')};${TimeUtil.formatValue(record.hum, 1, 4, ' ')};${TimeUtil.formatValue(record.hpa, 2, 7, ' ')};${TimeUtil.formatValue(record.bat, 1, 5, ' ')}`);
     }
+
+    let csvContent: string = csvLines.join('\r\n');
+    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8,' });
+    const csvDataUrl = URL.createObjectURL(csvBlob);
+    const csvDownloadLink = document.createElement('a');
+    csvDownloadLink.setAttribute('href', csvDataUrl);
+    csvDownloadLink.setAttribute('download', TimeUtil.getExportName('csv', records[0].instant, records[records.length - 1].instant)); // TODO format more unique
+    csvDownloadLink.click();
+
   }
-
-  const getXAxisMax = () => {
-    if (records.length > 0) {
-      return records[records.length - 1].instant;
-    } else {
-      return undefined;
-    }
-  }
-
-
 
   return (
     <>
@@ -347,7 +230,7 @@ const TabValues = (props: ITabValuesProps) => {
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
           title='export csv'
           size='small'
-          onClick={exportToCsv}
+          onClick={() => exportToCsv()}
         >
           <TableRowsIcon sx={{ fontSize: '1.0em' }} />
         </IconButton>
@@ -355,7 +238,7 @@ const TabValues = (props: ITabValuesProps) => {
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
           title='export png'
           size='small'
-          onClick={exportToPng}
+          onClick={() => setExportTo('png')}
         >
           <ImageIcon sx={{ fontSize: '1.0em' }} />
         </IconButton>
@@ -409,55 +292,7 @@ const TabValues = (props: ITabValuesProps) => {
           </div>
           <Stack direction={'column'} spacing={2} sx={{ flexGrow: 1000 }}>
             <div>
-              <LineChart
-                ref={chartRef}
-                height={height}
-                xAxis={[{
-                  dataKey: 'instant',
-                  valueFormatter: (instant, context) => {
-                    return TimeUtil.toLocalTime(instant)
-                  },
-                  min: getXAxisMin(),
-                  max: getXAxisMax(),
-                  label: 'time (HH:MM)',
-                  tickInterval,
-                  tickLabelStyle: {
-                    angle: -90,
-                    translate: -4,
-                    textAnchor: 'end',
-                    fontSize: 12,
-                  },
-                }]}
-                yAxis={[{
-                  colorMap: seriesDef.colorMap,
-                  valueFormatter: seriesDef.valueFormatter,
-                  min: seriesDef.min,
-                  label: `${seriesDef.label}`
-                }]}
-                series={[{
-                  dataKey: seriesDef.id,
-                  label: seriesDef.label,
-                  showMark: false,
-                  type: 'line',
-                  curve: 'linear',
-                  valueFormatter: seriesDef.valueFormatter
-                }]}
-                dataset={records}
-                grid={{ vertical: true, horizontal: true }}
-                margin={{ top: 15, right: 10, bottom: 65, left: 60 }}
-                sx={{
-                  [`& .${axisClasses.left} .${axisClasses.label}`]: {
-                    transform: 'translateX(-20px)',
-                  },
-                  [`& .${axisClasses.bottom} .${axisClasses.label}`]: {
-                    transform: 'translateY(25px)',
-                  },
-                }}
-                {...{
-                  legend: { hidden: true }
-                }}
-              >
-              </LineChart>
+              <ChartValues records={records} seriesDef={seriesDef} height={height} exportTo={''} handleExportComplete={handleExportComplete} />
             </div>
             <Stack direction={'row'} spacing={0} sx={{ flexGrow: 10 }}>
               {orientation === 'landscape' ? <div style={{ width: '50px' }}></div> : null}
@@ -494,6 +329,7 @@ const TabValues = (props: ITabValuesProps) => {
               {orientation === 'landscape' ? <div style={{ width: '10px' }}></div> : null}
             </Stack>
 
+
           </Stack>
           {/* <Stack spacing={0} sx={{ minHeight: '48px', flexDirection: 'row', alignItems: 'center' }}>
         <Typography sx={{ flexGrow: 100, padding: '5px' }}>{boxUrl}</Typography>
@@ -505,7 +341,13 @@ const TabValues = (props: ITabValuesProps) => {
         ></Value>
       </Stack> */}
         </LocalizationProvider >
+        {
+          exportTo !== '' ? <div style={{ position: 'absolute', top: '-10000px', visibility: 'hidden' }}>
+            <ChartValues records={records} seriesDef={seriesDef} height={600} width={1000} exportTo={exportTo} handleExportComplete={handleExportComplete} />
+          </div> : null
+        }
       </Stack >
+
     </>
   );
 

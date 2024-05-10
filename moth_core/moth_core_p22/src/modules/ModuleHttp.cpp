@@ -516,6 +516,9 @@ void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
 }
 
 void ModuleHttp::serveStatic(AsyncWebServerRequest *request) {
+#ifdef USE___SERIAL
+    Serial.printf("serving static: %s\n", request->url().c_str());
+#endif
     serveFile32(request, request->url());
 }
 

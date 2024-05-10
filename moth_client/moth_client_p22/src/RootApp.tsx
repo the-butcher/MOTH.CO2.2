@@ -21,6 +21,7 @@ const RootApp = () => {
 
   const boxUrl = `${window.location.origin}/api`; // when running directly from device
   // const boxUrl = `http://192.168.0.66/api`; // when running directly from device
+  // const boxUrl = `http://192.168.31.194/api`; // HotelSirius
 
   /**
    * TODO :: strategy for not having to re-evaluate (lots of http requests) date range often and for keeping historic data in cache
