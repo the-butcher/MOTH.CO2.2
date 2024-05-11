@@ -426,15 +426,14 @@ void ModuleHttp::handleApiNetOut(AsyncWebServerRequest *request) {
 
     JsonArray &networksJa = root.createNestedArray("networks");
     network_t network;
-    for (int networkIndex = 0; networkIndex < 10; networkIndex++) {
+    for (int networkIndex = 0; networkIndex < NETWORKS_BUFFER_SIZE; networkIndex++) {
         network = ModuleWifi::discoveredNetworks[networkIndex];
-        if (network.rssi != 0) {
+        if (network.rssi > NETWORK_RSSI_INVALID) {
             JsonObject &networkJo = networksJa.createNestedObject();
             networkJo["ssid"] = network.key;
             networkJo["rssi"] = network.rssi;
         }
     }
-
     root.printTo(*response);
     request->send(response);
 }

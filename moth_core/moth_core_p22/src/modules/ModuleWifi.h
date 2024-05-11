@@ -15,6 +15,8 @@ const String WIFI_AP_PWD = "CO2@420PPM";
 
 const uint8_t NETWORKS_BUFFER_SIZE = 10;
 
+const int32_t NETWORK_RSSI_INVALID = -10000;
+
 typedef struct {
     int32_t rssi;
     char key[64];
@@ -27,9 +29,9 @@ class ModuleWifi {
     static uint32_t secondstimeExpiry;
     static uint8_t expiryMinutes;
     static void updateSecondstimeExpiry(void* parameter);
-    static void scanNetworks(void* parameter);
     static bool connectToNetwork(config_t& config, network_t& network);
     static bool enableSoftAP(config_t& config);
+    static int cmpfunc(const void* a, const void* b);
 
    public:
     static network_t discoveredNetworks[NETWORKS_BUFFER_SIZE];

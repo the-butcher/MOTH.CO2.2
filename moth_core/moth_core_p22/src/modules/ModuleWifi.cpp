@@ -96,8 +96,8 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
 
     bool powerupSuccess = false;
 
-    // connect to previous network, if defined
-    if (config.wifi.networkConnIndexLast >= 0) {
+    // in case of auto connect, try to do a fast connect to the last network
+    if (!allowApMode && config.wifi.networkConnIndexLast >= 0) {
         if (ModuleWifi::connectToNetwork(config, configuredNetworks[config.wifi.networkConnIndexLast])) {
             powerupSuccess = true;
         } else {
@@ -105,22 +105,52 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         }
     }
 
-    // if no connection could be made through the default network id -> find more networks
+    // either manual connect or failed auto connect
     if (!powerupSuccess) {
+
         int ssidCount = WiFi.scanNetworks();
+        int ssidIndex = 0;
+        for (; ssidIndex < ssidCount; ssidIndex++) {
+            String ssid = WiFi.SSID(ssidIndex);
+            int32_t rssi = WiFi.RSSI(ssidIndex);
+            ModuleWifi::discoveredNetworks[ssidIndex] = {rssi};
+            ssid.toCharArray(ModuleWifi::discoveredNetworks[ssidIndex].key, 64);
+        }
+        for (; ssidIndex < NETWORKS_BUFFER_SIZE; ssidIndex++) {
+            ModuleWifi::discoveredNetworks[ssidIndex] = {NETWORK_RSSI_INVALID};
+        }
+
+        // Ssort ModuleWifi::discoveredNetworks by network strength
+        qsort(ModuleWifi::discoveredNetworks, NETWORKS_BUFFER_SIZE, sizeof(network_t), ModuleWifi::cmpfunc);
+
+        network_t network;
         String scanKey;
         String confKey;
-        // iterate available networks
-        for (int ssidIndex = 0; ssidIndex < ssidCount; ssidIndex++) {
-            scanKey = WiFi.SSID(ssidIndex);
-            for (int i = 0; i < configuredNetworkCount; i++) {
-                confKey = String(configuredNetworks[i].key);
-                if (i != config.wifi.networkConnIndexLast && confKey == scanKey) {  // found a configured network that matched one of the scanned networks
-                    if (ModuleWifi::connectToNetwork(config, configuredNetworks[i])) {
-                        config.wifi.networkConnIndexLast = i;
-                        powerupSuccess = true;
-                        break;
+        for (int networkIndex = 0; networkIndex < NETWORKS_BUFFER_SIZE; networkIndex++) {
+            network = ModuleWifi::discoveredNetworks[networkIndex];
+            if (network.rssi > NETWORK_RSSI_INVALID) {
+#ifdef USE___SERIAL
+                Serial.printf("network: %s, %d\n", String(network.key), network.rssi);
+#endif
+                scanKey = String(network.key);
+                for (int i = 0; i < configuredNetworkCount; i++) {
+                    confKey = String(configuredNetworks[i].key);
+                    if (confKey == scanKey) {  // found a configured network that matched one of the scanned networks
+#ifdef USE___SERIAL
+                        Serial.printf("connecting ...\n");
+#endif
+                        if (ModuleWifi::connectToNetwork(config, configuredNetworks[i])) {
+#ifdef USE___SERIAL
+                            Serial.printf("connected\n");
+#endif
+                            config.wifi.networkConnIndexLast = i;
+                            powerupSuccess = true;
+                            break;  // break the configured network loop
+                        }
                     }
+                }
+                if (powerupSuccess) {
+                    break;  // break the discovered network loop
                 }
             }
         }
@@ -141,32 +171,15 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         ModuleWifi::expire();
     }
 
-    if (allowApMode) {
-        xTaskCreate(ModuleWifi::scanNetworks, "scan networks", 5000, NULL, 2, NULL);
-    }
-
     return powerupSuccess;
 }
 
-void ModuleWifi::scanNetworks(void* parameter) {
-    int ssidCount = WiFi.scanNetworks();
-    int ssidIndex = 0;
-    for (; ssidIndex < ssidCount; ssidIndex++) {
-        String ssid = WiFi.SSID(ssidIndex);
-        int32_t rssi = WiFi.RSSI(ssidIndex);
-        ModuleWifi::discoveredNetworks[ssidIndex] = {rssi};
-        ssid.toCharArray(ModuleWifi::discoveredNetworks[ssidIndex].key, 64);
-    }
-    for (; ssidIndex < NETWORKS_BUFFER_SIZE; ssidIndex++) {
-        ModuleWifi::discoveredNetworks[ssidIndex] = {0};
-    }
-    vTaskDelete(NULL);
-    return;
+int ModuleWifi::cmpfunc(const void* a, const void* b) {
+    return (((network_t*)b)->rssi - ((network_t*)a)->rssi);
 }
 
 bool ModuleWifi::isPowered() {
     wifi_mode_t wifiMode = WiFi.getMode();
-    // return wifiMode == WIFI_AP || (wifiMode == WIFI_STA && WiFi.isConnected());
     return wifiMode == WIFI_AP || WiFi.isConnected();  // WiFi.isConnected() includes both WIFI_MODE_STA and WIFI_MODE_APSTA
 }
 

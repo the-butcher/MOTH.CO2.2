@@ -45,9 +45,9 @@ uint16_t actionNum = 0;
  * -- ISSUE: wifi connection code is not stable (switches to APSTA, maybe when a connection takes long to establish)
  *    -- possible fix implemented in ModuleWifi::isPowered() after reading MODE_WIFI_APSTA code
  * -- TODO: better caching for a dirout request (can have the last modified date of the youngest file)
- * -- ISSUE: in Siriushotel it was easliy possible to connect, but not to consume the large root.js file
+ * -- ISSUE: in Siriushotel it was easliy possible to connect, but not to consume the large root.js file in a timely fashion
  *    -- in some situations the device would directly crash after connection
- *    -- this resulted in a kind of live-lock, where the client was not accessible at all
+ *    -- this resulted in a kind of live-lock, where the client was not accessible at all due to not being able to connect to another network
  */
 
 // schedule setting and display
