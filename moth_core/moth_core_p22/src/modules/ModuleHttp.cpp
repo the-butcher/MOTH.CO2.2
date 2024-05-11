@@ -648,7 +648,7 @@ void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, s
         } else if (dataFileName == DISP_CONFIG_JSON) {
             ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                 ModuleDisp::configure(config);    // reloads json and applies settings to config
-                SensorScd041::configure(config);  // will apply temperature offset (if different from current value)
+                SensorScd041::configure(config);  // should apply temperature offset (if different from current value)
                 values.nextAutoNtpIndex = 0;      // trigger an ntp update (timezone may have changed)
             };
         }

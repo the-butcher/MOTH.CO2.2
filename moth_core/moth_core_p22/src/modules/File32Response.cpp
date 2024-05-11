@@ -23,6 +23,7 @@ File32Response::File32Response(String path, String contentType) : AsyncAbstractR
 
     lastModified = SensorTime::getDateTimeLastModString(_content);
     addHeader("Last-Modified", SensorTime::getDateTimeLastModString(_content));
+    addHeader("Cache-Control", "no-cache");
 }
 
 bool File32Response::wasModifiedSince(String ifModifiedSince) {
