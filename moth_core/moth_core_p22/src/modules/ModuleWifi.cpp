@@ -110,7 +110,7 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
 
         int ssidCount = WiFi.scanNetworks();
         int ssidIndex = 0;
-        for (; ssidIndex < ssidCount; ssidIndex++) {
+        for (; ssidIndex < max(ssidCount, (int)NETWORKS_BUFFER_SIZE); ssidIndex++) {
             String ssid = WiFi.SSID(ssidIndex);
             int32_t rssi = WiFi.RSSI(ssidIndex);
             ModuleWifi::discoveredNetworks[ssidIndex] = {rssi};
