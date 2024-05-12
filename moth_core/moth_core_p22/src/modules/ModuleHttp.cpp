@@ -118,6 +118,7 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     root["heap"] = ESP.getFreeHeap();
     root["sram"] = ESP.getPsramSize();
     root["freq"] = ESP.getCpuFreqMHz();
+
 #ifdef USE____DELAY
     root["ddel"] = true;
 #else
@@ -138,6 +139,13 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
 #else
     root["dper"] = false;
 #endif
+
+    JsonObject &values = root.createNestedObject("values");
+    values["nmsr"] = Values::values->nextMeasureIndex;
+    values["mmsr"] = Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE;
+    values["ndsp"] = Values::values->nextDisplayIndex;
+    values["nntp"] = Values::values->nextAutoNtpIndex;
+    values["npub"] = Values::values->nextAutoPubIndex;
 
     JsonObject &scd041Jo = root.createNestedObject("scd041");
     scd041Jo["toff"] = SensorScd041::getTemperatureOffset();

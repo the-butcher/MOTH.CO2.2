@@ -43,10 +43,6 @@ uint16_t actionNum = 0;
  *    -- can not reconnect MQTT after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
  * -- add more info to status (maybe config needs to be made public after all)
  * -- SENSOR: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
- * -- WIFI: wifi connection code is not stable (switches to APSTA, maybe when a connection takes long to establish)
- *    -- possible fix implemented in ModuleWifi::isPowered() after reading MODE_WIFI_APSTA code
- *    -- in Siriushotel the device would sometimes directly crash after connection
- *    -- in Siriushotel it was easliy possible to connect, but not to consume the large root.js file in a timely fashion, live-lock type of problem
  */
 
 // schedule setting and display
