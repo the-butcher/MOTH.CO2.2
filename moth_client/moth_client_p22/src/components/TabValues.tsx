@@ -4,6 +4,15 @@ import ImageIcon from '@mui/icons-material/Image';
 import SpeedIcon from '@mui/icons-material/Speed';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
+
+import Battery20Icon from '@mui/icons-material/Battery20';
+import Battery30Icon from '@mui/icons-material/Battery30';
+import Battery50Icon from '@mui/icons-material/Battery50';
+import Battery60Icon from '@mui/icons-material/Battery60';
+import Battery80Icon from '@mui/icons-material/Battery80';
+import Battery90Icon from '@mui/icons-material/Battery90';
+import BatteryFullIcon from '@mui/icons-material/BatteryFull';
+
 import { IconButton, Stack } from '@mui/material';
 import { DateTimePicker, renderDateViewCalendar, renderTimeViewClock } from '@mui/x-date-pickers';
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment';
@@ -32,10 +41,10 @@ const TabValues = (props: ITabValuesProps) => {
   const [height, setHeight] = useState<number>(400);
   const [resizeCount, setResizeCount] = useState<number>();
   const [exportTo, setExportTo] = useState<TExportTo>('');
+  const [batteryIcon, setBatteryIcon] = useState<JSX.Element>();
 
   const latestToRef = useRef<number>(-1);
   const valueRef = createRef<HTMLDivElement>();
-
 
   const handleExportComplete = () => {
     setExportTo('');
@@ -129,6 +138,22 @@ const TabValues = (props: ITabValuesProps) => {
     const secwait = 70 - seconds;
     window.clearTimeout(latestToRef.current);
     latestToRef.current = window.setTimeout(() => getLatestValues(), secwait * 1000);
+
+    if (latest.bat >= 95) {
+      setBatteryIcon(<BatteryFullIcon sx={{ fontSize: '1.0em' }} />);
+    } else if (latest.bat >= 85) {
+      setBatteryIcon(<Battery90Icon sx={{ fontSize: '1.0em' }} />);
+    } else if (latest.bat >= 70) {
+      setBatteryIcon(<Battery80Icon sx={{ fontSize: '1.0em' }} />);
+    } else if (latest.bat >= 55) {
+      setBatteryIcon(<Battery60Icon sx={{ fontSize: '1.0em' }} />);
+    } else if (latest.bat >= 40) {
+      setBatteryIcon(<Battery50Icon sx={{ fontSize: '1.0em' }} />);
+    } else if (latest.bat >= 25) {
+      setBatteryIcon(<Battery30Icon sx={{ fontSize: '1.0em' }} />);
+    } else {
+      setBatteryIcon(<Battery20Icon sx={{ fontSize: '1.0em' }} />);
+    }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latest]);
@@ -243,6 +268,18 @@ const TabValues = (props: ITabValuesProps) => {
           <ImageIcon sx={{ fontSize: '1.0em' }} />
         </IconButton>
       </Stack>
+      <Stack spacing={1} sx={{ flexDirection: 'column', position: 'fixed', left: '14px', bottom: '20px', ...props.style }}>
+        <IconButton
+          sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
+          title='battery'
+          size='small'
+          onClick={() => handleValueClick('bat')}
+        >
+          {
+            batteryIcon
+          }
+        </IconButton>
+      </Stack>
       <Stack spacing={0} sx={{ padding: '0px', flexGrow: 10, display: 'flex', ...props.style }}>
         <LocalizationProvider dateAdapter={AdapterMoment}>
           <div ref={valueRef} style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '0px', flexGrow: 10 }}>
@@ -281,13 +318,6 @@ const TabValues = (props: ITabValuesProps) => {
                 active={seriesDef.id === 'hpa'}
                 handleClick={() => handleValueClick('hpa')}
               ></ValueChoice>
-              {/* <Value
-              icon={<BatteryStdIcon />}
-              value={latest.bat.toFixed(1)}
-              unit='%'
-              grow='5'
-              handleClick={() => handleValueClick('bat')}
-            ></Value> */}
             </div>
           </div>
           <Stack direction={'column'} spacing={2} sx={{ flexGrow: 1000 }}>
@@ -331,15 +361,7 @@ const TabValues = (props: ITabValuesProps) => {
 
 
           </Stack>
-          {/* <Stack spacing={0} sx={{ minHeight: '48px', flexDirection: 'row', alignItems: 'center' }}>
-        <Typography sx={{ flexGrow: 100, padding: '5px' }}>{boxUrl}</Typography>
-        <Value
-          icon={<BatteryStdIcon />}
-          value={valBat.toFixed(1)}
-          unit='%'
-          grow='1'
-        ></Value>
-      </Stack> */}
+
         </LocalizationProvider >
         {
           exportTo !== '' ? <div style={{ position: 'absolute', top: '-10000px', visibility: 'hidden' }}>

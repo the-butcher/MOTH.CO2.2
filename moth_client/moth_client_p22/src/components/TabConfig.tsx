@@ -10,6 +10,7 @@ import { JsonLoader } from '../util/JsonLoader';
 import ConfigChoice from './ConfigChoice';
 import LabelledDivider from './LabelledDivider';
 import NetworkChoice from './NetworkChoice';
+import { InstLoader } from '../util/InstLoader';
 
 type DeepPartial<T> = T extends object ? {
   [P in keyof T]?: DeepPartial<T[P]>;
@@ -176,6 +177,19 @@ const TabConfig = (props: ITabConfigProps) => {
     });
   };
 
+
+  const handleConfigUpload = () => {
+
+    if (disp.status === 'MODIFIED') {
+      new InstLoader().load(disp, 'config/disp2.json', `${boxUrl}/upload`).then(response => {
+        console.log('disp upload success', response);
+      }).catch(e => {
+        console.error('disp upload error', e);
+      });
+    }
+
+  }
+
   const getModifiedFlag = (): number => {
     let modifiedFlag = 0;
     if (disp.status === 'MODIFIED') {
@@ -197,6 +211,7 @@ const TabConfig = (props: ITabConfigProps) => {
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)', width: '28px' }}
           size='small'
           title='synchronize to device'
+          onClick={() => handleConfigUpload()}
         >
           <Badge
             color='error'

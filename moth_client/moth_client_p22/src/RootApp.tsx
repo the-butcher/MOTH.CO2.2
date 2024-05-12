@@ -19,9 +19,8 @@ type VIEW_TYPE = 'values' | 'config' | 'server';
 
 const RootApp = () => {
 
-  const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  // const boxUrl = `http://192.168.0.66/api`; // when running directly from device
-  // const boxUrl = `http://192.168.31.194/api`; // HotelSirius
+  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  const boxUrl = `http://192.168.0.66/api`; // when running directly from device
 
   /**
    * TODO :: strategy for not having to re-evaluate (lots of http requests) date range often and for keeping historic data in cache
@@ -134,36 +133,6 @@ const RootApp = () => {
     console.debug('✨ building root component');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // const handleButtonPress = () => {
-
-  //   const str = JSON.stringify({
-  //     "key1": "value1",
-  //     "key2": "value2"
-  //   });
-  //   const bytes = new TextEncoder().encode(str);
-  //   const blob = new Blob([bytes], {
-  //     type: "application/json;charset=utf-8"
-  //   });
-
-  //   var file = new File([blob], "file_name", {lastModified: Date.now() });
-
-  //   console.log('file', file);
-
-  //   const request = new XMLHttpRequest();
-  //   const formData = new FormData();
-
-  //   request.open("POST", boxUrl + '/test', true);
-  //   request.onreadystatechange = () => {
-  //     if (request.readyState === 4 && request.status === 200) {
-  //       console.log(request.responseText);
-  //     }
-  //   };
-  //   formData.append("file", "config/test.json");
-  //   formData.append("content", file);
-  //   request.send(formData);
-
-  // }
 
   return (
     <ThemeProvider theme={ThemeUtil.createTheme()}>
