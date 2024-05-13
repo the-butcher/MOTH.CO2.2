@@ -1,7 +1,7 @@
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TocIcon from '@mui/icons-material/Toc';
 import TuneIcon from '@mui/icons-material/Tune';
-import { CssBaseline, IconButton, Paper, Stack, ThemeProvider } from '@mui/material';
+import { Alert, CssBaseline, IconButton, Paper, Snackbar, Stack, ThemeProvider } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import TabConfig from './components/TabConfig';
 import TabServer from './components/TabServer';
@@ -14,6 +14,7 @@ import { DISP_CONFIG_DEFAULT } from './types/IDispConfig';
 import { WIFI_CONFIG_DEFAULT } from './types/IWifiConfig';
 import { MQTT_CONFIG_DEFAULT } from './types/IMqttConfig';
 import { PiecewiseColorConfig } from '@mui/x-charts/models/colorMapping';
+import { IMessage } from './types/ITabProps';
 
 type VIEW_TYPE = 'values' | 'config' | 'server';
 
@@ -23,11 +24,33 @@ const RootApp = () => {
   const boxUrl = `http://192.168.0.66/api`; // when running directly from device
 
   /**
-   * TODO :: strategy for not having to re-evaluate (lots of http requests) date range often and for keeping historic data in cache
-   * TODO :: create form around device configuration (display, wifi, mqtt) and implement reassembly of those values for re-upload to device
+   * TODO :: initial step to establish and validate connection (i.e. do not show an empty chart)
    */
 
   const [viewType, setViewType] = useState<VIEW_TYPE>('values');
+  const [alertMessage, setAlertMessage] = useState<IMessage>({
+    message: '',
+    severity: 'success',
+    active: false
+  });
+
+  const handleClose = (event: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setAlertMessage({
+      ...alertMessage,
+      active: false
+    })
+  };
+
+  const handleAlertMessage = (_alertMessage: IMessage) => {
+
+    console.debug(`📞 handling alert message`, _alertMessage);
+
+    setAlertMessage(_alertMessage);
+
+  }
 
   const handleValuesUpdate = (updates: Partial<ITabValuesProps>) => {
 
@@ -56,7 +79,7 @@ const RootApp = () => {
 
     // updates to the display config
     let seriesDefUpdateRequired = false;
-    if (!compare(updates.disp.co2, tabConfigPropsRef.current.disp.co2, ['wHi', 'rHi'])) {
+    if (updates.disp && !compare(updates.disp.co2, tabConfigPropsRef.current.disp.co2, ['wHi', 'rHi'])) {
       seriesDefUpdateRequired = true;
       (SERIES_DEFS.co2Lpf.colorMap as PiecewiseColorConfig).thresholds = [
         updates.disp.co2.wHi,
@@ -67,7 +90,7 @@ const RootApp = () => {
         updates.disp.co2.rHi
       ];
     }
-    if (!compare(updates.disp.deg, tabConfigPropsRef.current.disp.deg, ['rLo', 'wLo', 'wHi', 'rHi'])) {
+    if (updates.disp && !compare(updates.disp.deg, tabConfigPropsRef.current.disp.deg, ['rLo', 'wLo', 'wHi', 'rHi'])) {
       seriesDefUpdateRequired = true;
       (SERIES_DEFS.deg.colorMap as PiecewiseColorConfig).thresholds = [
         updates.disp.deg.rLo,
@@ -75,9 +98,8 @@ const RootApp = () => {
         updates.disp.deg.wHi,
         updates.disp.deg.rHi
       ];
-      console.log('SERIES_DEFS.deg.colorMap', SERIES_DEFS.deg.colorMap);
     }
-    if (!compare(updates.disp.hum, tabConfigPropsRef.current.disp.hum, ['rLo', 'wLo', 'wHi', 'rHi'])) {
+    if (updates.disp && !compare(updates.disp.hum, tabConfigPropsRef.current.disp.hum, ['rLo', 'wLo', 'wHi', 'rHi'])) {
       seriesDefUpdateRequired = true;
       (SERIES_DEFS.hum.colorMap as PiecewiseColorConfig).thresholds = [
         updates.disp.hum.rLo,
@@ -116,7 +138,8 @@ const RootApp = () => {
     },
     records: [],
     seriesDef: SERIES_DEFS.co2Lpf,
-    handleUpdate: handleValuesUpdate
+    handleUpdate: handleValuesUpdate,
+    handleAlertMessage
   });
   const [tabValuesProps, setTabValuesProps] = useState<ITabValuesProps>(tabValuesPropsRef.current);
 
@@ -125,7 +148,8 @@ const RootApp = () => {
     disp: DISP_CONFIG_DEFAULT,
     wifi: WIFI_CONFIG_DEFAULT,
     mqtt: MQTT_CONFIG_DEFAULT,
-    handleUpdate: handleConfigUpdate
+    handleUpdate: handleConfigUpdate,
+    handleAlertMessage
   });
   const [tabConfigProps, setTabConfigProps] = useState<ITabConfigProps>(tabConfigPropsRef.current);
 
@@ -137,22 +161,37 @@ const RootApp = () => {
   return (
     <ThemeProvider theme={ThemeUtil.createTheme()}>
       <CssBaseline />
+      <Snackbar
+        open={alertMessage.active}
+        // autoHideDuration={5000}
+        onClose={handleClose}
+        sx={{ left: '72px' }}
+      >
+        <Alert
+          onClose={handleClose}
+          severity={alertMessage.severity}
+          variant='filled'
+          sx={{ width: '100%' }}
+        >
+          {alertMessage.message}
+        </Alert>
+      </Snackbar>
       <Stack direction={'row'} spacing={0} sx={{ height: '100%' }}>
         <Paper elevation={4} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', marginTop: '5px', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}>
-          <IconButton size='small' title='data' onClick={() => setViewType('values')}>
+          <IconButton size='small' title='data' onClick={() => setViewType('values')} sx={{ color: viewType === 'values' ? 'black' : 'gray' }}>
             <ShowChartIcon />
           </IconButton>
-          <IconButton size='small' title='configuration' onClick={() => setViewType('config')}>
+          <IconButton size='small' title='configuration' onClick={() => setViewType('config')} sx={{ color: viewType === 'config' ? 'black' : 'gray' }}>
             <TuneIcon />
           </IconButton>
-          <IconButton size='small' title='server api' onClick={() => setViewType('server')}>
+          <IconButton size='small' title='server api' onClick={() => setViewType('server')} sx={{ color: viewType === 'server' ? 'black' : 'gray' }}>
             <TocIcon />
           </IconButton>
         </Paper>
         <div style={{ minWidth: '45px' }}></div>
         <TabValues {...tabValuesProps} style={{ display: viewType === 'values' ? 'flex' : 'none' }} />
         <TabConfig {...tabConfigProps} style={{ display: viewType === 'config' ? 'flex' : 'none' }} />
-        <TabServer boxUrl={boxUrl} style={{ display: viewType === 'server' ? 'flex' : 'none' }} />
+        <TabServer boxUrl={boxUrl} handleAlertMessage={handleAlertMessage} style={{ display: viewType === 'server' ? 'flex' : 'none' }} />
       </Stack >
     </ThemeProvider >
   );

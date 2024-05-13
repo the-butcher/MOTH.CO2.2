@@ -21,11 +21,6 @@ DatCsvResponse::DatCsvResponse(String path) : AsyncAbstractResponse() {
     _contentLength = CSV_HEAD.length() + _content.size() * CSV_LINE_LENGTH / sizeof(values_all_t);
     _contentType = "text/csv";
 
-    // // download name
-    // char dispositionBuffer[64];
-    // sprintf(dispositionBuffer, "attachment; filename=\"%s.csv\"", path.substring(9, 17));
-    // addHeader("Content-Disposition", dispositionBuffer);
-    // download name
     char nameBuf[16];
     _content.getName(nameBuf, 16);
     char dispositionBuffer[64];
@@ -33,7 +28,18 @@ DatCsvResponse::DatCsvResponse(String path) : AsyncAbstractResponse() {
     addHeader("Content-Disposition", dispositionBuffer);
 
     lastModified = SensorTime::getDateTimeLastModString(_content);
-    addHeader("Last-Modified", SensorTime::getDateTimeLastModString(_content));
+
+    String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime(), "dat").name;  // slash in first char pos
+    if (dayPath.indexOf(path) < 0) {
+        addHeader("Cache-Control", "max-age=31536000");
+    } else {
+        uint8_t measurementsUntilUpdate = MEASUREMENT_BUFFER_SIZE - Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE;
+        char maxAgeBuf[16];
+        sprintf(maxAgeBuf, "max-age=%s", String(measurementsUntilUpdate * SECONDS_PER___________MINUTE));
+        addHeader("Cache-Control", maxAgeBuf);
+    }
+
+    addHeader("Last-Modified", lastModified);
 }
 
 bool DatCsvResponse::wasModifiedSince(String ifModifiedSince) {

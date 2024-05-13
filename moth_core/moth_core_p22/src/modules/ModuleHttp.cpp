@@ -549,7 +549,13 @@ void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String file) {
         File32Response *response = new File32Response(file, fileType);
         if (request->hasHeader("If-Modified-Since")) {
             String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
+#ifdef USE___SERIAL
+            Serial.printf("ifModifiedSince: %s, wasModified: %d\n", ifModifiedSince.c_str(), response->wasModifiedSince(ifModifiedSince));
+#endif
             if (!response->wasModifiedSince(ifModifiedSince)) {
+#ifdef USE___SERIAL
+                Serial.printf("sending 304 since not-modified\n");
+#endif
                 response->~File32Response();
                 request->send(304);  // not-modified
                 return;

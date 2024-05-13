@@ -22,8 +22,21 @@ File32Response::File32Response(String path, String contentType) : AsyncAbstractR
     _contentType = contentType;
 
     lastModified = SensorTime::getDateTimeLastModString(_content);
-    addHeader("Last-Modified", SensorTime::getDateTimeLastModString(_content));
-    addHeader("Cache-Control", "no-cache");
+
+    if (path.indexOf(".dat") > 0) {
+        String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime(), "dat").name;  // slash in first char pos
+        if (dayPath.indexOf(path) < 0) {
+            addHeader("Cache-Control", "max-age=31536000");
+        } else {
+            uint8_t measurementsUntilUpdate = MEASUREMENT_BUFFER_SIZE - Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE;
+            char maxAgeBuf[16];
+            sprintf(maxAgeBuf, "max-age=%s", String(measurementsUntilUpdate * SECONDS_PER___________MINUTE));
+            addHeader("Cache-Control", maxAgeBuf);
+        }
+    } else {
+        addHeader("Cache-Control", "no-cache");
+    }
+    addHeader("Last-Modified", lastModified);
 }
 
 bool File32Response::wasModifiedSince(String ifModifiedSince) {

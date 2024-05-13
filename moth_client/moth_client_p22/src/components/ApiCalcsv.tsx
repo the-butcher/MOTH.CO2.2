@@ -17,7 +17,9 @@ import ApiResponse from './ApiResponse';
 import { IApiProperties } from '../types/IApiProperties';
 import { IResponseProps } from '../types/IResponseProps';
 
-
+/**
+ * @deprecated
+ */
 const ApiCalcsv = (props: IApiProperties) => {
 
   const apiName = 'calcsv';

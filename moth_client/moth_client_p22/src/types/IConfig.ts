@@ -1,5 +1,5 @@
-type CONFIG_STATUS = 'DEFAULT' | 'LOADED' | 'MODIFIED';
+export type TConfigStatus = 'DEFAULT' | 'LOADED' | 'MODIFIED_VALID' | 'MODIFIED_INVALID';
 
 export interface IConfig {
-    status: CONFIG_STATUS;
+    status: TConfigStatus;
 }

@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { IChartProps } from "../types/IChartProps";
 import { TICK_DEFINITIONS } from "../types/ITickDefinition";
 import { TimeUtil } from "../util/TimeUtil";
+import { IRecord } from "../types/IRecord";
 
 const ChartValues = (props: IChartProps) => {
 
     const { width, height, seriesDef, records, exportTo, handleExportComplete } = props;
 
+    const [tickDefIndex, setTickDefIndex] = useState<number>(0);
     const [tickInterval, setTickInterval] = useState<number[]>();
+    const [stepRecords, setStepRecords] = useState<IRecord[]>([]);
     const chartRef = useRef<SVGElement>();
 
     /**
@@ -97,27 +100,81 @@ const ChartValues = (props: IChartProps) => {
                 const maxTickCount = chartWidth / 15;
                 // console.log('chartWidth', chartWidth, 'maxTickCount', maxTickCount, 'dpr', window.devicePixelRatio);
 
-                let tickDefinitionIndex = 0;
-                for (; tickDefinitionIndex < TICK_DEFINITIONS.length; tickDefinitionIndex++) {
-                    const curTickCount = difInstant / TICK_DEFINITIONS[tickDefinitionIndex].step;
+                let _tickDefIndex = 0;
+                for (; _tickDefIndex < TICK_DEFINITIONS.length; _tickDefIndex++) {
+                    const curTickCount = difInstant / TICK_DEFINITIONS[_tickDefIndex].tick;
                     if (curTickCount < maxTickCount) {
                         // console.log('using definition', TICK_DEFINITIONS[tickDefinitionIndex].step / (1000 * 60 * 60));
                         break;
                     }
                 }
 
-                minInstant = getTickInstant(records[0].instant, TICK_DEFINITIONS[tickDefinitionIndex].step);
-                maxInstant = getTickInstant(records[records.length - 1].instant, TICK_DEFINITIONS[tickDefinitionIndex].step);
+                minInstant = getTickInstant(records[0].instant, TICK_DEFINITIONS[_tickDefIndex].tick);
+                maxInstant = getTickInstant(records[records.length - 1].instant, TICK_DEFINITIONS[_tickDefIndex].tick);
 
                 const _tickInterval: number[] = [];
-                for (let instant = minInstant; instant < maxInstant; instant += TICK_DEFINITIONS[tickDefinitionIndex].step) {
+                for (let instant = minInstant; instant < maxInstant; instant += TICK_DEFINITIONS[_tickDefIndex].tick) {
                     _tickInterval.push(instant);
                 }
+                setTickDefIndex(_tickDefIndex);
                 setTickInterval(_tickInterval);
 
             }
 
         }
+
+    }
+
+    const getTickInstant = (instant: number, step: number) => {
+        const offsetInstant = instant - TimeUtil.getTimezoneOffsetSeconds() * 1000;
+        const moduloInstant = offsetInstant - offsetInstant % step + step
+        return moduloInstant + TimeUtil.getTimezoneOffsetSeconds() * 1000;
+    }
+
+    const rebuildStepRecords = () => {
+
+        if (records?.length > 0) {
+
+            const step = TICK_DEFINITIONS[tickDefIndex].tick / TICK_DEFINITIONS[tickDefIndex].step;
+            console.log('step', step);
+
+            let minInstant = getTickInstant(records[0].instant - step, step);
+            let maxInstant = getTickInstant(records[records.length - 1].instant, step);
+
+            const _stepRecords: IRecord[] = [];
+            let record: IRecord;
+            let recordIndex = 0;
+            let offInstant: number;
+            for (let instant = minInstant; instant < maxInstant; instant += step) {
+                for (; recordIndex < records.length; recordIndex++) {
+                    record = records[recordIndex];
+                    offInstant = record.instant - instant; // positive value while records are older than instant
+                    if (Math.abs(offInstant) <= TimeUtil.MILLISECONDS_PER_MINUTE / 2) {
+                        _stepRecords.push(record);
+                        // break; // will continue with the next searchable instant
+                    } else if (offInstant > 0) {
+                        break;
+                    }
+
+                }
+            }
+            setStepRecords(_stepRecords);
+
+        }
+
+        // console.log(new Date(minInstant), new Date(maxInstant));
+
+        // if (records?.length > 0) {
+
+        //     let lastInstant = records[0].instant;
+        //     for (let record of records) {
+        //         if (record.instant - lastInstant >= TICK_DEFINITIONS[tickDefIndex].step) {
+        //             _stepRecords.push(record);
+        //             lastInstant = record.instant;
+        //         }
+        //     }
+        //     setStepRecords(_stepRecords);
+        // }
 
     }
 
@@ -141,24 +198,30 @@ const ChartValues = (props: IChartProps) => {
 
     useEffect(() => {
 
-        if (tickInterval && exportTo !== '') {
-            console.debug(`⚙ updating chart component (tickInterval, exportTo)`, tickInterval, exportTo);
-            if (exportTo === 'png') {
-                setTimeout(() => {
-                    exportToPng();
-                }, 250);
-
-            }
-        }
+        console.debug(`⚙ updating chart component (tickInterval)`, tickInterval);
+        rebuildStepRecords();
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tickInterval]);
 
-    const getTickInstant = (instant: number, step: number) => {
-        const offsetInstant = instant - TimeUtil.getTimezoneOffsetSeconds() * 1000;
-        const moduloInstant = offsetInstant - offsetInstant % step + step
-        return moduloInstant + TimeUtil.getTimezoneOffsetSeconds() * 1000;
-    }
+    useEffect(() => {
+
+        if (stepRecords?.length > 0) {
+            console.debug(`⚙ updating chart component (stepRecords, exportTo)`, stepRecords, exportTo);
+            if (exportTo !== '') {
+                if (exportTo === 'png') {
+                    setTimeout(() => {
+                        exportToPng();
+                    }, 250);
+
+                }
+            }
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [stepRecords]);
+
+
 
     useEffect(() => {
 
@@ -219,7 +282,7 @@ const ChartValues = (props: IChartProps) => {
                 curve: 'linear',
                 valueFormatter: seriesDef.valueFormatter
             }]}
-            dataset={records}
+            dataset={stepRecords}
             grid={{ vertical: true, horizontal: true }}
             margin={{ top: 15, right: 10, bottom: 65, left: 60 }}
             sx={{

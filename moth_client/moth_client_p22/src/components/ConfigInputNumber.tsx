@@ -28,6 +28,9 @@ const ConfigInputNumber = (props: IValueNumberConfig) => {
             numberValue = Math.min(max, numberValue);
         }
         numberValue = fixed ? Math.round(numberValue) : numberValue;
+        if (!Number.isFinite(numberValue)) {
+            numberValue = value;
+        }
         if (numberValue !== value) {
             handleUpdate(numberValue);
         } else {

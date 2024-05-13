@@ -18,7 +18,7 @@ const ApiResponse = (props: IResponseProps) => {
     }, [time, href, http, data]);
 
     return (
-        <div>
+        <div style={{ width: 'inherit' }}>
             <Typography variant="caption" sx={{ display: "flex", alignItems: "center" }}>
                 <QueryBuilderIcon sx={{ fontSize: 'medium' }} />
                 &nbsp;{new Date(time).toLocaleTimeString()}
@@ -37,8 +37,8 @@ const ApiResponse = (props: IResponseProps) => {
                 }
                 &nbsp;{type}
             </Typography>
-            <Typography variant="caption" sx={{ display: "flex", alignItems: "center", height: '200px', background: 'black', color: 'white', marginTop: '4px' }}>
-                <pre style={{ height: 'inherit', width: '100%', overflow: 'auto', padding: '6px' }}>{content}</pre>
+            <Typography variant="caption" component={'div'} sx={{ display: "flex", alignItems: "center", width: '100%', color: 'white', marginTop: '4px' }}>
+                <pre style={{ whiteSpace: 'pre-wrap', height: '200px', padding: '6px', overflow: 'auto', background: 'black', width: '100%', display: 'block' }}>{content}</pre>
             </Typography>
         </div>
 

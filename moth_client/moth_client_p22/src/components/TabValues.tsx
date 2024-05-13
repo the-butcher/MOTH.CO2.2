@@ -35,7 +35,7 @@ import { TExportTo } from '../types/IChartProps';
 
 const TabValues = (props: ITabValuesProps) => {
 
-  const { boxUrl, latest, dateRangeData, dateRangeUser, records, seriesDef, handleUpdate } = { ...props };
+  const { boxUrl, latest, dateRangeData, dateRangeUser, records, seriesDef, handleUpdate, handleAlertMessage } = { ...props };
 
   const [orientation, setOrientation] = useState<TOrientation>('landscape');
   const [height, setHeight] = useState<number>(400);
@@ -55,8 +55,13 @@ const TabValues = (props: ITabValuesProps) => {
       handleUpdate({
         latest
       });
-    }).catch(e => {
+    }).catch((e: Error) => {
       console.error('e', e);
+      handleAlertMessage({
+        message: e.message ? e.message : 'failed to get latest values',
+        severity: 'error',
+        active: true
+      });
     });
   }
 
@@ -70,8 +75,13 @@ const TabValues = (props: ITabValuesProps) => {
         dateRangeData: [dateMinData, dateMaxMisc],
         dateRangeUser: [dateMinUser, dateMaxMisc]
       });
-    }).catch(e => {
+    }).catch((e: Error) => {
       console.error('e', e);
+      handleAlertMessage({
+        message: e.message ? e.message : 'failed to collect date range',
+        severity: 'error',
+        active: true
+      });
     });
 
   }
@@ -104,8 +114,13 @@ const TabValues = (props: ITabValuesProps) => {
       handleUpdate({
         records
       });
-    }).catch(e => {
+    }).catch((e: Error) => {
       console.error('e', e);
+      handleAlertMessage({
+        message: e.message ? e.message : 'failed to load records',
+        severity: 'error',
+        active: true
+      });
     });
 
   }
@@ -128,9 +143,13 @@ const TabValues = (props: ITabValuesProps) => {
     const updates: Partial<ITabValuesProps> = {
       dateRangeData: [dateRangeData[0], new Date()]
     };
-    // if the user range is close to "now" adjust user range to include the newest records
+
+    // if the user range is close to "now" adjust user range to include the newest records, move the beginning of the range as well to have a constant range
     if (Math.abs(dateRangeUser[1].getTime() - new Date().getTime()) <= TimeUtil.MILLISECONDS_PER_MINUTE * 5) {
-      updates.dateRangeUser = [dateRangeUser[0], new Date()];
+      const curUserMax = new Date();
+      const difUserMax = curUserMax.getTime() - dateRangeUser[1].getTime();
+      const curUserMin = new Date(dateRangeUser[0].getTime() + difUserMax);
+      updates.dateRangeUser = [curUserMin, curUserMax];
     }
     handleUpdate(updates);
 
@@ -139,6 +158,7 @@ const TabValues = (props: ITabValuesProps) => {
     window.clearTimeout(latestToRef.current);
     latestToRef.current = window.setTimeout(() => getLatestValues(), secwait * 1000);
 
+    // show appropriate battery icon
     if (latest.bat >= 95) {
       setBatteryIcon(<BatteryFullIcon sx={{ fontSize: '1.0em' }} />);
     } else if (latest.bat >= 85) {
@@ -198,7 +218,6 @@ const TabValues = (props: ITabValuesProps) => {
   }, []);
 
   const handleValueClick = (value: TRecordKey) => {
-    // console.log('handleValueClick', value, SERIES_DEFS[value]);
     handleUpdate({
       seriesDef: SERIES_DEFS[value]
     });

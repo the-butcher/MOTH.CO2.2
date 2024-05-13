@@ -22,29 +22,23 @@ export class InstLoader {
 
         return new Promise(function (resolve, reject) {
 
-            var instRequ = new XMLHttpRequest();
-            var instForm = new FormData();
-            instRequ.open('POST', url, true);
+            var xhr = new XMLHttpRequest();
+            var frm = new FormData();
+            xhr.open('POST', url, true);
 
-            instRequ.onload = function () {
+            xhr.onload = function () {
                 if (this.status >= 200 && this.status < 300) {
-                    resolve(JSON.parse(instRequ.responseText));
+                    resolve(JSON.parse(xhr.responseText));
                 } else {
-                    reject({
-                        status: this.status,
-                        statusText: instRequ.statusText
-                    });
+                    reject(new Error(this.statusText));
                 }
             };
-            instRequ.onerror = function () {
-                reject({
-                    status: this.status,
-                    statusText: instRequ.statusText
-                });
+            xhr.onerror = (e) => {
+                reject(e);
             };
-            instForm.append("file", path);
-            instForm.append("content", instFile);
-            instRequ.send(instForm);
+            frm.append("file", path);
+            frm.append("content", instFile);
+            xhr.send(frm);
 
         });
     }

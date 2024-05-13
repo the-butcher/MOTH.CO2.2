@@ -1,32 +1,41 @@
 import { TimeUtil } from "../util/TimeUtil";
 
 export interface ITickDefinition {
+    tick: number;
     step: number;
 }
 
 export const TICK_DEFINITIONS: ITickDefinition[] = [
     {
-        step: TimeUtil.MILLISECONDS_PER_MINUTE * 10
+        tick: TimeUtil.MILLISECONDS_PER_MINUTE * 10,
+        step: 10
     },
     {
-        step: TimeUtil.MILLISECONDS_PER_MINUTE * 15
+        tick: TimeUtil.MILLISECONDS_PER_MINUTE * 15,
+        step: 15
     },
     {
-        step: TimeUtil.MILLISECONDS_PER_MINUTE * 30
+        tick: TimeUtil.MILLISECONDS_PER_MINUTE * 30,
+        step: 30
     },
     {
-        step: TimeUtil.MILLISECONDS_PER_HOUR
+        tick: TimeUtil.MILLISECONDS_PER_HOUR,
+        step: 30
     },
     {
-        step: TimeUtil.MILLISECONDS_PER_HOUR * 3
+        tick: TimeUtil.MILLISECONDS_PER_HOUR * 3,
+        step: 36
     },
     {
-        step: TimeUtil.MILLISECONDS_PER_HOUR * 6
+        tick: TimeUtil.MILLISECONDS_PER_HOUR * 6,
+        step: 36
     },
     {
-        step: TimeUtil.MILLISECONDS_PER_HOUR * 12
+        tick: TimeUtil.MILLISECONDS_PER_HOUR * 12,
+        step: 24
     },
     {
-        step: TimeUtil.MILLISECONDS_PER__DAY
+        tick: TimeUtil.MILLISECONDS_PER__DAY,
+        step: 24
     }
 ];

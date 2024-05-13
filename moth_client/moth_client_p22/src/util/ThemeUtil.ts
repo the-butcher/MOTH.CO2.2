@@ -54,29 +54,28 @@ export class ThemeUtil {
                         }
                     }
                 },
-                MuiTabs: {
-                    styleOverrides: {
-                        root: {
-                            minHeight: '48px',
-                            padding: '5px'
-                        }
-                    }
-                },
-                MuiTab: {
-                    styleOverrides: {
-                        root: {
-                            minHeight: '48px',
-                            fontSize: '1.5em',
-                            flexGrow: '2',
-                            // backgroundColor: '#FAFAFA',
-                            borderBottom: '3px solid #F0F0F0',
-                            maxWidth: 'unset',
-                            '&.Mui-selected': {
-                                // backgroundColor: '#F0F0F0'
-                            }
-                        }
-                    }
-                },
+                // MuiTabs: {
+                //     styleOverrides: {
+                //         root: {
+                //             minHeight: '48px',
+                //             padding: '5px'
+                //         }
+                //     }
+                // },
+                // MuiTab: {
+                //     styleOverrides: {
+                //         root: {
+                //             minHeight: '48px',
+                //             fontSize: '1.5em',
+                //             flexGrow: '2',
+                //             borderBottom: '3px solid #F0F0F0',
+                //             maxWidth: 'unset',
+                //             '&.Mui-selected': {
+
+                //             }
+                //         }
+                //     }
+                // },
                 MuiInputBase: {
                     styleOverrides: {
                         input: {
@@ -91,9 +90,31 @@ export class ThemeUtil {
                     styleOverrides: {
                         root: {
                             '&.MuiInputLabel-root': {
-                                top: '-5px'
+                                // top: '-5px'
                                 // backgroundColor: '#F0F0F0'
                             }
+                        }
+                    }
+                },
+                MuiSnackbar: {
+                    styleOverrides: {
+                        root: {
+                            top: '15px !important',
+                            left: '60px !important',
+                            right: '15px !important',
+                            bottom: 'unset !important'
+                        }
+                    }
+                },
+                MuiAlert: {
+                    styleOverrides: {
+                        root: {
+                            height: '37px',
+                            padding: '1px 12px',
+                            boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)'
+                        },
+                        message: {
+                            overflow: 'hidden',
                         }
                     }
                 }

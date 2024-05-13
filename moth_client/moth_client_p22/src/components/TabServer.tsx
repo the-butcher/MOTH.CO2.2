@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { IApiCall } from '../types/IApiCall';
 import { IApiProperties } from '../types/IApiProperties';
 import { ITabProps } from '../types/ITabProps';
-import ApiCalcsv from './ApiCalcsv';
 import ApiCo2Cal from './ApiCo2Cal';
 import ApiDatOut from './ApiDatOut';
 import ApiDatcsv from './ApiDatcsv';
@@ -115,7 +114,6 @@ const TabServer = (props: ITabProps) => {
         apiDesc: 'get the latest measurement as json',
         apiType: 'json'
       }} />
-      {/* <ApiValcsv {...apiProps} /> */}
       <ApiSimple {...{
         ...apiProps,
         apiName: 'valcsv',
@@ -130,7 +128,7 @@ const TabServer = (props: ITabProps) => {
         apiType: 'dat'
       }} />
       <ApiDatOut {...apiProps} />
-      <ApiCalcsv {...apiProps} />
+      {/* <ApiCalcsv {...apiProps} /> */}
 
       <LabelledDivider label='files, folders' style={{ paddingTop: '12px' }} />
       <ApiDirOut {...apiProps} />

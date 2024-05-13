@@ -11,6 +11,7 @@ import ConfigChoice from './ConfigChoice';
 import LabelledDivider from './LabelledDivider';
 import NetworkChoice from './NetworkChoice';
 import { InstLoader } from '../util/InstLoader';
+import { TConfigStatus } from '../types/IConfig';
 
 type DeepPartial<T> = T extends object ? {
   [P in keyof T]?: DeepPartial<T[P]>;
@@ -19,7 +20,7 @@ type DeepPartial<T> = T extends object ? {
 
 const TabConfig = (props: ITabConfigProps) => {
 
-  const { boxUrl, disp, wifi, mqtt, handleUpdate } = { ...props };
+  const { boxUrl, disp, wifi, mqtt, handleUpdate, handleAlertMessage } = { ...props };
 
   const loadDispConfig = async (): Promise<IDispConfig> => {
     return await new JsonLoader().load(`${boxUrl}/datout?file=config/disp.json`);
@@ -72,17 +73,35 @@ const TabConfig = (props: ITabConfigProps) => {
             },
             mqtt: {
               ..._mqttConfig,
+              // crt: _mqttConfig.crt ? _mqttConfig.crt : '/config/ca.crt',
+              cli: _mqttConfig.cli ? _mqttConfig.cli : `moth${boxUrl.substring(boxUrl.lastIndexOf('.')).replace('.', '_').replace('/api', '').padStart(4, '_')}`,
+              min: _mqttConfig.min ? _mqttConfig.min : 5,
               status: 'LOADED'
             }
           });
         }).catch(e => {
           console.error('e', e);
+          handleAlertMessage({
+            message: e.message ? e.message : 'failed to load mqtt config',
+            severity: 'error',
+            active: true
+          });
         });
       }).catch(e => {
         console.error('e', e);
+        handleAlertMessage({
+          message: e.message ? e.message : 'failed to load wifi config',
+          severity: 'error',
+          active: true
+        });
       });
     }).catch(e => {
       console.error('e', e);
+      handleAlertMessage({
+        message: e.message ? e.message : 'failed to load disp config',
+        severity: 'error',
+        active: true
+      });
     });
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,7 +112,7 @@ const TabConfig = (props: ITabConfigProps) => {
       disp: {
         ...disp,
         ...update,
-        status: 'MODIFIED',
+        status: 'MODIFIED_VALID',
         co2: {
           ...disp.co2,
           ...update.co2
@@ -119,7 +138,7 @@ const TabConfig = (props: ITabConfigProps) => {
       wifi: {
         ...wifi,
         ...update,
-        status: 'MODIFIED',
+        status: 'MODIFIED_VALID',
       }
     });
   };
@@ -130,7 +149,7 @@ const TabConfig = (props: ITabConfigProps) => {
         handleUpdate({
           wifi: {
             ...wifi,
-            status: 'MODIFIED',
+            status: 'MODIFIED_VALID',
             ntw: wifi.ntw.map((value, index) => {
               return index === idx ? {
                 key,
@@ -143,7 +162,7 @@ const TabConfig = (props: ITabConfigProps) => {
         handleUpdate({
           wifi: {
             ...wifi,
-            status: 'MODIFIED',
+            status: 'MODIFIED_VALID',
             ntw: wifi.ntw.filter((value, index) => index !== idx)
           }
         });
@@ -152,7 +171,7 @@ const TabConfig = (props: ITabConfigProps) => {
       handleUpdate({
         wifi: {
           ...wifi,
-          status: 'MODIFIED',
+          status: 'MODIFIED_VALID',
           ntw: [
             ...wifi.ntw,
             {
@@ -167,38 +186,74 @@ const TabConfig = (props: ITabConfigProps) => {
     }
   }
 
+  const getMqttConfigStatus = (mqtt: IMqttConfig): TConfigStatus => {
+    if (!mqtt.srv || mqtt.srv === '') {
+      return 'MODIFIED_INVALID';
+    }
+    if (!mqtt.prt) {
+      return 'MODIFIED_INVALID';
+    }
+    if (!mqtt.cli || mqtt.cli === '') {
+      return 'MODIFIED_INVALID';
+    }
+    if (!mqtt.min) {
+      return 'MODIFIED_INVALID';
+    }
+    return 'MODIFIED_VALID';
+  }
+
   const handleMqttUpdate = (update: Partial<IMqttConfig>) => {
+    const _mqtt = {
+      ...mqtt,
+      ...update
+    };
+    const mqttConfigStatus: TConfigStatus = getMqttConfigStatus(_mqtt);
     handleUpdate({
       mqtt: {
-        ...mqtt,
-        ...update,
-        status: 'MODIFIED'
+        ..._mqtt,
+        status: mqttConfigStatus
       }
     });
   };
 
+  const handleConfigUpload = async (): Promise<void> => {
 
-  const handleConfigUpload = () => {
-
-    if (disp.status === 'MODIFIED') {
-      new InstLoader().load(disp, 'config/disp2.json', `${boxUrl}/upload`).then(response => {
-        console.log('disp upload success', response);
-      }).catch(e => {
-        console.error('disp upload error', e);
-      });
+    const updates: Partial<ITabConfigProps> = {};
+    if (disp.status === 'MODIFIED_VALID') {
+      await new InstLoader().load(disp, 'config/disp.json', `${boxUrl}/upload`);
+      updates.disp = {
+        ...disp,
+        status: 'LOADED'
+      };
     }
+    if (wifi.status === 'MODIFIED_VALID') {
+      await new InstLoader().load(wifi, 'config/wifi.json', `${boxUrl}/upload`);
+      updates.wifi = {
+        ...wifi,
+        status: 'LOADED'
+      };
+    }
+    if (mqtt.status === 'MODIFIED_VALID') {
+      await new InstLoader().load(mqtt, 'config/mqtt.json', `${boxUrl}/upload`);
+      updates.mqtt = {
+        ...mqtt,
+        status: 'LOADED'
+      };
+    }
+
+    handleUpdate(updates);
 
   }
 
   const getModifiedFlag = (): number => {
     let modifiedFlag = 0;
-    if (disp.status === 'MODIFIED') {
+    if (disp.status === 'MODIFIED_VALID') {
       modifiedFlag++;
     }
-    if (wifi.status === 'MODIFIED') {
+    if (wifi.status === 'MODIFIED_VALID') {
       modifiedFlag++;
     }
-    if (mqtt.status === 'MODIFIED') {
+    if (mqtt.status === 'MODIFIED_VALID') {
       modifiedFlag++;
     }
     return modifiedFlag;
@@ -218,6 +273,7 @@ const TabConfig = (props: ITabConfigProps) => {
             // variant='dot'
             overlap='rectangular'
             badgeContent={getModifiedFlag()}
+            sx={{ color: getModifiedFlag() > 0 ? 'black' : 'gray' }}
           >
             <VideoLabelIcon sx={{ fontSize: '0.8em', position: 'relative', left: '6px' }} />
             <SouthIcon sx={{ fontSize: '0.7em', position: 'relative', left: '-7px', top: '-4px' }} />
@@ -522,64 +578,72 @@ const TabConfig = (props: ITabConfigProps) => {
               handleUpdate: value => handleMqttUpdate({ srv: value })
             }}
           />
-          <ConfigChoice
-            caption='broker port'
-            value={{
-              type: 'number',
-              fixed: true,
-              value: mqtt.prt,
-              step: 1000,
-              min: 1,
-              max: 65535,
-              handleUpdate: value => handleMqttUpdate({ prt: value })
-            }}
-          />
-          <ConfigChoice
-            caption='certificate path'
-            value={{
-              type: 'string',
-              value: mqtt.crt,
-              help: 'certificate must be uploaded to this path',
-              handleUpdate: value => handleMqttUpdate({ crt: value })
-            }}
-          />
-          <ConfigChoice
-            caption='username'
-            value={{
-              type: 'string',
-              value: mqtt.usr,
-              handleUpdate: value => handleMqttUpdate({ usr: value })
-            }}
-          />
-          <ConfigChoice
-            caption='password'
-            value={{
-              type: 'string',
-              value: mqtt.pwd,
-              pwd: true,
-              handleUpdate: value => handleMqttUpdate({ pwd: value })
-            }}
-          />
-          <ConfigChoice
-            caption='client'
-            value={{
-              type: 'string',
-              value: mqtt.cli,
-              help: 'mqtt message client id',
-              handleUpdate: value => handleMqttUpdate({ cli: value })
-            }}
-          />
-          <ConfigChoice
-            caption='publish interval'
-            value={{
-              type: 'number',
-              fixed: true,
-              value: mqtt.min,
-              unit: 'minutes',
-              min: 1,
-              handleUpdate: value => handleMqttUpdate({ min: value })
-            }}
-          />
+          {
+            mqtt.srv ? <ConfigChoice
+              caption='broker port'
+              value={{
+                type: 'number',
+                fixed: true,
+                value: mqtt.prt,
+                step: 1000,
+                min: 1,
+                max: 65535,
+                handleUpdate: value => handleMqttUpdate({ prt: value })
+              }}
+            /> : null
+          }
+          {
+            mqtt.srv && mqtt.prt ? <>
+              <ConfigChoice
+                caption='certificate path'
+                value={{
+                  type: 'string',
+                  value: mqtt.crt,
+                  help: 'certificate must be uploaded to this path',
+                  handleUpdate: value => handleMqttUpdate({ crt: value })
+                }}
+              />
+              <ConfigChoice
+                caption='username'
+                value={{
+                  type: 'string',
+                  value: mqtt.usr,
+                  handleUpdate: value => handleMqttUpdate({ usr: value })
+                }}
+              />
+              <ConfigChoice
+                caption='password'
+                value={{
+                  type: 'string',
+                  value: mqtt.pwd,
+                  pwd: true,
+                  handleUpdate: value => handleMqttUpdate({ pwd: value })
+                }}
+              />
+              <ConfigChoice
+                caption='client'
+                value={{
+                  type: 'string',
+                  value: mqtt.cli,
+                  help: 'mqtt message client id',
+                  handleUpdate: value => handleMqttUpdate({ cli: value })
+                }}
+              />
+              <ConfigChoice
+                caption='publish interval'
+                value={{
+                  type: 'number',
+                  fixed: true,
+                  value: mqtt.min,
+                  unit: 'minutes',
+                  min: 1,
+                  handleUpdate: value => handleMqttUpdate({ min: value })
+                }}
+              />
+            </> : null
+          }
+
+
         </Stack>
 
       </Stack>

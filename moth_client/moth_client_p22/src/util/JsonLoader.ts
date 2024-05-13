@@ -15,17 +15,11 @@ export class JsonLoader {
                 if (this.status >= 200 && this.status < 300) {
                     resolve(JSON.parse(xhr.responseText));
                 } else {
-                    reject({
-                        status: this.status,
-                        statusText: xhr.statusText
-                    });
+                    reject(new Error(this.statusText));
                 }
             };
-            xhr.onerror = function () {
-                reject({
-                    status: this.status,
-                    statusText: xhr.statusText
-                });
+            xhr.onerror = (e) => {
+                reject(e);
             };
             xhr.send();
         });
