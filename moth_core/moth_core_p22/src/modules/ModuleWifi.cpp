@@ -21,10 +21,10 @@ void ModuleWifi::configure(config_t& config) {
 
 void ModuleWifi::createDat(config_t& config) {
 
-    ModuleSignal::beep(523);
-    delay(100);
-    ModuleSignal::beep(659);
-    delay(100);
+    // ModuleSignal::beep(523);
+    // delay(100);
+    // ModuleSignal::beep(659);
+    // delay(100);
 
     File32 wifiFileJson;
     bool jsonSuccess = wifiFileJson.open(WIFI_CONFIG_JSON.c_str(), O_RDONLY);

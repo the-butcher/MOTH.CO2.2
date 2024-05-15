@@ -3,6 +3,7 @@
 #include <sntp.h>
 #include <time.h>
 
+#include "modules/ModuleCard.h"
 #include "types/Define.h"
 
 RTC_PCF8523 SensorTime::baseSensor;
@@ -107,7 +108,44 @@ file32_def_t SensorTime::getFile32Def(DateTime date, String fileFormat) {
     sprintf(pathBuffer, "/%04d/%02d", date.year(), date.month());
     char nameBuffer[22];
     sprintf(nameBuffer, "/%04d/%02d/%04d%02d%02d.%s", date.year(), date.month(), date.year(), date.month(), date.day(), fileFormat);
-    return {String(pathBuffer), String(nameBuffer)};
+    String name = String(nameBuffer);
+    return {String(pathBuffer), name, ModuleCard::existsPath(name)};
+}
+
+file32_def_t SensorTime::getFile32DefData(uint32_t secondstime) {
+    return SensorTime::getFile32DefData(DateTime(SECONDS_FROM_1970_TO_2000 + secondstime));
+}
+
+file32_def_t SensorTime::getFile32DefData(DateTime date) {
+    file32_def_t fileDefDap = SensorTime::getFile32Def(date, FILE_FORMAT_DATA_PUBLISHABLE);
+    if (ModuleCard::existsPath(fileDefDap.name)) {
+#ifdef USE___SERIAL
+        String fileNameDap = String(fileDefDap.name);
+        Serial.printf("found fileDefDap: %s\n", fileNameDap.c_str());
+#endif
+        return fileDefDap;
+    }
+    file32_def_t fileDefDar = SensorTime::getFile32Def(date, FILE_FORMAT_DATA____ARCHIVED);
+    if (ModuleCard::existsPath(fileDefDar.name)) {
+#ifdef USE___SERIAL
+        String fileNameDar = String(fileDefDar.name);
+        Serial.printf("found fileDefDar: %s\n", fileNameDar.c_str());
+#endif
+        return fileDefDar;
+    }
+#ifdef USE___SERIAL
+    String fileNameDar = String(fileDefDar.name);
+    Serial.printf("found neither fileDefDap nor fileDefDar\n");
+#endif
+    return FILE_DEF_EMPTY;
+}
+
+bool SensorTime::isPersistPath(String path) {
+    String persistPath = SensorTime::getFile32Def(SensorTime::getSecondstime() - SECONDS_PER_____________HOUR, FILE_FORMAT_DATA_PUBLISHABLE).name;
+#ifdef USE___SERIAL
+    Serial.printf("persistPath: %s, path: %s\n", persistPath.c_str(), path.c_str());
+#endif
+    return persistPath.indexOf(path) >= 0;
 }
 
 String SensorTime::getDateTimeSecondsString(uint32_t secondstime) {

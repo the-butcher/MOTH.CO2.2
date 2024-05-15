@@ -27,6 +27,7 @@ class ModuleMqtt {
     static void configure(config_t& config);  // loads json configuration, TODO :: is writing to dat a good idea here as well?
     static void createDat(config_t& config);
     static void publish(config_t& config);
+    static bool publishMeasurement(config_t& config, values_all_t* value, char* client, PubSubClient* mqttClient);
     static mqtt____stat__e checkDatStat(mqtt____t& mqtt);
     static mqtt____stat__e checkCliStat(PubSubClient* mqttClient);
 };

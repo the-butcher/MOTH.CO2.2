@@ -16,10 +16,10 @@ void ModuleMqtt::configure(config_t& config) {
 
 void ModuleMqtt::createDat(config_t& config) {
 
-    ModuleSignal::beep(523);
-    delay(100);
-    ModuleSignal::beep(659);
-    delay(100);
+    // ModuleSignal::beep(523);
+    // delay(100);
+    // ModuleSignal::beep(659);
+    // delay(100);
 
     File32 mqttFileJson;
     bool jsonSuccess = mqttFileJson.open(MQTT_CONFIG_JSON.c_str(), O_RDONLY);
@@ -158,90 +158,115 @@ void ModuleMqtt::publish(config_t& config) {
                     // max publishable features
                     values_all_t datValue;
                     uint16_t year = 2024;
-                    File32 yearFolder;
-                    File32 mnthFolder;
-                    File32 dataFile;
-                    values_all_t readValue;
+                    File32 yeaFold;
+                    File32 monFold;
+                    File32 datFile;
+                    char yeaFoldNameBuffer[16];
+                    char monFoldNameBuffer[16];
+                    char datFileNameBuffer[16];
+                    String datFilePath;
+
+                    bool success = true;
 
                     while (year > 0) {
                         String folderYearName = String(year);
                         if (ModuleCard::existsPath(folderYearName)) {
-                            if (yearFolder) {
-                                yearFolder.close();
+                            if (yeaFold) {
+                                yeaFold.close();
                             }
-                            yearFolder.open(folderYearName.c_str(), O_RDONLY);
-                            while (mnthFolder.openNext(&yearFolder, O_RDONLY)) {
-                                if (mnthFolder.isDirectory()) {
-                                    while (dataFile.openNext(&mnthFolder, O_RDONLY)) {
-                                        char fileDataNameBuffer[32];
-                                        dataFile.getName(fileDataNameBuffer, 32);
-                                        String fileDataName = String(fileDataNameBuffer);
-                                        // TODO :: check for file extension, then open and read data
-                                        if (fileDataName.endsWith("dat")) {
-                                            while (dataFile.available() > 1) {
-                                                dataFile.read((byte*)&readValue, sizeof(readValue));  // read one measurement from the file
-                                                // TODO :: if publishable -> publish
+                            yeaFold.open(folderYearName.c_str(), O_RDONLY);
+                            while (monFold.openNext(&yeaFold, O_RDONLY)) {
+                                if (monFold.isDirectory()) {
+                                    while (datFile.openNext(&monFold, O_RDONLY)) {
+
+                                        yeaFold.getName(yeaFoldNameBuffer, 16);  // i.e. 2024
+                                        monFold.getName(monFoldNameBuffer, 16);  // i.e. 05
+                                        datFile.getName(datFileNameBuffer, 16);  // i.e. 20240429.dar
+
+                                        char datPathBuffer[48];
+                                        sprintf(datPathBuffer, "/%s/%s/%s", String(yeaFoldNameBuffer), String(monFoldNameBuffer), String(datFileNameBuffer));
+                                        datFilePath = String(datPathBuffer);  // either dap or dar
+
+                                        if (datFilePath.endsWith(FILE_FORMAT_DATA_PUBLISHABLE)) {
+
+                                            // close and reopen with read and write
+                                            datFile.close();
+                                            datFile.open(datFilePath.c_str(), O_RDWR);
+
+                                            uint32_t filePos = 0;
+                                            while (datFile.available() > 1) {
+                                                datFile.read((byte*)&datValue, sizeof(datValue));  // read one measurement from the file
+                                                // filePos += sizeof(datFile);
+                                                filePos = datFile.position();
+                                                if (datValue.publishable = true) {  // must still check for publishable (could have been partially published while measuring)
+#ifdef USE___SERIAL
+                                                    Serial.printf("datValue.co2: %d\n", datValue.valuesCo2.co2Raw);
+#endif
+                                                    success = success && ModuleMqtt::publishMeasurement(config, &datValue, mqtt.cli, mqttClient);
+                                                    datFile.seekSet(filePos - 2);  // the assumed position where the publishable flag is stored
+                                                    datFile.write(false);          // set to publishable false
+                                                    datFile.seekSet(filePos);      // reset to original file position
+                                                    if (!success) {
+                                                        break;  // stop reading from this file
+                                                    }
+                                                    mqttClient->loop();
+                                                }
                                             }
-                                            // TODO :: rename file to pub (instead of pnd, or a better fitting file extension)
+                                            if (success) {  // when all measurements from one file were published, mark this file as archive
+                                                if (!SensorTime::isPersistPath(datFilePath)) {
+                                                    // this leads to the file havin persispath being published over and over
+                                                    String darFilePath = String(datFilePath);
+                                                    darFilePath.replace(FILE_FORMAT_DATA_PUBLISHABLE, FILE_FORMAT_DATA____ARCHIVED);
+                                                    ModuleCard::renameFile32(datFilePath, darFilePath);
+                                                }
+                                            }
                                         }
-                                        dataFile.close();
+                                        datFile.close();
+                                        if (!success) {
+                                            break;  // dont open another file in case of failure
+                                        }
                                     }
                                 }
-                                mnthFolder.close();
+                                monFold.close();
                             }
                             year++;  // continue with next year
+                            break;
                         } else {
                             year = 0;  // no further year search
                         }
                     }
-                    if (dataFile) {
-                        dataFile.close();
+                    if (datFile) {
+                        datFile.close();
                     }
-                    if (mnthFolder) {
-                        mnthFolder.close();
+                    if (monFold) {
+                        monFold.close();
                     }
-                    if (yearFolder) {
-                        yearFolder.close();
+                    if (yeaFold) {
+                        yeaFold.close();
                     }
 
-                    uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
-                    uint32_t dataIndex;
-                    for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {  // similar code in ValcsvResponse
-                        dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
-                        datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
-                        if (datValue.publishable) {
-
-                            DynamicJsonBuffer jsonBuffer;
-                            JsonObject& root = jsonBuffer.createObject();
-                            root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(datValue.secondstime);
-                            root[FIELD_NAME_CO2_LPF] = (uint16_t)round(datValue.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
-                            root[FIELD_NAME_CO2_RAW] = datValue.valuesCo2.co2Raw;
-                            root[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(datValue.valuesCo2.deg) * 10) / 10.0;
-                            root[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(datValue.valuesCo2.hum) * 10) / 10.0;
-                            root[FIELD_NAME_____HPA] = datValue.valuesBme.pressure;
-                            root[FIELD_NAME_____BAT] = SensorEnergy::toFloatPercent(datValue.valuesNrg.percent);
-
-                            // print json to string
-                            String outputStr;
-                            root.printTo(outputStr);
-                            int outputLen = outputStr.length() + 1;
-
-                            char outputBuf[outputLen];
-                            outputStr.toCharArray(outputBuf, outputLen);
-
-                            bool success = mqttClient->publish(mqtt.cli, (uint8_t const*)outputBuf, outputLen);
-                            if (success) {
-                                // replace with non-publishable version
-                                Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE] = {
-                                    datValue.secondstime,  // secondstime
-                                    datValue.valuesCo2,    // co2-sensor values
-                                    datValue.valuesBme,    // bme-sensor values
-                                    datValue.valuesNrg,    // bat-sensor values
-                                    false                  // publishable
-                                };
-                            } else {
-                                config.mqtt.mqttStatus = MQTT_FAIL____PUBLISH;
-                                break;
+                    // if publishing from file was successful so far
+                    if (success) {
+                        uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
+                        uint32_t dataIndex;
+                        for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {  // similar code in ValcsvResponse
+                            dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
+                            datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
+                            if (datValue.publishable) {
+                                success = success / ModuleMqtt::publishMeasurement(config, &datValue, mqtt.cli, mqttClient);
+                                if (success) {
+                                    // replace with non-publishable version
+                                    Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE] = {
+                                        datValue.secondstime,  // secondstime
+                                        datValue.valuesCo2,    // co2-sensor values
+                                        datValue.valuesBme,    // bme-sensor values
+                                        datValue.valuesNrg,    // bat-sensor values
+                                        false                  // publishable
+                                    };
+                                } else {
+                                    config.mqtt.mqttStatus = MQTT_FAIL____PUBLISH;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -252,12 +277,6 @@ void ModuleMqtt::publish(config_t& config) {
                     while (wifiClient->available() && loopExecutionCount++ < 5) {
                         mqttClient->loop();
                     }
-
-                    // TODO :: find a way to know then the last publication time was, open and read all files from there and publish
-                    // finally publish anything currently in measurement buffer
-                    // publishable cant be older than mqtt config time (boot time?)
-                    // if publishing measurements already stored in file, those files would have to be rewritten with publishable = false flags
-                    // how could the file be tagged as completely published
 
                     mqttClient->disconnect();  // calls stop() on wificlient
 
@@ -313,4 +332,27 @@ void ModuleMqtt::publish(config_t& config) {
         Serial.printf("returning from mqtt success, heap: %u\n", ESP.getFreeHeap());
 #endif
     }
+}
+
+bool ModuleMqtt::publishMeasurement(config_t& config, values_all_t* value, char* client, PubSubClient* mqttClient) {
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& root = jsonBuffer.createObject();
+    root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(value->secondstime);
+    root[FIELD_NAME_CO2_LPF] = (uint16_t)round(value->valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
+    root[FIELD_NAME_CO2_RAW] = value->valuesCo2.co2Raw;
+    root[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(value->valuesCo2.deg) * 10) / 10.0;
+    root[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(value->valuesCo2.hum) * 10) / 10.0;
+    root[FIELD_NAME_____HPA] = value->valuesBme.pressure;
+    root[FIELD_NAME_____BAT] = round(SensorEnergy::toFloatPercent(value->valuesNrg.percent) * 10) / 10.0;
+
+    // print json to string
+    String outputStr;
+    root.printTo(outputStr);
+    int outputLen = outputStr.length() + 1;
+
+    char outputBuf[outputLen];
+    outputStr.toCharArray(outputBuf, outputLen);
+
+    return mqttClient->publish(client, (uint8_t const*)outputBuf, outputLen);
 }

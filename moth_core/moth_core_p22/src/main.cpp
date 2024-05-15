@@ -40,7 +40,9 @@ uint16_t actionNum = 0;
  * OK reimplement OTA update, TODO :: test
  * -- MQTT:
  *    -- enable MQTT publishing of non-published data from file?
- *       -- files still having publishable records need to be identifiable (could be by file ending, dat(a) | arc(hive) )
+ *       -- files still having publishable records need to be identifiable (could be by file ending, dap(ublishable) | dar(chive) )
+ *       -- maybe it is not possible to publish an entire file at once (need to have some portioning strategy)
+ *       -- verify that writing a single byte to file is successful
  *    -- mqtt update after MQTT permanent failure freezes the device action cycle (wifi is still responsive though)
  * -- SENSOR: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
  * -- WIFI: wifi sometimes turns off for unknown reasons (more likely when multiple requests are pending), and sometimes ends up in a state where it can not be turned back on

@@ -11,7 +11,7 @@ File32Response::~File32Response() {
 /**
  * response wrapper around the content of a File32
  */
-File32Response::File32Response(String path, String contentType) : AsyncAbstractResponse() {
+File32Response::File32Response(String path, String mimeType) : AsyncAbstractResponse() {
 
     ModuleCard::begin();
 
@@ -19,20 +19,18 @@ File32Response::File32Response(String path, String contentType) : AsyncAbstractR
     _path = path;
     _content.open(_path.c_str(), O_RDONLY);
     _contentLength = _content.size();
-    _contentType = contentType;
+    _contentType = mimeType;
 
     lastModified = SensorTime::getDateTimeLastModString(_content);
 
-    if (path.indexOf(".dat") > 0) {
-        // the last write on the previous day file may be up to one hour delayed into the next day
-        String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime() - SECONDS_PER_____________HOUR, "dat").name;  // slash in first char pos
-        if (dayPath.indexOf(path) < 0) {
-            addHeader("Cache-Control", "max-age=31536000");
-        } else {
+    if (ModuleCard::isDataPath(path)) {
+        if (SensorTime::isPersistPath(path)) {
             uint8_t measurementsUntilUpdate = MEASUREMENT_BUFFER_SIZE - Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE;
             char maxAgeBuf[16];
             sprintf(maxAgeBuf, "max-age=%s", String(measurementsUntilUpdate * SECONDS_PER___________MINUTE));
             addHeader("Cache-Control", maxAgeBuf);
+        } else {
+            addHeader("Cache-Control", "max-age=31536000");
         }
     } else {
         addHeader("Cache-Control", "no-cache");

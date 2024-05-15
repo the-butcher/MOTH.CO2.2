@@ -81,32 +81,6 @@ void ModuleHttp::handleApiValCsv(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleHttp::handleApiDatCsv(AsyncWebServerRequest *request) {
-
-    ModuleWifi::access();
-    if (request->hasParam("file")) {
-        // TODO :: dat|arc
-        String datFileName = "/" + request->getParam("file")->value();
-        String csvLine;
-        if (ModuleCard::existsPath(datFileName)) {
-            DatCsvResponse *response = new DatCsvResponse(datFileName);
-            if (request->hasHeader("If-Modified-Since")) {
-                String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
-                if (!response->wasModifiedSince(ifModifiedSince)) {
-                    response->~DatCsvResponse();
-                    request->send(304);  // not-modified
-                    return;
-                }
-            }
-            request->send(response);
-        } else {
-            serve404Json(request, datFileName);
-        }
-    } else {
-        serve400Json(request, "file required");
-    }
-}
-
 void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
@@ -326,10 +300,56 @@ void ModuleHttp::handleApiValOut(AsyncWebServerRequest *request) {
 void ModuleHttp::handleApiDatOut(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     if (request->hasParam("file")) {
-        // TODO :: dat|arc
-        ModuleHttp::serveFile32(request, request->getParam("file")->value());
+        String path = request->getParam("file")->value();
+        if (ModuleCard::isDataPath(path)) {
+            String dataPath = ModuleCard::toDataPath(path);
+            if (dataPath != FILE_FORMAT_DATA_____INVALID) {
+                ModuleHttp::serveFile32(request, dataPath);
+                return;
+            } else {
+                serve404Json(request, path);
+                return;
+            }
+        } else {
+            ModuleHttp::serveFile32(request, path);
+            return;
+        }
     } else {
         ModuleHttp::serve400Json(request, "file required");
+        return;
+    }
+}
+
+void ModuleHttp::handleApiDatCsv(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    if (request->hasParam("file")) {
+        String path = request->getParam("file")->value();
+        if (ModuleCard::isDataPath(path)) {
+            String dataPath = ModuleCard::toDataPath(path);
+            if (dataPath != FILE_FORMAT_DATA_____INVALID) {
+                DatCsvResponse *response = new DatCsvResponse(dataPath);
+                if (request->hasHeader("If-Modified-Since")) {
+                    String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
+                    if (!response->wasModifiedSince(ifModifiedSince)) {
+                        response->~DatCsvResponse();
+                        request->send(304);  // not-modified
+                        return;
+                    }
+                } else {
+                    request->send(response);
+                    return;
+                }
+            } else {  // FILE_FORMAT_DATA_____INVALID
+                serve404Json(request, path);
+                return;
+            }
+        } else {
+            serve400Json(request, "file must point to a data file");
+            return;
+        }
+    } else {
+        serve400Json(request, "file required");
+        return;
     }
 }
 
@@ -532,24 +552,24 @@ void ModuleHttp::serveStatic(AsyncWebServerRequest *request) {
     serveFile32(request, request->url());
 }
 
-void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String file) {
+void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String path) {
 
     ModuleWifi::access();
-    if (ModuleCard::existsPath(file)) {
+    if (ModuleCard::existsPath(path)) {
 
-        String fileType = file.substring(file.indexOf("."));
-        if (fileType == ".dat") {
-            fileType = "application/octet-stream";
-        } else if (fileType == ".html") {
-            fileType = "text/html";
-        } else if (fileType == ".js") {
-            fileType = "application/javascript";
-        } else if (fileType == ".css") {
-            fileType = "text/css";
-        } else if (fileType == ".ttf") {
-            fileType = "font/ttf";
+        String mimeType = "text/plain";
+        if (ModuleCard::isDataPath(path)) {
+            mimeType = "application/octet-stream";
+        } else if (path.endsWith("html")) {
+            mimeType = "text/html";
+        } else if (path.endsWith("js")) {
+            mimeType = "application/javascript";
+        } else if (path.endsWith("css")) {
+            mimeType = "text/css";
+        } else if (path.endsWith("ttf")) {
+            mimeType = "font/ttf";
         }
-        File32Response *response = new File32Response(file, fileType);
+        File32Response *response = new File32Response(path, mimeType);
         if (request->hasHeader("If-Modified-Since")) {
             String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
 #ifdef USE___SERIAL
@@ -557,7 +577,7 @@ void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String file) {
 #endif
             if (!response->wasModifiedSince(ifModifiedSince)) {
 #ifdef USE___SERIAL
-                Serial.printf("sending 304 since not-modified\n");
+                Serial.printf("sending 304 since file was not-modified\n");
 #endif
                 response->~File32Response();
                 request->send(304);  // not-modified
@@ -570,7 +590,7 @@ void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String file) {
         if (request->method() == HTTP_OPTIONS) {
             request->send(200);
         } else {
-            serve404Json(request, file);
+            serve404Json(request, path);
         }
     }
 }

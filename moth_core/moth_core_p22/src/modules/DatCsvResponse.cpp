@@ -29,16 +29,14 @@ DatCsvResponse::DatCsvResponse(String path) : AsyncAbstractResponse() {
 
     lastModified = SensorTime::getDateTimeLastModString(_content);
 
-    String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime() - SECONDS_PER_____________HOUR, "dat").name;  // slash in first char pos
-    if (dayPath.indexOf(path) < 0) {
-        addHeader("Cache-Control", "max-age=31536000");
-    } else {
+    if (SensorTime::isPersistPath(path)) {
         uint8_t measurementsUntilUpdate = MEASUREMENT_BUFFER_SIZE - Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE;
         char maxAgeBuf[16];
         sprintf(maxAgeBuf, "max-age=%s", String(measurementsUntilUpdate * SECONDS_PER___________MINUTE));
         addHeader("Cache-Control", maxAgeBuf);
+    } else {
+        addHeader("Cache-Control", "max-age=31536000");
     }
-
     addHeader("Last-Modified", lastModified);
 }
 

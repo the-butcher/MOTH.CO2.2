@@ -11,6 +11,41 @@ void ModuleCard::begin() {
         ModuleCard::sd32.begin(SD_CS, SPI_CLOCK);
         FsDateTime::setCallback(SensorTime::dateTimeCallback);
         ModuleCard::hasBegun = true;
+
+        // ModuleCard::renameFile32("/20240412.dar", "/2024/04/20240412.dar");
+        // ModuleCard::renameFile32("/20240413.dar", "/2024/04/20240413.dar");
+        // ModuleCard::renameFile32("/20240414.dar", "/2024/04/20240414.dar");
+        // ModuleCard::renameFile32("/20240415.dar", "/2024/04/20240415.dar");
+        // ModuleCard::renameFile32("/20240416.dar", "/2024/04/20240416.dar");
+        // ModuleCard::renameFile32("/20240417.dar", "/2024/04/20240417.dar");
+        // ModuleCard::renameFile32("/20240418.dar", "/2024/04/20240418.dar");
+        // ModuleCard::renameFile32("/20240419.dar", "/2024/04/20240419.dar");
+        // ModuleCard::renameFile32("/20240420.dar", "/2024/04/20240420.dar");
+        // ModuleCard::renameFile32("/20240421.dar", "/2024/04/20240421.dar");
+        // ModuleCard::renameFile32("/20240422.dar", "/2024/04/20240422.dar");
+        // ModuleCard::renameFile32("/20240423.dar", "/2024/04/20240423.dar");
+        // ModuleCard::renameFile32("/20240424.dar", "/2024/04/20240424.dar");
+        // ModuleCard::renameFile32("/20240425.dar", "/2024/04/20240425.dar");
+        // ModuleCard::renameFile32("/20240426.dar", "/2024/04/20240426.dar");
+        // ModuleCard::renameFile32("/20240427.dar", "/2024/04/20240427.dar");
+        // ModuleCard::renameFile32("/20240428.dar", "/2024/04/20240428.dar");
+        // ModuleCard::renameFile32("/20240429.dar", "/2024/04/20240429.dar");
+        // ModuleCard::renameFile32("/20240430.dar", "/2024/04/20240430.dar");
+        // ModuleCard::renameFile32("/20240501.dar", "/2024/05/20240501.dar");
+        // ModuleCard::renameFile32("/20240502.dar", "/2024/05/20240502.dar");
+        // ModuleCard::renameFile32("/20240503.dar", "/2024/05/20240503.dar");
+        // ModuleCard::renameFile32("/20240504.dar", "/2024/05/20240504.dar");
+        // ModuleCard::renameFile32("/20240505.dar", "/2024/05/20240505.dar");
+        // ModuleCard::renameFile32("/20240506.dar", "/2024/05/20240506.dar");
+        // ModuleCard::renameFile32("/20240507.dar", "/2024/05/20240507.dar");
+        // ModuleCard::renameFile32("/20240508.dar", "/2024/05/20240508.dar");
+        // ModuleCard::renameFile32("/20240509.dar", "/2024/05/20240509.dar");
+        // ModuleCard::renameFile32("/20240510.dar", "/2024/05/20240510.dar");
+        // ModuleCard::renameFile32("/20240511.dar", "/2024/05/20240511.dar");
+        // ModuleCard::renameFile32("/20240512.dar", "/2024/05/20240512.dar");
+        // ModuleCard::renameFile32("/20240513.dar", "/2024/05/20240513.dar");
+        // ModuleCard::renameFile32("/20240514.dar", "/2024/05/20240514.dar");
+        // ModuleCard::renameFile32("/20240515.dar", "/2024/05/20240515.dap");
     }
 }
 
@@ -33,7 +68,7 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
         ModuleCard::begin();
 
         File32 datFile;
-        file32_def_t fileDef32;
+        file32_def_t fileDef32Data;
 
         String datFileNameLast = "";
         String datFilePathLast = "";
@@ -48,16 +83,20 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
             // create empty measurement at that index
             history[historyIndex] = Values::emptyMeasurement(secondstimeIndx);
 
-            // get the file definition for the given time
-            fileDef32 = SensorTime::getFile32Def(secondstimeIndx, "dat");
+            // get the file definition for the given time (either a dap or dar file extensions)
+            fileDef32Data = SensorTime::getFile32DefData(secondstimeIndx);
+#ifdef USE___SERIAL
+            String fileDef32DataName = String(fileDef32Data.path);
+            Serial.printf("fileDef32DataName: %s\n", fileDef32DataName.c_str());
+#endif
 
             // open when hitting a new file name
-            if (fileDef32.name != datFileNameLast) {
+            if (fileDef32Data.name != datFileNameLast) {
                 if (datFile) {
                     datFile.close();  // close the previous file
                 }
-                datFile.open(fileDef32.name.c_str(), O_READ);
-                datFileNameLast = fileDef32.name;
+                datFile.open(fileDef32Data.name.c_str(), O_READ);
+                datFileNameLast = fileDef32Data.name;
             }
 
             // keep reading from old to young until a time is found that is within search bounds or above search bounds
@@ -105,30 +144,59 @@ void ModuleCard::persistValues() {
 
     ModuleCard::begin();
 
-    file32_def_t fileDef32;
+    file32_def_t fileDef32Dap;
     String datFileNameLast = "";
     String datFilePathLast = "";
     File32 datFile;
     values_all_t value;
     for (int valueIndex = 0; valueIndex < MEASUREMENT_BUFFER_SIZE; valueIndex++) {
         value = Values::values->measurements[valueIndex];
-        fileDef32 = SensorTime::getFile32Def(value.secondstime, "dat");  // the file name that shall be written to
-        if (fileDef32.name != datFileNameLast) {
+        fileDef32Dap = SensorTime::getFile32Def(value.secondstime, FILE_FORMAT_DATA_PUBLISHABLE);  // the file name that shall be written to (always in publishable filr format)
+        if (fileDef32Dap.name != datFileNameLast) {
             if (datFile) {  // file already open -> file change at midnight
                 datFile.close();
             }
-            if (fileDef32.path != datFileNameLast) {  // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
-                buildFolders(fileDef32.path);
-                datFilePathLast = fileDef32.path;
+            if (fileDef32Dap.path != datFileNameLast) {  // if not only the file name changed, but also the path (a change in month or year, the folders need to be ready)
+                buildFolders(fileDef32Dap.path);
+                datFilePathLast = fileDef32Dap.path;
             }
-            datFile.open(fileDef32.name.c_str(), O_RDWR | O_CREAT | O_AT_END);
-            datFileNameLast = fileDef32.name;
+            datFile.open(fileDef32Dap.name.c_str(), O_RDWR | O_CREAT | O_AT_END);
+            datFileNameLast = fileDef32Dap.name;
         }
         datFile.write((byte*)&value, sizeof(value));
     }
     if (datFile) {
         datFile.close();
     }
+}
+
+bool ModuleCard::isDataPath(String path) {
+    return path.endsWith(FILE_FORMAT_DATA_PUBLISHABLE) || path.endsWith(FILE_FORMAT_DATA____ARCHIVED) || path.endsWith(FILE_FORMAT_DATA);
+}
+
+String ModuleCard::toDataPath(String path) {
+    if (path.endsWith(FILE_FORMAT_DATA)) {
+        String dapFilePath = String(path);
+        dapFilePath.replace(FILE_FORMAT_DATA, FILE_FORMAT_DATA_PUBLISHABLE);
+#ifdef USE___SERIAL
+        Serial.printf("dapFilePath: %s\n", dapFilePath.c_str());
+#endif
+        if (ModuleCard::existsPath(dapFilePath)) {
+            return dapFilePath;
+        } else {
+            String darFilePath = String(path);
+            darFilePath.replace(FILE_FORMAT_DATA, FILE_FORMAT_DATA____ARCHIVED);
+#ifdef USE___SERIAL
+            Serial.printf("darFilePath: %s\n", darFilePath.c_str());
+#endif
+            if (ModuleCard::existsPath(darFilePath)) {
+                return darFilePath;
+            }
+        }
+    } else if ((path.endsWith(FILE_FORMAT_DATA_PUBLISHABLE) || path.endsWith(FILE_FORMAT_DATA____ARCHIVED)) && ModuleCard::existsPath(path)) {
+        return path;
+    }
+    return FILE_FORMAT_DATA_____INVALID;
 }
 
 bool ModuleCard::buildFolders(String folder) {
@@ -145,4 +213,11 @@ bool ModuleCard::existsPath(String path) {
 
 bool ModuleCard::removeFile32(String file) {
     return ModuleCard::sd32.remove(file);
+}
+
+bool ModuleCard::renameFile32(String pathCurr, String pathDest) {
+#ifdef USE___SERIAL
+    Serial.printf("rename, pathCurr: %s, pathDest: %s\n", pathCurr.c_str(), pathDest.c_str());
+#endif
+    return ModuleCard::sd32.rename(pathCurr, pathDest);
 }

@@ -136,7 +136,6 @@ const ChartValues = (props: IChartProps) => {
         if (records?.length > 0) {
 
             const step = TICK_DEFINITIONS[tickDefIndex].tick / TICK_DEFINITIONS[tickDefIndex].step;
-            console.log('step', step);
 
             let minInstant = getTickInstant(records[0].instant - step, step);
             let maxInstant = getTickInstant(records[records.length - 1].instant, step);

@@ -22,6 +22,7 @@ const uint32_t WAITTIME_DISPLAY_AND_DEPOWER = 5;  // very conservative estimatio
  * GPIO_NUM_8  :: A5
  */
 const gpio_num_t PIN_RTC_SQW = GPIO_NUM_8;
+const file32_def_t FILE_DEF_EMPTY = {"", "", false};
 
 class SensorTime {
    private:
@@ -49,6 +50,9 @@ class SensorTime {
     static String getDateTimeDisplayString(uint32_t secondstime);
     static file32_def_t getFile32Def(uint32_t secondstime, String fileFormat);
     static file32_def_t getFile32Def(DateTime date, String fileFormat);
+    static file32_def_t getFile32DefData(uint32_t secondstime);
+    static file32_def_t getFile32DefData(DateTime date);
+    static bool isPersistPath(String path);
     static uint32_t getSecondsUntil(uint32_t secondstime);
     static bool isInterrupted();
     static void dateTimeCallback(uint16_t* date, uint16_t* time);

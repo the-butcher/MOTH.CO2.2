@@ -85,6 +85,7 @@ typedef struct {
 typedef struct {
     String path;
     String name;
+    bool exists;
 } file32_def_t;
 
 class Values {
