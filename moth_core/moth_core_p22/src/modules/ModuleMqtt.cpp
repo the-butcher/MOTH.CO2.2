@@ -106,6 +106,10 @@ mqtt____stat__e ModuleMqtt::checkCliStat(PubSubClient* mqttClient) {
 
 void ModuleMqtt::publish(config_t& config) {
 
+#ifdef USE___SERIAL
+    Serial.printf("before mqtt publish, heap: %u\n", ESP.getFreeHeap());
+#endif
+
     ModuleCard::begin();
 
     if (!ModuleCard::existsPath(MQTT_CONFIG__DAT)) {
@@ -123,15 +127,19 @@ void ModuleMqtt::publish(config_t& config) {
             if (datStat == MQTT______________OK) {  // a set of config worth trying
 
                 WiFiClient* wifiClient;
+                char* certFileData = NULL;
                 if (mqtt.crt != "" && ModuleCard::existsPath(mqtt.crt)) {
                     wifiClient = new WiFiClientSecure();
                     File32 certFile;
                     certFile.open(mqtt.crt, O_RDONLY);
-                    ((WiFiClientSecure*)wifiClient)->loadCACert(certFile, certFile.size());
+                    certFileData = (char*)malloc(certFile.size() + 1);
+                    certFile.readBytes(certFileData, certFile.size());
+                    ((WiFiClientSecure*)wifiClient)->setCACert(certFileData);
                     certFile.close();
                 } else {
                     wifiClient = new WiFiClient();
                 }
+
                 PubSubClient* mqttClient;
                 mqttClient = new PubSubClient(*wifiClient);
                 mqttClient->setServer(mqtt.srv, mqtt.prt);
@@ -140,6 +148,7 @@ void ModuleMqtt::publish(config_t& config) {
                 } else {
                     mqttClient->connect(mqtt.cli);  // connect without credentials
                 }
+
                 if (mqttClient->connected()) {
 
                     config.mqtt.mqttStatus = MQTT______________OK;
@@ -147,16 +156,60 @@ void ModuleMqtt::publish(config_t& config) {
                     config.mqtt.mqttFailureCount = 0;
 
                     // max publishable features
-                    uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
                     values_all_t datValue;
+                    uint16_t year = 2024;
+                    File32 yearFolder;
+                    File32 mnthFolder;
+                    File32 dataFile;
+                    values_all_t readValue;
+
+                    while (year > 0) {
+                        String folderYearName = String(year);
+                        if (ModuleCard::existsPath(folderYearName)) {
+                            if (yearFolder) {
+                                yearFolder.close();
+                            }
+                            yearFolder.open(folderYearName.c_str(), O_RDONLY);
+                            while (mnthFolder.openNext(&yearFolder, O_RDONLY)) {
+                                if (mnthFolder.isDirectory()) {
+                                    while (dataFile.openNext(&mnthFolder, O_RDONLY)) {
+                                        char fileDataNameBuffer[32];
+                                        dataFile.getName(fileDataNameBuffer, 32);
+                                        String fileDataName = String(fileDataNameBuffer);
+                                        // TODO :: check for file extension, then open and read data
+                                        if (fileDataName.endsWith("dat")) {
+                                            while (dataFile.available() > 1) {
+                                                dataFile.read((byte*)&readValue, sizeof(readValue));  // read one measurement from the file
+                                                // TODO :: if publishable -> publish
+                                            }
+                                            // TODO :: rename file to pub (instead of pnd, or a better fitting file extension)
+                                        }
+                                        dataFile.close();
+                                    }
+                                }
+                                mnthFolder.close();
+                            }
+                            year++;  // continue with next year
+                        } else {
+                            year = 0;  // no further year search
+                        }
+                    }
+                    if (dataFile) {
+                        dataFile.close();
+                    }
+                    if (mnthFolder) {
+                        mnthFolder.close();
+                    }
+                    if (yearFolder) {
+                        yearFolder.close();
+                    }
+
+                    uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
                     uint32_t dataIndex;
                     for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {  // similar code in ValcsvResponse
                         dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
                         datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
                         if (datValue.publishable) {
-
-                            // char mqttClidCO2[mqttClid.length() + 5];
-                            // sprintf(mqttClidCO2, "%s/%s", mqttClid, "CO2");
 
                             DynamicJsonBuffer jsonBuffer;
                             JsonObject& root = jsonBuffer.createObject();
@@ -206,15 +259,22 @@ void ModuleMqtt::publish(config_t& config) {
                     // if publishing measurements already stored in file, those files would have to be rewritten with publishable = false flags
                     // how could the file be tagged as completely published
 
-                    mqttClient->disconnect();
-                    delete mqttClient;
-                    delete wifiClient;
-                    mqttClient = NULL;
-                    wifiClient = NULL;
+                    mqttClient->disconnect();  // calls stop() on wificlient
 
                 } else {
                     config.mqtt.mqttStatus = ModuleMqtt::checkCliStat(mqttClient);
                 }
+
+                wifiClient->stop();  // explicit stop to be sure it happened (before resetting certFileData)
+                if (certFileData != NULL) {
+                    free(const_cast<char*>(certFileData));  // there seemed to be a memory issue with _CA_cert not being released when closing/destroying the WifiClient
+                    certFileData = NULL;
+                }
+
+                delete mqttClient;  // releases some memory buffer
+                delete wifiClient;  // calls stop (again) and deletes an internal sslclient instance
+                mqttClient = NULL;
+                wifiClient = NULL;
 
             } else {  // datStat other than MQTT______________OK
                 config.mqtt.mqttStatus = datStat;
@@ -239,18 +299,18 @@ void ModuleMqtt::publish(config_t& config) {
         config.mqtt.mqttFailureCount++;
         if (config.mqtt.mqttFailureCount > 3) {
 #ifdef USE___SERIAL
-            Serial.printf("before returning from mqtt failure (non-recoverable), stat: %d\n", config.mqtt.mqttStatus);
+            Serial.printf("returning from mqtt failure (non-recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
 #endif
             config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // no update
         } else {
 #ifdef USE___SERIAL
-            Serial.printf("before returning from mqtt failure (recoverable), stat: %d\n", config.mqtt.mqttStatus);
+            Serial.printf("returning from mqtt failure (recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
 #endif
         }
     } else {
         // do nothing the correct interval must have been set when the status was set to OK, failure count reset there as well
 #ifdef USE___SERIAL
-        Serial.println("before returning from mqtt success");
+        Serial.printf("returning from mqtt success, heap: %u\n", ESP.getFreeHeap());
 #endif
     }
 }

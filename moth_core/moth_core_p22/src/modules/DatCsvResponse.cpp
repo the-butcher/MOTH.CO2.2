@@ -29,7 +29,7 @@ DatCsvResponse::DatCsvResponse(String path) : AsyncAbstractResponse() {
 
     lastModified = SensorTime::getDateTimeLastModString(_content);
 
-    String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime(), "dat").name;  // slash in first char pos
+    String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime() - SECONDS_PER_____________HOUR, "dat").name;  // slash in first char pos
     if (dayPath.indexOf(path) < 0) {
         addHeader("Cache-Control", "max-age=31536000");
     } else {

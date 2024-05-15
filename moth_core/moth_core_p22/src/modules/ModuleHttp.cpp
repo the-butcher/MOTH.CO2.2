@@ -82,12 +82,14 @@ void ModuleHttp::handleApiValCsv(AsyncWebServerRequest *request) {
 }
 
 void ModuleHttp::handleApiDatCsv(AsyncWebServerRequest *request) {
+
     ModuleWifi::access();
     if (request->hasParam("file")) {
+        // TODO :: dat|arc
         String datFileName = "/" + request->getParam("file")->value();
         String csvLine;
         if (ModuleCard::existsPath(datFileName)) {
-            DatCsvResponse *response = new DatCsvResponse(datFileName);  // cache headers in ValcsvResponse
+            DatCsvResponse *response = new DatCsvResponse(datFileName);
             if (request->hasHeader("If-Modified-Since")) {
                 String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
                 if (!response->wasModifiedSince(ifModifiedSince)) {
@@ -324,6 +326,7 @@ void ModuleHttp::handleApiValOut(AsyncWebServerRequest *request) {
 void ModuleHttp::handleApiDatOut(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     if (request->hasParam("file")) {
+        // TODO :: dat|arc
         ModuleHttp::serveFile32(request, request->getParam("file")->value());
     } else {
         ModuleHttp::serve400Json(request, "file required");

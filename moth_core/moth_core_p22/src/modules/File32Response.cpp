@@ -24,7 +24,8 @@ File32Response::File32Response(String path, String contentType) : AsyncAbstractR
     lastModified = SensorTime::getDateTimeLastModString(_content);
 
     if (path.indexOf(".dat") > 0) {
-        String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime(), "dat").name;  // slash in first char pos
+        // the last write on the previous day file may be up to one hour delayed into the next day
+        String dayPath = SensorTime::getFile32Def(SensorTime::getSecondstime() - SECONDS_PER_____________HOUR, "dat").name;  // slash in first char pos
         if (dayPath.indexOf(path) < 0) {
             addHeader("Cache-Control", "max-age=31536000");
         } else {

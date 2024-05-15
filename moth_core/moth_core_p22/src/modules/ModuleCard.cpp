@@ -69,7 +69,6 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
             if (abs(secondstimeDiff) <= 30) {
                 historyIndexMax = historyIndex;
                 history[historyIndex] = readValue;
-            } else {
             }
             if (datFile.available() <= 1) {
                 break;

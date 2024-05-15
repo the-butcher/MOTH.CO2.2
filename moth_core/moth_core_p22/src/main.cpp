@@ -40,8 +40,8 @@ uint16_t actionNum = 0;
  * OK reimplement OTA update, TODO :: test
  * -- MQTT:
  *    -- enable MQTT publishing of non-published data from file?
- *       -- how can a file that has been fully published be tagged appropriately?
- *    -- can not reconnect MQTT after a number of connections, mosquitto or device problem, TODO :: analyze SSL error from mosquitto log?
+ *       -- files still having publishable records need to be identifiable (could be by file ending, dat(a) | arc(hive) )
+ *    -- mqtt update after MQTT permanent failure freezes the device action cycle (wifi is still responsive though)
  * -- SENSOR: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
  * -- WIFI: wifi sometimes turns off for unknown reasons (more likely when multiple requests are pending), and sometimes ends up in a state where it can not be turned back on
  * -- MISC: be sure data is written every 60 minutes (not 59 or 61)
