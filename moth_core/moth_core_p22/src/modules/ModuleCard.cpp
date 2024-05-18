@@ -12,40 +12,42 @@ void ModuleCard::begin() {
         FsDateTime::setCallback(SensorTime::dateTimeCallback);
         ModuleCard::hasBegun = true;
 
-        // ModuleCard::renameFile32("/20240412.dar", "/2024/04/20240412.dar");
-        // ModuleCard::renameFile32("/20240413.dar", "/2024/04/20240413.dar");
-        // ModuleCard::renameFile32("/20240414.dar", "/2024/04/20240414.dar");
-        // ModuleCard::renameFile32("/20240415.dar", "/2024/04/20240415.dar");
-        // ModuleCard::renameFile32("/20240416.dar", "/2024/04/20240416.dar");
-        // ModuleCard::renameFile32("/20240417.dar", "/2024/04/20240417.dar");
-        // ModuleCard::renameFile32("/20240418.dar", "/2024/04/20240418.dar");
-        // ModuleCard::renameFile32("/20240419.dar", "/2024/04/20240419.dar");
-        // ModuleCard::renameFile32("/20240420.dar", "/2024/04/20240420.dar");
-        // ModuleCard::renameFile32("/20240421.dar", "/2024/04/20240421.dar");
-        // ModuleCard::renameFile32("/20240422.dar", "/2024/04/20240422.dar");
-        // ModuleCard::renameFile32("/20240423.dar", "/2024/04/20240423.dar");
-        // ModuleCard::renameFile32("/20240424.dar", "/2024/04/20240424.dar");
-        // ModuleCard::renameFile32("/20240425.dar", "/2024/04/20240425.dar");
-        // ModuleCard::renameFile32("/20240426.dar", "/2024/04/20240426.dar");
-        // ModuleCard::renameFile32("/20240427.dar", "/2024/04/20240427.dar");
-        // ModuleCard::renameFile32("/20240428.dar", "/2024/04/20240428.dar");
-        // ModuleCard::renameFile32("/20240429.dar", "/2024/04/20240429.dar");
-        // ModuleCard::renameFile32("/20240430.dar", "/2024/04/20240430.dar");
-        // ModuleCard::renameFile32("/20240501.dar", "/2024/05/20240501.dar");
-        // ModuleCard::renameFile32("/20240502.dar", "/2024/05/20240502.dar");
-        // ModuleCard::renameFile32("/20240503.dar", "/2024/05/20240503.dar");
-        // ModuleCard::renameFile32("/20240504.dar", "/2024/05/20240504.dar");
-        // ModuleCard::renameFile32("/20240505.dar", "/2024/05/20240505.dar");
-        // ModuleCard::renameFile32("/20240506.dar", "/2024/05/20240506.dar");
-        // ModuleCard::renameFile32("/20240507.dar", "/2024/05/20240507.dar");
-        // ModuleCard::renameFile32("/20240508.dar", "/2024/05/20240508.dar");
-        // ModuleCard::renameFile32("/20240509.dar", "/2024/05/20240509.dar");
-        // ModuleCard::renameFile32("/20240510.dar", "/2024/05/20240510.dar");
-        // ModuleCard::renameFile32("/20240511.dar", "/2024/05/20240511.dar");
-        // ModuleCard::renameFile32("/20240512.dar", "/2024/05/20240512.dar");
-        // ModuleCard::renameFile32("/20240513.dar", "/2024/05/20240513.dar");
-        // ModuleCard::renameFile32("/20240514.dar", "/2024/05/20240514.dar");
-        // ModuleCard::renameFile32("/20240515.dar", "/2024/05/20240515.dap");
+        // ModuleCard::renameFile32("/2024/04/20240411.dat", "/2024/04/20240411.dar");
+        // ModuleCard::renameFile32("/2024/04/20240412.dat", "/2024/04/20240412.dar");
+        // ModuleCard::renameFile32("/2024/04/20240413.dat", "/2024/04/20240413.dar");
+        // ModuleCard::renameFile32("/2024/04/20240414.dat", "/2024/04/20240414.dar");
+        // ModuleCard::renameFile32("/2024/04/20240415.dat", "/2024/04/20240415.dar");
+        // ModuleCard::renameFile32("/2024/04/20240416.dat", "/2024/04/20240416.dar");
+        // ModuleCard::renameFile32("/2024/04/20240417.dat", "/2024/04/20240417.dar");
+        // ModuleCard::renameFile32("/2024/04/20240418.dat", "/2024/04/20240418.dar");
+        // ModuleCard::renameFile32("/2024/04/20240419.dat", "/2024/04/20240419.dar");
+        // ModuleCard::renameFile32("/2024/04/20240420.dat", "/2024/04/20240420.dar");
+        // ModuleCard::renameFile32("/2024/04/20240421.dat", "/2024/04/20240421.dar");
+        // ModuleCard::renameFile32("/2024/04/20240422.dat", "/2024/04/20240422.dar");
+        // ModuleCard::renameFile32("/2024/04/20240423.dat", "/2024/04/20240423.dar");
+        // ModuleCard::renameFile32("/2024/04/20240424.dat", "/2024/04/20240424.dar");
+        // ModuleCard::renameFile32("/2024/04/20240425.dat", "/2024/04/20240425.dar");
+        // ModuleCard::renameFile32("/2024/04/20240426.dat", "/2024/04/20240426.dar");
+        // ModuleCard::renameFile32("/2024/04/20240427.dat", "/2024/04/20240427.dar");
+        // ModuleCard::renameFile32("/2024/04/20240428.dat", "/2024/04/20240428.dar");
+        // ModuleCard::renameFile32("/2024/04/20240429.dat", "/2024/04/20240429.dar");
+        // ModuleCard::renameFile32("/2024/04/20240430.dat", "/2024/04/20240430.dar");
+        // ModuleCard::renameFile32("/2024/05/20240501.dat", "/2024/05/20240501.dar");
+        // ModuleCard::renameFile32("/2024/05/20240502.dat", "/2024/05/20240502.dar");
+        // ModuleCard::renameFile32("/2024/05/20240503.dat", "/2024/05/20240503.dar");
+        // ModuleCard::renameFile32("/2024/05/20240504.dat", "/2024/05/20240504.dar");
+        // ModuleCard::renameFile32("/2024/05/20240505.dat", "/2024/05/20240505.dar");
+        // ModuleCard::renameFile32("/2024/05/20240506.dat", "/2024/05/20240506.dar");
+        // ModuleCard::renameFile32("/2024/05/20240507.dat", "/2024/05/20240507.dar");
+        // ModuleCard::renameFile32("/2024/05/20240508.dat", "/2024/05/20240508.dar");
+        // ModuleCard::renameFile32("/2024/05/20240509.dat", "/2024/05/20240509.dar");
+        // ModuleCard::renameFile32("/2024/05/20240510.dat", "/2024/05/20240510.dar");
+        // ModuleCard::renameFile32("/2024/05/20240511.dat", "/2024/05/20240511.dar");
+        // ModuleCard::renameFile32("/2024/05/20240512.dat", "/2024/05/20240512.dar");
+        // ModuleCard::renameFile32("/2024/05/20240513.dat", "/2024/05/20240513.dar");
+        // ModuleCard::renameFile32("/2024/05/20240514.dat", "/2024/05/20240514.dar");
+        // ModuleCard::renameFile32("/2024/05/20240515.dat", "/2024/05/20240515.dar");
+        // ModuleCard::renameFile32("/2024/05/20240516.dat", "/2024/05/20240516.dap");
     }
 }
 
@@ -85,10 +87,6 @@ void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY___
 
             // get the file definition for the given time (either a dap or dar file extensions)
             fileDef32Data = SensorTime::getFile32DefData(secondstimeIndx);
-#ifdef USE___SERIAL
-            String fileDef32DataName = String(fileDef32Data.path);
-            Serial.printf("fileDef32DataName: %s\n", fileDef32DataName.c_str());
-#endif
 
             // open when hitting a new file name
             if (fileDef32Data.name != datFileNameLast) {
@@ -178,17 +176,11 @@ String ModuleCard::toDataPath(String path) {
     if (path.endsWith(FILE_FORMAT_DATA)) {
         String dapFilePath = String(path);
         dapFilePath.replace(FILE_FORMAT_DATA, FILE_FORMAT_DATA_PUBLISHABLE);
-#ifdef USE___SERIAL
-        Serial.printf("dapFilePath: %s\n", dapFilePath.c_str());
-#endif
         if (ModuleCard::existsPath(dapFilePath)) {
             return dapFilePath;
         } else {
             String darFilePath = String(path);
             darFilePath.replace(FILE_FORMAT_DATA, FILE_FORMAT_DATA____ARCHIVED);
-#ifdef USE___SERIAL
-            Serial.printf("darFilePath: %s\n", darFilePath.c_str());
-#endif
             if (ModuleCard::existsPath(darFilePath)) {
                 return darFilePath;
             }
@@ -216,8 +208,5 @@ bool ModuleCard::removeFile32(String file) {
 }
 
 bool ModuleCard::renameFile32(String pathCurr, String pathDest) {
-#ifdef USE___SERIAL
-    Serial.printf("rename, pathCurr: %s, pathDest: %s\n", pathCurr.c_str(), pathDest.c_str());
-#endif
     return ModuleCard::sd32.rename(pathCurr, pathDest);
 }

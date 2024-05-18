@@ -31,10 +31,14 @@ class ModuleWifi {
     static void updateSecondstimeExpiry(void* parameter);
     static bool connectToNetwork(config_t& config, network_t& network);
     static bool enableSoftAP(config_t& config);
-    static int cmpfunc(const void* a, const void* b);
+    static int compareByRssi(const void* a, const void* b);
+    static void handleStationDisconnected(WiFiEvent_t event);
+    static std::function<void(std::function<bool(config_t& config)>)> actionCompleteCallback;  // callback to main
+    static bool configureWifiValPower(config_t& config);
 
    public:
     static network_t discoveredNetworks[NETWORKS_BUFFER_SIZE];
+    static void begin(std::function<void(std::function<bool(config_t& config)>)> actionCompleteCallback);
     static void configure(config_t& config);  // loads json configuration and creates a dat version for faster future accessibility
     static void createDat(config_t& config);
     static bool powerup(config_t& config, bool allowApMode);

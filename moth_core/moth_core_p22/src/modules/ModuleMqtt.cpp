@@ -107,7 +107,7 @@ mqtt____stat__e ModuleMqtt::checkCliStat(PubSubClient* mqttClient) {
 void ModuleMqtt::publish(config_t& config) {
 
 #ifdef USE___SERIAL
-    Serial.printf("before mqtt publish, heap: %u\n", ESP.getFreeHeap());
+    Serial.printf("before mqtt publish, heap: %u, caps: %u\n", ESP.getFreeHeap(), heap_caps_get_free_size(MALLOC_CAP_8BIT));
 #endif
 
     ModuleCard::begin();
@@ -166,7 +166,9 @@ void ModuleMqtt::publish(config_t& config) {
                     char datFileNameBuffer[16];
                     String datFilePath;
 
-                    bool success = true;
+                    bool pubSuccess = true;
+                    bool wrtSuccess;
+                    bool rnmSuccess;
 
                     while (year > 0) {
                         String folderYearName = String(year);
@@ -198,31 +200,47 @@ void ModuleMqtt::publish(config_t& config) {
                                                 datFile.read((byte*)&datValue, sizeof(datValue));  // read one measurement from the file
                                                 // filePos += sizeof(datFile);
                                                 filePos = datFile.position();
-                                                if (datValue.publishable = true) {  // must still check for publishable (could have been partially published while measuring)
+                                                if (datValue.publishable) {  // must still check for publishable (could have been partially published while measuring)
 #ifdef USE___SERIAL
                                                     Serial.printf("datValue.co2: %d\n", datValue.valuesCo2.co2Raw);
 #endif
-                                                    success = success && ModuleMqtt::publishMeasurement(config, &datValue, mqtt.cli, mqttClient);
-                                                    datFile.seekSet(filePos - 2);  // the assumed position where the publishable flag is stored
-                                                    datFile.write(false);          // set to publishable false
-                                                    datFile.seekSet(filePos);      // reset to original file position
-                                                    if (!success) {
+                                                    pubSuccess = pubSuccess && ModuleMqtt::publishMeasurement(config, &datValue, mqtt.cli, mqttClient);
+                                                    datFile.seekSet(filePos - 2);                                         // the assumed position where the publishable flag is stored
+                                                    wrtSuccess = datFile.write((uint8_t)0) && datFile.write((uint8_t)0);  // set to publishable false
+#ifdef USE___SERIAL
+                                                    Serial.printf("wrtSuccess: %d\n", wrtSuccess);
+#endif
+                                                    datFile.seekSet(filePos);  // reset to original file position
+                                                    if (!pubSuccess) {
                                                         break;  // stop reading from this file
                                                     }
                                                     mqttClient->loop();
                                                 }
                                             }
-                                            if (success) {  // when all measurements from one file were published, mark this file as archive
+                                            if (pubSuccess) {  // when all measurements from one file were published, mark this file as archive
                                                 if (!SensorTime::isPersistPath(datFilePath)) {
-                                                    // this leads to the file havin persispath being published over and over
+
+                                                    datFile.close();
+
                                                     String darFilePath = String(datFilePath);
                                                     darFilePath.replace(FILE_FORMAT_DATA_PUBLISHABLE, FILE_FORMAT_DATA____ARCHIVED);
-                                                    ModuleCard::renameFile32(datFilePath, darFilePath);
+                                                    rnmSuccess = ModuleCard::renameFile32(datFilePath, darFilePath);
+#ifdef USE___SERIAL
+                                                    Serial.printf("rnmSuccess: %d\n", rnmSuccess);
+#endif
                                                 }
+                                            } else {
+                                                // publishing failed :: nothing
                                             }
+                                        } else {
+                                            // not a publishable format :: nothing
                                         }
-                                        datFile.close();
-                                        if (!success) {
+
+                                        if (datFile) {
+                                            datFile.close();
+                                        }
+
+                                        if (!pubSuccess) {
                                             break;  // dont open another file in case of failure
                                         }
                                     }
@@ -246,15 +264,15 @@ void ModuleMqtt::publish(config_t& config) {
                     }
 
                     // if publishing from file was successful so far
-                    if (success) {
+                    if (pubSuccess) {
                         uint32_t lineLimit = min((uint32_t)Values::values->nextMeasureIndex, (uint32_t)MEASUREMENT_BUFFER_SIZE);
                         uint32_t dataIndex;
                         for (uint32_t lineIndex = 0; lineIndex < lineLimit; lineIndex++) {  // similar code in ValcsvResponse
                             dataIndex = lineIndex + Values::values->nextMeasureIndex - lineLimit;
                             datValue = Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE];
                             if (datValue.publishable) {
-                                success = success / ModuleMqtt::publishMeasurement(config, &datValue, mqtt.cli, mqttClient);
-                                if (success) {
+                                pubSuccess = pubSuccess && ModuleMqtt::publishMeasurement(config, &datValue, mqtt.cli, mqttClient);
+                                if (pubSuccess) {
                                     // replace with non-publishable version
                                     Values::values->measurements[dataIndex % MEASUREMENT_BUFFER_SIZE] = {
                                         datValue.secondstime,  // secondstime

@@ -11,6 +11,28 @@ String ModuleWifi::networkName = "";
 uint32_t ModuleWifi::secondstimeExpiry = 0;
 uint8_t ModuleWifi::expiryMinutes = 5;  // default
 network_t ModuleWifi::discoveredNetworks[NETWORKS_BUFFER_SIZE];
+std::function<void(std::function<bool(config_t& config)>)> ModuleWifi::actionCompleteCallback = nullptr;
+
+void ModuleWifi::begin(std::function<void(std::function<bool(config_t& config)>)> actionCompleteCallback) {
+    ModuleWifi::actionCompleteCallback = actionCompleteCallback;
+    WiFi.onEvent(ModuleWifi::handleStationDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+}
+
+void ModuleWifi::handleStationDisconnected(WiFiEvent_t event) {
+    ModuleWifi::actionCompleteCallback(ModuleWifi::configureWifiValPower);
+}
+
+bool ModuleWifi::configureWifiValPower(config_t& config) {
+    if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_Y) {  // if it is actually on -> set to pending off
+#ifdef USE___SERIAL
+        Serial.printf("config.wifi.wifiValPower -> WIFI____VAL_P__PND_N\n", WiFi.getMode());
+#endif
+        config.wifi.wifiValPower = WIFI____VAL_P__PND_N;
+        return true;
+    } else {
+        return false;
+    }
+}
 
 void ModuleWifi::configure(config_t& config) {
     ModuleCard::begin();
@@ -111,9 +133,6 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         int ssidCount = WiFi.scanNetworks();
         int ssidIndex = 0;
         for (; ssidIndex < min(ssidCount, (int)NETWORKS_BUFFER_SIZE); ssidIndex++) {
-#ifdef USE___SERIAL
-            Serial.printf("ssidIndex: %d\n", ssidIndex);
-#endif
             String ssid = WiFi.SSID(ssidIndex);
             int32_t rssi = WiFi.RSSI(ssidIndex);
             ModuleWifi::discoveredNetworks[ssidIndex] = {rssi};
@@ -124,7 +143,7 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         }
 
         // Ssort ModuleWifi::discoveredNetworks by network strength
-        qsort(ModuleWifi::discoveredNetworks, NETWORKS_BUFFER_SIZE, sizeof(network_t), ModuleWifi::cmpfunc);
+        qsort(ModuleWifi::discoveredNetworks, NETWORKS_BUFFER_SIZE, sizeof(network_t), ModuleWifi::compareByRssi);
 
         network_t network;
         String scanKey;
@@ -132,20 +151,11 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         for (int networkIndex = 0; networkIndex < NETWORKS_BUFFER_SIZE; networkIndex++) {
             network = ModuleWifi::discoveredNetworks[networkIndex];
             if (network.rssi > NETWORK_RSSI_INVALID) {
-#ifdef USE___SERIAL
-                Serial.printf("network: %s, %d\n", String(network.key), network.rssi);
-#endif
                 scanKey = String(network.key);
                 for (int i = 0; i < configuredNetworkCount; i++) {
                     confKey = String(configuredNetworks[i].key);
                     if (confKey == scanKey) {  // found a configured network that matched one of the scanned networks
-#ifdef USE___SERIAL
-                        Serial.printf("connecting ...\n");
-#endif
                         if (ModuleWifi::connectToNetwork(config, configuredNetworks[i])) {
-#ifdef USE___SERIAL
-                            Serial.printf("connected\n");
-#endif
                             config.wifi.networkConnIndexLast = i;
                             powerupSuccess = true;
                             break;  // break the configured network loop
@@ -177,7 +187,7 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     return powerupSuccess;
 }
 
-int ModuleWifi::cmpfunc(const void* a, const void* b) {
+int ModuleWifi::compareByRssi(const void* a, const void* b) {
     return (((network_t*)b)->rssi - ((network_t*)a)->rssi);
 }
 
@@ -235,6 +245,7 @@ bool ModuleWifi::enableSoftAP(config_t& config) {
 }
 
 void ModuleWifi::depower(config_t& config) {
+    config.wifi.wifiValPower = WIFI____VAL_P__CUR_N;  // needs to be at method start or the disconnect callback will trigger a second call to depower
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true);
     for (int i = 0; i < 10; i++) {
@@ -244,7 +255,6 @@ void ModuleWifi::depower(config_t& config) {
         }
     }
     WiFi.mode(WIFI_OFF);
-    config.wifi.wifiValPower = WIFI____VAL_P__CUR_N;  // set flag to currently off
 }
 
 /**

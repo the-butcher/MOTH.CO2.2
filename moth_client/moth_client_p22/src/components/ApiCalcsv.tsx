@@ -11,11 +11,11 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import moment from 'moment';
 import 'moment/locale/de';
 import { useEffect, useState } from 'react';
+import { IApiProperties } from '../types/IApiProperties';
+import { IResponseProps } from '../types/IResponseProps';
 import { ByteLoader } from '../util/ByteLoader';
 import { TimeUtil } from '../util/TimeUtil';
 import ApiResponse from './ApiResponse';
-import { IApiProperties } from '../types/IApiProperties';
-import { IResponseProps } from '../types/IResponseProps';
 
 /**
  * @deprecated

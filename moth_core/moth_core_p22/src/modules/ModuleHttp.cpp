@@ -26,20 +26,22 @@ void ModuleHttp::begin() {
         server.on("/api/latest", HTTP_GET, handleApiLatest);
         server.on("/api/valcsv", HTTP_GET, handleApiValCsv);
         server.on("/api/datcsv", HTTP_GET, handleApiDatCsv);
-        server.on("/api/status", HTTP_GET, handleApiStatus);
-        server.on("/api/dspset", HTTP_GET, handleApiDspSet);
-        server.on("/api/dirout", HTTP_GET, handleApiDirOut);
         server.on("/api/valout", HTTP_GET, handleApiValOut);
         server.on("/api/datout", HTTP_GET, handleApiDatOut);
+        server.on("/api/dirout", HTTP_GET, handleApiDirOut);
         server.on("/api/upload", HTTP_POST, handleApiUpload, ModuleHttp::handleUpload);
-        server.on("/api/dirdel", HTTP_GET, handleApiDirDel);
         server.on("/api/datdel", HTTP_GET, handleApiDatDel);
+        server.on("/api/dirdel", HTTP_GET, handleApiDirDel);
+        server.on("/api/dspset", HTTP_GET, handleApiDspSet);
+        server.on("/api/status", HTTP_GET, handleApiStatus);
         server.on("/api/netout", HTTP_GET, handleApiNetOut);
         server.on("/api/netoff", HTTP_GET, handleApiNetOff);
+
         server.on("/api/co2cal", HTTP_GET, handleApiCo2Cal);
         server.on("/api/co2rst", HTTP_GET, handleApiCo2Rst);
         server.on("/api/esprst", HTTP_GET, handleApiEspRst);
         server.on("/api/update", HTTP_POST, handleApiUpdate, ModuleHttp::handleUpdate);
+
         server.onNotFound(serveStatic);
         DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
         server.begin();
@@ -47,6 +49,9 @@ void ModuleHttp::begin() {
     }
 }
 
+/**
+ * get the latest measurement as JSON
+ */
 void ModuleHttp::handleApiLatest(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
@@ -75,12 +80,299 @@ void ModuleHttp::handleApiLatest(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+/**
+ * get the last hour of measurements as CSV
+ */
 void ModuleHttp::handleApiValCsv(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     ValcsvResponse *response = new ValcsvResponse();  // cache headers in ValcsvResponse
     request->send(response);
 }
 
+/**
+ * get the contents of a data file as CSV
+ */
+void ModuleHttp::handleApiDatCsv(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    if (request->hasParam("file")) {
+        String path = request->getParam("file")->value();
+        if (ModuleCard::isDataPath(path)) {
+            String dataPath = ModuleCard::toDataPath(path);
+            if (dataPath != FILE_FORMAT_DATA_____INVALID) {
+                DatCsvResponse *response = new DatCsvResponse(dataPath);
+                if (request->hasHeader("If-Modified-Since")) {
+                    String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
+                    if (!response->wasModifiedSince(ifModifiedSince)) {
+                        response->~DatCsvResponse();
+                        request->send(304);  // not-modified
+                        return;
+                    }
+                } else {
+                    request->send(response);
+                    return;
+                }
+            } else {  // FILE_FORMAT_DATA_____INVALID
+                serve404Json(request, path);
+                return;
+            }
+        } else {
+            serve400Json(request, "file must point to a data file");
+            return;
+        }
+    } else {
+        serve400Json(request, "file required");
+        return;
+    }
+}
+
+/**
+ * get the last hour of measurements as binary data
+ */
+void ModuleHttp::handleApiValOut(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    ValoutResponse *response = new ValoutResponse();  // cache headers in ValoutResponse
+    request->send(response);
+}
+
+/**
+ * get the contents of a file as binary data
+ */
+void ModuleHttp::handleApiDatOut(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    if (request->hasParam("file")) {
+        String path = request->getParam("file")->value();
+        if (ModuleCard::isDataPath(path)) {
+            String dataPath = ModuleCard::toDataPath(path);
+            if (dataPath != FILE_FORMAT_DATA_____INVALID) {
+                ModuleHttp::serveFile32(request, dataPath);
+                return;
+            } else {
+                serve404Json(request, path);
+                return;
+            }
+        } else {
+            ModuleHttp::serveFile32(request, path);
+            return;
+        }
+    } else {
+        ModuleHttp::serve400Json(request, "file required");
+        return;
+    }
+}
+
+/**
+ * list the contents of a folder
+ */
+void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
+
+    ModuleWifi::access();
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=10");
+
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = 200;
+
+    JsonArray &foldersJa = root.createNestedArray("folders");
+    JsonArray &filesJa = root.createNestedArray("files");
+
+    String folderName = "/";
+    if (request->hasParam("folder")) {
+        folderName = request->getParam("folder")->value();
+    }
+    File32 folder;
+    folder.open(folderName.c_str(), O_RDONLY);
+    File32 file;
+
+    while (file.openNext(&folder, O_RDONLY)) {
+        if (!file.isHidden()) {
+            char nameBuf[16];
+            file.getName(nameBuf, 16);
+            String name = String(nameBuf);
+
+            uint16_t pdate;
+            uint16_t ptime;
+            file.getModifyDateTime(&pdate, &ptime);
+
+            char lastModifiedBuffer[32];
+            sprintf(lastModifiedBuffer, "%d-%02d-%02d %02d:%02d:%02d", FS_YEAR(pdate), FS_MONTH(pdate), FS_DAY(pdate), FS_HOUR(ptime), FS_MINUTE(ptime), FS_SECOND(ptime));
+            String lastModified = String(lastModifiedBuffer);
+
+            if (file.isDirectory()) {
+                JsonObject &itemJo = foldersJa.createNestedObject();
+                itemJo["folder"] = name;
+                itemJo["last"] = lastModified;
+            } else {
+                JsonObject &itemJo = filesJa.createNestedObject();
+                itemJo["size"] = file.size();
+                itemJo["file"] = name;
+                itemJo["last"] = lastModified;
+            }
+        }
+        file.close();
+    }
+    folder.close();
+
+    root.printTo(*response);
+    request->send(response);
+}
+
+/**
+ * upload files to the device
+ */
+void ModuleHttp::handleApiUpload(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = ModuleHttp::uploadCode;
+    ModuleHttp::uploadCode = -1;  // reset for next usage
+    root.printTo(*response);
+    request->send(response);
+}
+
+/**
+ * delete files from the device
+ */
+void ModuleHttp::handleApiDatDel(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    if (request->hasParam("file")) {
+        String path = "/" + request->getParam("file")->value();
+        if (ModuleCard::existsPath(path)) {
+
+            bool success = ModuleCard::removeFile32(path);
+
+            AsyncResponseStream *response = request->beginResponseStream("application/json");
+            DynamicJsonBuffer jsonBuffer;
+            JsonObject &root = jsonBuffer.createObject();
+            root["code"] = success ? 200 : 500;
+            root["file"] = path;
+            root.printTo(*response);
+            request->send(response);
+
+        } else {
+            ModuleHttp::serve404Json(request, path);
+        }
+    } else {
+        ModuleHttp::serve400Json(request, "file required");
+    }
+}
+
+/**
+ * delete folders from the device
+ */
+void ModuleHttp::handleApiDirDel(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    if (request->hasParam("folder")) {
+        String path = "/" + request->getParam("folder")->value();
+        if (ModuleCard::existsPath(path)) {
+
+            bool success = ModuleCard::removeFolder(path);
+
+            AsyncResponseStream *response = request->beginResponseStream("application/json");
+            DynamicJsonBuffer jsonBuffer;
+            JsonObject &root = jsonBuffer.createObject();
+            root["code"] = success ? 200 : 500;
+            root["folder"] = path;
+            root.printTo(*response);
+            request->send(response);
+
+        } else {
+            ModuleHttp::serve404Json(request, path);
+        }
+    } else {
+        ModuleHttp::serve400Json(request, "folder required");
+    }
+}
+
+/**
+ * change device display
+ */
+void ModuleHttp::handleApiDspSet(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    if (request->hasParam("p") && request->hasParam("v")) {
+        String pRaw = request->getParam("p")->value();
+        String vRaw = request->getParam("v")->value();
+        if (ModuleHttp::isNumeric(pRaw) && ModuleHttp::isNumeric(vRaw)) {
+            uint8_t p = pRaw.toInt();
+            if (p >= 0 && p <= 5) {
+                uint8_t v = vRaw.toInt();
+                if (p == 0) {
+                    if (v >= DISPLAY_VAL_M__TABLE && v <= DISPLAY_VAL_M__CALIB) {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                            config.disp.displayValModus = (display_val_m_e)v;
+                        };
+                        serve200Json(request, p, v);
+                        return;
+                    } else {
+                        serve400Json(request, "v must be between 0 and 2 for modus (p=0)");
+                        return;
+                    }
+                } else if (p == 1) {
+                    if (v >= DISPLAY_THM____LIGHT && v <= DISPLAY_THM_____DARK) {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                            config.disp.displayValTheme = (display_val_e_e)v;
+                        };
+                        serve200Json(request, p, v);
+                        return;
+                    } else {
+                        serve400Json(request, "v must be between 0 and 1 for theme (p=1)");
+                        return;
+                    }
+                } else if (p == 2) {
+                    if (v >= DISPLAY_VAL_T____CO2 && v <= DISPLAY_VAL_T____ALT) {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                            config.disp.displayValTable = (display_val_t_e)v;
+                        };
+                        serve200Json(request, p, v);
+                        return;
+                    } else {
+                        serve400Json(request, "v must be between 0 and 2 for table value (p=2)");
+                        return;
+                    }
+                } else if (p == 3) {
+                    if (v >= DISPLAY_VAL_C____CO2 && v <= DISPLAY_VAL_C____NRG) {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                            config.disp.displayValChart = (display_val_c_e)v;
+                        };
+                        serve200Json(request, p, v);
+                        return;
+                    } else {
+                        serve400Json(request, "v must be between 0 and 5 for chart value (p=3)");
+                        return;
+                    }
+                } else if (p == 4) {
+                    if (v == DISPLAY_HRS_C_____01 || v == DISPLAY_HRS_C_____03 || v == DISPLAY_HRS_C_____06 || v == DISPLAY_HRS_C_____12 || v == DISPLAY_HRS_C_____24) {
+                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+                            config.disp.displayHrsChart = (display_val_h_e)v;
+                        };
+                        serve200Json(request, p, v);
+                        return;
+                    } else {
+                        serve400Json(request, "v must be one of 1,3,6,12,24 for chart hours (p=4)");
+                        return;
+                    }
+                } else {
+                    serve400Json(request, "unhandled p value");
+                    return;
+                }
+            } else {
+                serve400Json(request, "p must be between 0 and 5");
+                return;
+            }
+        } else {
+            serve400Json(request, "p and v must be numeric");
+            return;
+        }
+    } else {
+        serve400Json(request, "p and v required");
+        return;
+    }
+}
+
+/**
+ * get details about device status
+ */
 void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
@@ -146,308 +438,9 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
-void ModuleHttp::handleApiDspSet(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    if (request->hasParam("p") && request->hasParam("v")) {
-        String pRaw = request->getParam("p")->value();
-        String vRaw = request->getParam("v")->value();
-        if (ModuleHttp::isNumeric(pRaw) && ModuleHttp::isNumeric(vRaw)) {
-            uint8_t p = pRaw.toInt();
-            if (p >= 0 && p <= 5) {
-                uint8_t v = vRaw.toInt();
-                if (p == 0) {
-                    if (v >= DISPLAY_VAL_M__TABLE && v <= DISPLAY_VAL_M__CALIB) {
-                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                            config.disp.displayValModus = (display_val_m_e)v;
-                        };
-                        serve200Json(request, p, v);
-                        return;
-                    } else {
-                        serve400Json(request, "v must be between 0 and 1 for modus (p=0)");
-                        return;
-                    }
-                } else if (p == 1) {
-                    if (v >= DISPLAY_THM____LIGHT && v <= DISPLAY_THM_____DARK) {
-                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                            config.disp.displayValTheme = (display_val_e_e)v;
-                        };
-                        serve200Json(request, p, v);
-                        return;
-                    } else {
-                        serve400Json(request, "v must be between 0 and 1 for theme (p=1)");
-                        return;
-                    }
-                } else if (p == 2) {
-                    if (v >= DISPLAY_VAL_T____CO2 && v <= DISPLAY_VAL_T____ALT) {
-                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                            config.disp.displayValTable = (display_val_t_e)v;
-                        };
-                        serve200Json(request, p, v);
-                        return;
-                    } else {
-                        serve400Json(request, "v must be between 0 and 2 for table value (p=2)");
-                        return;
-                    }
-                } else if (p == 3) {
-                    if (v >= DISPLAY_VAL_C____CO2 && v <= DISPLAY_VAL_C____NRG) {
-                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                            config.disp.displayValChart = (display_val_c_e)v;
-                        };
-                        serve200Json(request, p, v);
-                        return;
-                    } else {
-                        serve400Json(request, "v must be between 0 and 5 for chart value (p=3)");
-                        return;
-                    }
-                } else if (p == 4) {
-                    if (v == DISPLAY_HRS_C_____01 || v == DISPLAY_HRS_C_____03 || v == DISPLAY_HRS_C_____06 || v == DISPLAY_HRS_C_____12 || v == DISPLAY_HRS_C_____24) {
-                        ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                            config.disp.displayHrsChart = (display_val_h_e)v;
-                        };
-                        serve200Json(request, p, v);
-                        return;
-                    } else {
-                        serve400Json(request, "v must be one of 1,3,6,12,24 for chart hours (p=4)");
-                        return;
-                    }
-                } else {
-                    serve400Json(request, "unhandled p value");
-                    return;
-                }
-            } else {
-                serve400Json(request, "p must be between 0 and 5");
-                return;
-            }
-        } else {
-            serve400Json(request, "p and v must be numeric");
-            return;
-        }
-    } else {
-        serve400Json(request, "p and v required");
-        return;
-    }
-}
-
-bool ModuleHttp::isNumeric(String value) {
-    for (uint8_t i = 0; i < value.length(); i++) {
-        if (!isDigit(value.charAt(i))) {
-            return false;
-        }
-    }
-    return true;
-}
-
-void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
-
-    ModuleWifi::access();
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=10");
-
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
-
-    JsonArray &foldersJa = root.createNestedArray("folders");
-    JsonArray &filesJa = root.createNestedArray("files");
-
-    String folderName = "/";
-    if (request->hasParam("folder")) {
-        folderName = request->getParam("folder")->value();
-    }
-    File32 folder;
-    folder.open(folderName.c_str(), O_RDONLY);
-    File32 file;
-
-    while (file.openNext(&folder, O_RDONLY)) {
-        if (!file.isHidden()) {
-            char nameBuf[16];
-            file.getName(nameBuf, 16);
-            String name = String(nameBuf);
-
-            uint16_t pdate;
-            uint16_t ptime;
-            file.getModifyDateTime(&pdate, &ptime);
-
-            char lastModifiedBuffer[32];
-            sprintf(lastModifiedBuffer, "%d-%02d-%02d %02d:%02d:%02d", FS_YEAR(pdate), FS_MONTH(pdate), FS_DAY(pdate), FS_HOUR(ptime), FS_MINUTE(ptime), FS_SECOND(ptime));
-            String lastModified = String(lastModifiedBuffer);
-
-            if (file.isDirectory()) {
-                JsonObject &itemJo = foldersJa.createNestedObject();
-                itemJo["folder"] = name;
-                itemJo["last"] = lastModified;
-            } else {
-                JsonObject &itemJo = filesJa.createNestedObject();
-                itemJo["size"] = file.size();
-                itemJo["file"] = name;
-                itemJo["last"] = lastModified;
-            }
-        }
-        file.close();
-    }
-    folder.close();
-
-    root.printTo(*response);
-    request->send(response);
-}
-
-void ModuleHttp::handleApiValOut(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    ValoutResponse *response = new ValoutResponse();  // cache headers in ValoutResponse
-    request->send(response);
-}
-
-void ModuleHttp::handleApiDatOut(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    if (request->hasParam("file")) {
-        String path = request->getParam("file")->value();
-        if (ModuleCard::isDataPath(path)) {
-            String dataPath = ModuleCard::toDataPath(path);
-            if (dataPath != FILE_FORMAT_DATA_____INVALID) {
-                ModuleHttp::serveFile32(request, dataPath);
-                return;
-            } else {
-                serve404Json(request, path);
-                return;
-            }
-        } else {
-            ModuleHttp::serveFile32(request, path);
-            return;
-        }
-    } else {
-        ModuleHttp::serve400Json(request, "file required");
-        return;
-    }
-}
-
-void ModuleHttp::handleApiDatCsv(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    if (request->hasParam("file")) {
-        String path = request->getParam("file")->value();
-        if (ModuleCard::isDataPath(path)) {
-            String dataPath = ModuleCard::toDataPath(path);
-            if (dataPath != FILE_FORMAT_DATA_____INVALID) {
-                DatCsvResponse *response = new DatCsvResponse(dataPath);
-                if (request->hasHeader("If-Modified-Since")) {
-                    String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
-                    if (!response->wasModifiedSince(ifModifiedSince)) {
-                        response->~DatCsvResponse();
-                        request->send(304);  // not-modified
-                        return;
-                    }
-                } else {
-                    request->send(response);
-                    return;
-                }
-            } else {  // FILE_FORMAT_DATA_____INVALID
-                serve404Json(request, path);
-                return;
-            }
-        } else {
-            serve400Json(request, "file must point to a data file");
-            return;
-        }
-    } else {
-        serve400Json(request, "file required");
-        return;
-    }
-}
-
-void ModuleHttp::handleApiUpload(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = ModuleHttp::uploadCode;
-    ModuleHttp::uploadCode = -1;  // reset for next usage
-    root.printTo(*response);
-    request->send(response);
-}
-
-void ModuleHttp::handleApiEspRst(AsyncWebServerRequest *request) {
-
-    ModuleWifi::expire();
-
-    ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-        // this happens before wifi becomes a chance to disconnect
-        // check for wifi to become disconnected, or ESP.restart() may not work
-        ModuleWifi::depower(config);
-        for (uint8_t i = 0; i < 5; i++) {
-            delay(1000);
-            if (!ModuleWifi::isPowered()) {
-                ESP.restart();
-            }
-        }
-    };
-
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    response->addHeader("Cache-Control", "max-age=10");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
-    root.printTo(*response);
-    request->send(response);
-}
-
-void ModuleHttp::handleApiUpdate(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = ModuleHttp::updateCode;
-    ModuleHttp::updateCode = -1;  // reset for next usage
-    root.printTo(*response);
-    request->send(response);
-}
-
-void ModuleHttp::handleApiDirDel(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    if (request->hasParam("folder")) {
-        String path = "/" + request->getParam("folder")->value();
-        if (ModuleCard::existsPath(path)) {
-
-            bool success = ModuleCard::removeFolder(path);
-
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            DynamicJsonBuffer jsonBuffer;
-            JsonObject &root = jsonBuffer.createObject();
-            root["code"] = success ? 200 : 500;
-            root["folder"] = path;
-            root.printTo(*response);
-            request->send(response);
-
-        } else {
-            ModuleHttp::serve404Json(request, path);
-        }
-    } else {
-        ModuleHttp::serve400Json(request, "folder required");
-    }
-}
-
-void ModuleHttp::handleApiDatDel(AsyncWebServerRequest *request) {
-    ModuleWifi::access();
-    if (request->hasParam("file")) {
-        String path = "/" + request->getParam("file")->value();
-        if (ModuleCard::existsPath(path)) {
-
-            bool success = ModuleCard::removeFile32(path);
-
-            AsyncResponseStream *response = request->beginResponseStream("application/json");
-            DynamicJsonBuffer jsonBuffer;
-            JsonObject &root = jsonBuffer.createObject();
-            root["code"] = success ? 200 : 500;
-            root["file"] = path;
-            root.printTo(*response);
-            request->send(response);
-
-        } else {
-            ModuleHttp::serve404Json(request, path);
-        }
-    } else {
-        ModuleHttp::serve400Json(request, "file required");
-    }
-}
-
+/**
+ * get a list of networks visible to the device
+ */
 void ModuleHttp::handleApiNetOut(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -469,6 +462,9 @@ void ModuleHttp::handleApiNetOut(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+/**
+ * disconnect the device
+ */
 void ModuleHttp::handleApiNetOff(AsyncWebServerRequest *request) {
     ModuleWifi::expire();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -480,6 +476,9 @@ void ModuleHttp::handleApiNetOff(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+/**
+ * calibrate the CO₂ sensor to a given reference value
+ */
 void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
 
     ModuleWifi::access();
@@ -528,6 +527,9 @@ void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
     }
 }
 
+/**
+ * reset the CO₂ sensor to factory
+ */
 void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -545,10 +547,55 @@ void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+/**
+ * reset the device
+ */
+void ModuleHttp::handleApiEspRst(AsyncWebServerRequest *request) {
+
+    ModuleWifi::expire();
+
+    ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
+        // this happens before wifi becomes a chance to disconnect
+        // check for wifi to become disconnected, or ESP.restart() may not work
+        ModuleWifi::depower(config);
+        for (uint8_t i = 0; i < 5; i++) {
+            delay(1000);
+            if (!ModuleWifi::isPowered()) {
+                ESP.restart();
+            }
+        }
+    };
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    response->addHeader("Cache-Control", "max-age=10");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = 200;
+    root.printTo(*response);
+    request->send(response);
+}
+
+void ModuleHttp::handleApiUpdate(AsyncWebServerRequest *request) {
+    ModuleWifi::access();
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    root["code"] = ModuleHttp::updateCode;
+    ModuleHttp::updateCode = -1;  // reset for next usage
+    root.printTo(*response);
+    request->send(response);
+}
+
+bool ModuleHttp::isNumeric(String value) {
+    for (uint8_t i = 0; i < value.length(); i++) {
+        if (!isDigit(value.charAt(i))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void ModuleHttp::serveStatic(AsyncWebServerRequest *request) {
-#ifdef USE___SERIAL
-    Serial.printf("serving static: %s\n", request->url().c_str());
-#endif
     serveFile32(request, request->url());
 }
 
@@ -572,13 +619,7 @@ void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String path) {
         File32Response *response = new File32Response(path, mimeType);
         if (request->hasHeader("If-Modified-Since")) {
             String ifModifiedSince = request->getHeader("If-Modified-Since")->value();
-#ifdef USE___SERIAL
-            Serial.printf("ifModifiedSince: %s, wasModified: %d\n", ifModifiedSince.c_str(), response->wasModifiedSince(ifModifiedSince));
-#endif
             if (!response->wasModifiedSince(ifModifiedSince)) {
-#ifdef USE___SERIAL
-                Serial.printf("sending 304 since file was not-modified\n");
-#endif
                 response->~File32Response();
                 request->send(304);  // not-modified
                 return;
@@ -648,6 +689,7 @@ void ModuleHttp::fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_t 
 }
 
 void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+
     if (request->hasParam("file", true)) {
         String dataFileName = "/" + request->getParam("file", true)->value();
 

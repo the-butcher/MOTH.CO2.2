@@ -7,24 +7,20 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const InlineChunkHtmlPlugin = require('react-dev-utils/InlineChunkHtmlPlugin');
 const TerserPlugin = require('terser-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-// const safePostCssParser = require('postcss-safe-parser');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 const ModuleScopePlugin = require('react-dev-utils/ModuleScopePlugin');
-const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
 const ESLintPlugin = require('eslint-webpack-plugin');
 const paths = require('./paths');
 const modules = require('./modules');
 const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
-// const CompressionPlugin = require('compression-webpack-plugin');
+const CompressionPlugin = require('compression-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 // const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 // const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-
-// const postcssNormalize = require('postcss-normalize');
 
 // const appPackageJson = require(paths.appPackageJson);
 
@@ -42,21 +38,11 @@ const reactRefreshOverlayEntry = require.resolve(
 const emitErrorsAsWarnings = process.env.ESLINT_NO_DEV_ERRORS === 'true';
 const disableESLintPlugin = process.env.DISABLE_ESLINT_PLUGIN === 'true';
 
-const imageInlineSizeLimit = parseInt(
-  process.env.IMAGE_INLINE_SIZE_LIMIT || '10000'
-);
-
 // Check if TypeScript is setup
 const useTypeScript = fs.existsSync(paths.appTsConfig);
 
 // Get the path to the uncompiled service worker (if it exists).
 const swSrc = paths.swSrc;
-
-// style files regexes
-const cssRegex = /\.css$/;
-const cssModuleRegex = /\.module\.css$/;
-const sassRegex = /\.(scss|sass)$/;
-const sassModuleRegex = /\.module\.(scss|sass)$/;
 
 const hasJsxRuntime = (() => {
   if (process.env.DISABLE_NEW_JSX_TRANSFORM === 'true') {
@@ -74,12 +60,6 @@ const hasJsxRuntime = (() => {
 
 module.exports = function (webpackEnv) {
 
-  // // webpackEnv = 'development';
-  // if (webpackEnv.WEBPACK_SERVE) {
-  //   webpackEnv = 'development';
-  //   // process.env.NODE_ENV = 'development';
-  // }
-
   const isEnvDevelopment = webpackEnv === 'development';
   const isEnvProduction = webpackEnv === 'production';
 
@@ -88,59 +68,8 @@ module.exports = function (webpackEnv) {
   console.log('process.env.NODE_ENV', process.env.NODE_ENV);
 
   const isEnvProductionProfile = isEnvProduction && process.argv.includes('--profile');
-
   const env = getClientEnvironment(paths.publicUrlOrPath.slice(0, -1));
-
   const shouldUseReactRefresh = webpackEnv === 'development';
-
-  // common function to get style loaders
-  const getStyleLoaders = (cssOptions, preProcessor) => {
-    const loaders = [
-      {
-        loader: MiniCssExtractPlugin.loader,
-        options: paths.publicUrlOrPath.startsWith('.') ? { publicPath: '../../' } : {},
-      },
-      {
-        loader: require.resolve('css-loader'),
-        options: cssOptions,
-      },
-      // {
-      //   loader: require.resolve('postcss-loader'),
-      //   options: {
-      //     ident: 'postcss',
-      //     plugins: () => [
-      //       require('postcss-flexbugs-fixes'),
-      //       require('postcss-preset-env')({
-      //         autoprefixer: {
-      //           flexbox: 'no-2009',
-      //         },
-      //         stage: 3,
-      //       }),
-      //       postcssNormalize(),
-      //     ],
-      //     sourceMap: shouldUseSourceMap,
-      //   },
-      // },
-    ].filter(Boolean);
-    if (preProcessor) {
-      loaders.push(
-        {
-          loader: require.resolve('resolve-url-loader'),
-          options: {
-            sourceMap: shouldUseSourceMap,
-            root: paths.appSrc,
-          },
-        },
-        {
-          loader: require.resolve(preProcessor),
-          options: {
-            sourceMap: shouldUseSourceMap,
-          },
-        }
-      );
-    }
-    return loaders;
-  };
 
   return {
 
@@ -155,12 +84,9 @@ module.exports = function (webpackEnv) {
       path: paths.appBuild,
       pathinfo: !isEnvProduction,
       filename: 'static/js/[name].js',
-      // futureEmitAssets: true,
       chunkFilename: 'static/js/[name].chunk.js',
       publicPath: paths.publicUrlOrPath,
       devtoolModuleFilenameTemplate: info => path.relative(paths.appSrc, info.absoluteResourcePath).replace(/\\/g, '/'),
-      // chunkLoadingGlobal: `webpackJsonp${appPackageJson.name}`,
-      // globalObject: 'this',
     },
     devServer: {
       static: path.resolve(__dirname, '../build'),
@@ -196,23 +122,16 @@ module.exports = function (webpackEnv) {
           },
           sourceMap: shouldUseSourceMap,
         }),
-        // new OptimizeCSSAssetsPlugin({
-        //   cssProcessorOptions: {
-        //     parser: safePostCssParser,
-        //     map: shouldUseSourceMap ? {
-        //       inline: false,
-        //       annotation: true,
-        //     } : false,
-        //   },
-        //   cssProcessorPluginOptions: {
-        //     preset: ['default', { minifyFontValues: { removeQuotes: false } }],
-        //   },
-        // }),
       ],
-      runtimeChunk: {
-        name: entrypoint => `runtime-${entrypoint.name}`,
-      },
+      // splitChunks: {
+      //   chunks: 'all',
+      // },
     },
+    // performance: {
+    //   maxAssetSize: 250000,
+    //   maxEntrypointSize: 250000,
+    //   hints: 'error',
+    // },
     resolve: {
       modules: ['src', 'node_modules', paths.appNodeModules].concat(
         modules.additionalModulePaths || []
@@ -231,6 +150,7 @@ module.exports = function (webpackEnv) {
           paths.appPackageJson,
           reactRefreshOverlayEntry,
         ]),
+
       ],
     },
     resolveLoader: {
@@ -244,28 +164,6 @@ module.exports = function (webpackEnv) {
         { parser: { requireEnsure: false } },
         {
           oneOf: [
-            // {
-            //   test: [/\.avif$/],
-            //   loader: require.resolve('url-loader'),
-            //   options: {
-            //     limit: imageInlineSizeLimit,
-            //     mimetype: 'image/avif',
-            //     name: 'static/media/[name].[ext]',
-            //   },
-            // },
-            {
-              test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
-              loader: require.resolve('url-loader'),
-              options: {
-                limit: imageInlineSizeLimit,
-                name: 'static/media/[name].[ext]',
-              },
-            },
-            {
-              test: /\.(woff|woff2|eot|ttf|otf)$/i,
-              loader: require.resolve('base64-inline-loader'),
-              // type: 'asset/resource',
-            },
             {
               test: /\.(js|mjs|jsx|ts|tsx)$/,
               include: paths.appSrc,
@@ -329,88 +227,6 @@ module.exports = function (webpackEnv) {
                 inputSourceMap: shouldUseSourceMap,
               },
             },
-            // "postcss" loader applies autoprefixer to our CSS.
-            // "css" loader resolves paths in CSS and adds assets as dependencies.
-            // "style" loader turns CSS into JS modules that inject <style> tags.
-            // In production, we use MiniCSSExtractPlugin to extract that CSS
-            // to a file, but in development "style" loader enables hot editing
-            // of CSS.
-            // By default we support CSS Modules with the extension .module.css
-            // {
-            //   test: cssRegex,
-            //   exclude: cssModuleRegex,
-            //   use: getStyleLoaders({
-            //     importLoaders: 1,
-            //     sourceMap: shouldUseSourceMap,
-            //   }),
-            //   // Don't consider CSS imports dead code even if the
-            //   // containing package claims to have no side effects.
-            //   // Remove this when webpack adds a warning or an error for this.
-            //   // See https://github.com/webpack/webpack/issues/6571
-            //   sideEffects: true,
-            // },
-            // Adds support for CSS Modules (https://github.com/css-modules/css-modules)
-            // using the extension .module.css
-            // {
-            //   test: cssModuleRegex,
-            //   use: getStyleLoaders({
-            //     importLoaders: 1,
-            //     sourceMap: shouldUseSourceMap,
-            //     modules: {
-            //       getLocalIdent: getCSSModuleLocalIdent,
-            //     },
-            //   }),
-            // },
-            // Opt-in support for SASS (using .scss or .sass extensions).
-            // By default we support SASS Modules with the
-            // extensions .module.scss or .module.sass
-            // {
-            //   test: sassRegex,
-            //   exclude: sassModuleRegex,
-            //   use: getStyleLoaders(
-            //     {
-            //       importLoaders: 3,
-            //       sourceMap: shouldUseSourceMap,
-            //     },
-            //     'sass-loader'
-            //   ),
-            // Don't consider CSS imports dead code even if the
-            // containing package claims to have no side effects.
-            // Remove this when webpack adds a warning or an error for this.
-            // See https://github.com/webpack/webpack/issues/6571
-            // sideEffects: true,
-            // },
-            // Adds support for CSS Modules, but using SASS
-            // using the extension .module.scss or .module.sass
-            // {
-            //   test: sassModuleRegex,
-            //   use: getStyleLoaders(
-            //     {
-            //       importLoaders: 3,
-            //       sourceMap: shouldUseSourceMap,
-            //       modules: {
-            //         getLocalIdent: getCSSModuleLocalIdent,
-            //       },
-            //     },
-            //     'sass-loader'
-            //   ),
-            // },
-            // "file" loader makes sure those assets get served by WebpackDevServer.
-            // When you `import` an asset, you get its (virtual) filename.
-            // In production, they would get copied to the `build` folder.
-            // This loader doesn't use a "test" so it will catch all modules
-            // that fall through the other loaders.
-            {
-              loader: require.resolve('file-loader'),
-              // Exclude `js` files to keep "css" loader working as it injects
-              // its runtime that would otherwise be processed through "file" loader.
-              // Also exclude `html` and `json` extensions so they get processed
-              // by webpacks internal loaders.
-              exclude: [/\.(js|mjs|jsx|ts|tsx)$/, /\.html$/, /\.json$/],
-              options: {
-                name: 'static/media/[name].[ext]',
-              },
-            },
             // ** STOP ** Are you adding a new loader?
             // Make sure to add the new loader(s) before the "file" loader.
           ],
@@ -418,6 +234,7 @@ module.exports = function (webpackEnv) {
       ],
     },
     plugins: [
+      // new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin({
         title: "moth-root",
@@ -429,16 +246,12 @@ module.exports = function (webpackEnv) {
         ],
         inlineSource: ".(css)$"
       }),
-      new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime-.+[.]js/]),
+      // new InlineChunkHtmlPlugin(HtmlWebpackPlugin, [/runtime-.+[.]js/]),
       new InterpolateHtmlPlugin(HtmlWebpackPlugin, env.raw),
       new ModuleNotFoundPlugin(paths.appPath),
       new webpack.DefinePlugin(env.stringified),
       isEnvDevelopment && new CaseSensitivePathsPlugin(),
       isEnvDevelopment && new ReactRefreshWebpackPlugin(),
-      new MiniCssExtractPlugin({
-        filename: 'static/css/[name].css',
-        chunkFilename: 'static/css/[name].chunk.css',
-      }),
       isEnvProduction && fs.existsSync(swSrc) && new WorkboxWebpackPlugin.InjectManifest({
         swSrc,
         dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
@@ -469,7 +282,15 @@ module.exports = function (webpackEnv) {
           },
         },
       }),
-      // new CompressionPlugin(),
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^\.\/locale$/,
+        contextRegExp: /moment$/
+      }),
+      new CompressionPlugin({
+        // test: /\.js(\?.*)?$/i,
+        algorithm: 'gzip'
+      }),
+      // new BundleAnalyzerPlugin()
     ].filter(Boolean),
     // Some libraries import Node modules but don't use them in the browser.
     // Tell webpack to provide empty mocks for them so importing them works.

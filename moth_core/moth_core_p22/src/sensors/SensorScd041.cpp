@@ -94,18 +94,10 @@ co2cal______t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
     SensorScd041::baseSensor.performForcedRecalibration(requestedCo2Ref, frcR);
     delay(400);
 
-#ifdef USE___SERIAL
-    Serial.printf("frcV: %d\n", frcV);
-#endif
-
     if (frcV != 0xffff) {  // other than error
 
         corValue += (int16_t)(frcV - 0x8000);
         corExtra = corExpct - corValue;
-
-#ifdef USE___SERIAL
-        Serial.printf("corExpct: %d, corValue: %d, requestedCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
-#endif
 
         requestedCo2Ref += corExtra;
 
@@ -120,10 +112,6 @@ co2cal______t SensorScd041::forceCalibration(uint16_t requestedCo2Ref) {
 
             corValue += (int16_t)(frcV - 0x8000);
             corExtra = corExpct - corValue;
-
-#ifdef USE___SERIAL
-            Serial.printf("corExpct: %d, corValue: %d, requestedCo2Ref: %d\n", corExpct, corValue, requestedCo2Ref);
-#endif
 
             result.corValue = corValue;
             result.type = CO2CAL_SUCCESS;

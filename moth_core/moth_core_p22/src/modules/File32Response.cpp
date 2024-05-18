@@ -36,6 +36,10 @@ File32Response::File32Response(String path, String mimeType) : AsyncAbstractResp
         addHeader("Cache-Control", "no-cache");
     }
     addHeader("Last-Modified", lastModified);
+
+    if (mimeType == "text/html" || mimeType == "application/javascript") {
+        addHeader("Content-Encoding", "gzip");
+    }
 }
 
 bool File32Response::wasModifiedSince(String ifModifiedSince) {

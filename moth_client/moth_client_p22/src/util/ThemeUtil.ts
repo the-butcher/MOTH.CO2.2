@@ -54,28 +54,6 @@ export class ThemeUtil {
                         }
                     }
                 },
-                // MuiTabs: {
-                //     styleOverrides: {
-                //         root: {
-                //             minHeight: '48px',
-                //             padding: '5px'
-                //         }
-                //     }
-                // },
-                // MuiTab: {
-                //     styleOverrides: {
-                //         root: {
-                //             minHeight: '48px',
-                //             fontSize: '1.5em',
-                //             flexGrow: '2',
-                //             borderBottom: '3px solid #F0F0F0',
-                //             maxWidth: 'unset',
-                //             '&.Mui-selected': {
-
-                //             }
-                //         }
-                //     }
-                // },
                 MuiInputBase: {
                     styleOverrides: {
                         input: {
@@ -118,13 +96,6 @@ export class ThemeUtil {
                         }
                     }
                 }
-                // MuiDivider: {
-                //     styleOverrides: {
-                //         root: {
-                //             marginTop: '5px !important'
-                //         }
-                //     }
-                // }
             }
 
             // .css-1w301fc-MuiFormLabel-root-MuiInputLabel-root

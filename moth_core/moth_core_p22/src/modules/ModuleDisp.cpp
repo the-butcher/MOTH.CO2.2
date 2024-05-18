@@ -397,10 +397,6 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
             maxValue = minValue + batteryDif * 2;
         }
         maxValue += batteryDif;  // room for text
-
-#ifdef USE___SERIAL
-        Serial.printf("batteryDif: %f, batteryAvg: %f\n", batteryDif, batteryAvg);
-#endif
     }
 
     String label2 = String(minValue + (maxValue - minValue) * 2 / 3);
@@ -645,33 +641,6 @@ void ModuleDisp::renderEntry(config_t& config) {
 
     ModuleDisp::flushBuffer();
 }
-
-// void ModuleDisp::renderCo2(config_t& config, calibration_t calibration) {
-
-//     ModuleDisp::clearBuffer(config);
-//     ModuleDisp::drawOuterBorders(EPD_LIGHT);
-
-//     String actionTitle = "CALIBRATION";
-//     if (calibration.action == ACTION_FACTORY_RESET) {
-//         actionTitle = "RESET";
-//     }
-
-//     char titleBuf[32];
-//     sprintf(titleBuf, "%s (%s)", actionTitle, calibration.success ? "success" : "failure");
-
-//     drawAntialiasedText08(String(titleBuf), RECT_TOP, 8, 40, EPD_BLACK);
-//     if (calibration.action == ACTION___CALIBRATION) {
-//         drawAntialiasedText08("req: ", RECT_TOP, 8, 60, EPD_BLACK);
-//         drawAntialiasedText08(String(calibration.requestedCo2Ref), RECT_TOP, 50, 60, EPD_BLACK);
-//         drawAntialiasedText08("off: ", RECT_TOP, 8, 96, EPD_BLACK);
-//         drawAntialiasedText08(String(calibration.calibrationResult), RECT_TOP, 50, 96, EPD_BLACK);
-//     }
-
-//     ModuleDisp::renderHeader();
-//     ModuleDisp::renderFooter(config);
-
-//     ModuleDisp::flushBuffer();
-// }
 
 void ModuleDisp::renderQRCodes(config_t& config) {
     ModuleDisp::clearBuffer(config);

@@ -2,9 +2,9 @@ import { LineChart } from "@mui/x-charts";
 import { axisClasses } from '@mui/x-charts/ChartsAxis';
 import { useEffect, useRef, useState } from "react";
 import { IChartProps } from "../types/IChartProps";
+import { IRecord } from "../types/IRecord";
 import { TICK_DEFINITIONS } from "../types/ITickDefinition";
 import { TimeUtil } from "../util/TimeUtil";
-import { IRecord } from "../types/IRecord";
 
 const ChartValues = (props: IChartProps) => {
 
@@ -161,20 +161,6 @@ const ChartValues = (props: IChartProps) => {
 
         }
 
-        // console.log(new Date(minInstant), new Date(maxInstant));
-
-        // if (records?.length > 0) {
-
-        //     let lastInstant = records[0].instant;
-        //     for (let record of records) {
-        //         if (record.instant - lastInstant >= TICK_DEFINITIONS[tickDefIndex].step) {
-        //             _stepRecords.push(record);
-        //             lastInstant = record.instant;
-        //         }
-        //     }
-        //     setStepRecords(_stepRecords);
-        // }
-
     }
 
     const handleRefChange = (ref: SVGElement) => {
@@ -198,7 +184,9 @@ const ChartValues = (props: IChartProps) => {
     useEffect(() => {
 
         console.debug(`⚙ updating chart component (tickInterval)`, tickInterval);
-        rebuildStepRecords();
+        if (tickInterval) {
+            rebuildStepRecords();
+        }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tickInterval]);
@@ -207,14 +195,12 @@ const ChartValues = (props: IChartProps) => {
 
         if (stepRecords?.length > 0) {
             console.debug(`⚙ updating chart component (stepRecords, exportTo)`, stepRecords, exportTo);
-            if (exportTo !== '') {
-                if (exportTo === 'png') {
-                    setTimeout(() => {
-                        exportToPng();
-                    }, 250);
-
-                }
+            if (exportTo === 'png') {
+                setTimeout(() => {
+                    exportToPng();
+                }, 250);
             }
+
         }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps

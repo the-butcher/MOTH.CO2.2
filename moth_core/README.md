@@ -1,72 +1,27 @@
 # MOTH Core
 
-This folder contains the Arduino Sketch for the MOTH.CO2.2 sensor and a set of configuration- and system files in [SD](SD) that need be placed on the SD card of the device.
+This folder contains the Arduino Sketch for the MOTH.CO2.2 sensor and a set of configuration files in [SD](SD) that need be copied to the SD card of the device.
 
 The moth_core folder of the project is structured as follows:
 
 ---
 
-Arduino Sketch
+Historic versions of the project (kept for reference):
 
-## [moth_core_020](moth_core_020)
+#### [moth_core_020](moth_core_020)
+#### [moth_core_021](moth_core_021)
 
-Required packages are:
+Most recent PlatformIO project:
 
-- RTClib at version 2.1.1
-- Adafruit BusIO at version 1.15.0
-- Wire at version 2.0.0
-- ESP Async WebServer at version 1.2.3
-- FS at version 2.0.0
-- WiFi at version 2.0.0
-- AsyncTCP at version 1.1.1
-- PubSubClient at version 2.8
-- ArduinoJson at version 5.13.5
-- Adafruit LC709203F at version 1.3.2
-- SdFat - Adafruit Fork at version 2.2.1
-- SPI at version 2.0.0
-- Adafruit EPD at version 4.5.1
-- Adafruit GFX Library at version 1.11.7
-- QRCode at version 0.0.1
-- Adafruit Unified Sensor at version 1.1.14
-- Adafruit BME280 Library at version 2.2.2
-- Sensirion I2C SCD4x at version 0.4.0
-- Sensirion Core at version 0.6.0
-- Adafruit PM25 AQI Sensor at version 1.0.6
-- Update at version 2.0.0
-- AESLib at version 2.3.6
-- WiFiClientSecure at version 2.0.0
+## [moth_core_022](moth_core_022)
 
 ---
 
-Configuration files that define the behaviour of the sensor and a single html page which is required for Cross-Site (CORS) concerns when administering the device.
+Configuration files that define the behaviour of the sensor.
 
 ## [SD/config](SD/config/)
 
-- ### [encr.json](SD/config/encr.json)
-
-Passwords stored in the device are encrypted. This file defines key and initialization vector for the encryption. You can use the default configuration, but it is recommended to define your own keys for extra safety. Once you know which keys you want to use you can use this [Online AES Encryption and Decryption Tool](https://www.javainuse.com/aesgenerator) to encrypt passwords needed in the configuration.
-
-Using the key "ielxdb1yd4xlcco1" and initialization vector "4mtxg8yroia48rwf", the plaintext value of "toomuchcoffee" should encryt to "pM43tKZYyemPQVyHdezUog==", an encrypted value of "G8H9B97V6jSl4W7A7/KxdQ==" should decrypt to "inthemorning".
-
-The device api provides an "api/encrypt" operation for convenience.
-
-documentation (please do not use the documented version on the device, but a clean json without the comments):
-
-```
-{
-  "key": "moth_aes128__key", <<< 16-character (!) encryption key
-  "inv": "moth_aes128__inv"  <<< 16-character (!) initialization vector
-}
-```
-
-example:
-
-```
-{
-  "key": "ielxdb1yd4xlcco1",
-  "inv": "4mtxg8yroia48rwf"
-}
-```
+---
 
 - ### [disp.json](SD/config/disp.json)
 
@@ -81,27 +36,29 @@ documentation (please do not use the documented version on the device, but a cle
   "alt": 153, <<< base altitude of the device
   "tzn": "CET-1CEST,M3.5.0,M10.5.0/3", <<< timezone
   "co2": {
-    "ref": 425, <<< co2 reference value for stale calculation
     "wHi": 800, <<< co2 warn limit
     "rHi": 1000 <<< co2 risk limit
+    "ref": 425, <<< co2 reference value for stale calculation
+    "cal": 400, <<< co2 reference value for fresh air calibration
+    "lpa": 0.5  <<< low pass filter alpha, low value yields stronger filtering
   },
   "deg": {
     "rLo": 14, <<< lower temperature (celsius) risk limit
     "wLo": 19, <<< lower temperature (celsius) warn limit
     "wHi": 25, <<< upper temperature (celsius) warn limit
     "rHi": 30, <<< upper temperature (celsius) risk limit
-    "off": [ <<< temperature offsets
-      0.805, <<< primary temperature offset of the scd41 sensor
-      0.785  <<< secondary temperature offset of the bme280 sensor (this value will change internally at runtime)
-    ],
-    "c2f": false, <<< temperature display in fahrenheit?
-    "cor": 0.42 <<< temperature correction (see explanation below)
+    "off": 1.5, <<< temperature offset of the scd41 sensor
+    "c2f": false <<< temperature display in fahrenheit?
   },
   "hum": {
     "rLo": 25, <<< lower humidity (% RH) risk limit
     "wLo": 30, <<< lower humidity (% RH) warn limit
     "wHi": 60, <<< upper humidity (% RH) warn limit
     "rHi": 65  <<< upper humidity (% RH) risk limit
+  },
+  "bme": {
+    "alt": 153, <<< base altitude of the sensor
+    "lpa": 0.25 <<< low pass filter alpha, low value yields stronger filtering
   }
 }
 ```
@@ -122,40 +79,37 @@ Timezones that have been tested to work are (but other will work too):
 |MST7MDT,M3.2.0,M11.1.0|Denver|
 |PST8PDT,M3.2.0,M11.1.0|Los Angeles|
 
-When the "cor" property holds a value larger than zero, the device attempts to correct temperature changes from charging or WiFi operation.
-This correction is based on the internal temperature difference between the on-controller bme280 sensor and the scd41's primary temperature sensor.
-Check the moth_core_020/BoxDisplay::getDisplayValues() method for more detail.
-
 example:
 
 ```
 {
   "min": 3,
   "ssc": true,
-  "alt": 153,
   "tzn": "CET-1CEST,M3.5.0,M10.5.0/3",
   "co2": {
-    "ref": 425,
     "wHi": 800,
-    "rHi": 1000
+    "rHi": 1000,
+    "ref": 425,
+    "cal": 400,
+    "lpa": 0.5
   },
   "deg": {
     "rLo": 14,
     "wLo": 19,
     "wHi": 25,
     "rHi": 30,
-    "off": [
-      0.805,
-      0.785
-    ],
-    "c2f": false,
-    "cor": 0.42
+    "off": 1.5,
+    "c2f": false
   },
   "hum": {
     "rLo": 25,
     "wLo": 30,
     "wHi": 60,
-    "rHi": 657
+    "rHi": 65
+  },
+  "bme": {
+    "alt": 153,
+    "lpa": 0.25
   }
 }
 ```
@@ -173,8 +127,8 @@ documentation (please do not use the documented version on the device, but a cle
   "crt": "/config/ca.crt", <<< mqtt certificate (optional), if specified, the certificate must be present at the location specified
   "usr": "hannes", <<< mqtt user (optional)
   "pwd": "n7NZ+SfvP68wzUgh3t4acw==", <<< mqtt password (optional)
-  "cli": "moth", <<< the mqtt client-id that the device will use
-  "top": "moth/co2" <<< the mqtt topic that the device will use when publishing values
+  "cli": "moth_2", <<< the mqtt client-id that the device will use
+  "min": 5 <<< publish interval in minutes
 }
 ```
 
@@ -182,13 +136,13 @@ example (protected server with certificate):
 
 ```
 {
-  "srv": "192.168.0.116",
+  "srv": "192.168.0.115",
   "prt": 8883,
   "crt": "/config/ca.crt",
   "usr": "hannes",
-  "pwd": "n7NZ+SfvP68wzUgh3t4acw==",
-  "cli": "moth",
-  "top": "moth/co2"
+  "pwd": "fleischer",
+  "cli": "moth__66",
+  "min": 5
 }
 ```
 
@@ -196,12 +150,12 @@ example (protected server, no certificate):
 
 ```
 {
-  "srv": "192.168.0.116",
+  "srv": "192.168.0.115",
   "prt": 8883,
   "usr": "hannes",
-  "pwd": "n7NZ+SfvP68wzUgh3t4acw==",
-  "cli": "moth",
-  "top": "moth/co2"
+  "pwd": "fleischer",
+  "cli": "moth__66",
+  "min": 5
 }
 ```
 
@@ -209,10 +163,18 @@ example (unprotected server, no certificate):
 
 ```
 {
-  "srv": "192.168.0.116",
+  "srv": "192.168.0.115",
   "prt": 1883,
-  "cli": "moth",
-  "top": "moth/co2"
+  "cli": "moth__66",
+  "min": 5
+}
+```
+
+example (mqtt inactive):
+
+```
+{
+  "srv": ""
 }
 ```
 
@@ -228,13 +190,13 @@ documentation (please do not use the documented version on the device, but a cle
   "ntw": [ <<< an array of network connections
     {
       "key": "your-wifi-ssid", <<< the ssid of your network
-      "pwd": "06xj5MI/EJoS/3PliM5nzA==" <<< encrypted password for your networt (see encr.json above)
+      "pwd": "your-wifi-password" <<< the password of your network
     }
   ]
 }
 ```
 
-example (the password decrypts to "your-wifi-pass"):
+example:
 
 ```
 {
@@ -242,7 +204,21 @@ example (the password decrypts to "your-wifi-pass"):
   "ntw": [
     {
       "key": "your-wifi-ssid",
-      "pwd": "06xj5MI/EJoS/3PliM5nzA=="
+      "pwd": "your-wifi-password"
+    }
+  ]
+}
+```
+
+example (unprotected network):
+
+```
+{
+  "min": 5,
+  "ntw": [
+    {
+      "key": "your-wifi-ssid",
+      "pwd": ""
     }
   ]
 }
@@ -250,22 +226,8 @@ example (the password decrypts to "your-wifi-pass"):
 
 ## [SD/server](SD/server/)
 
-The device contains a small webserver. The files in this folder server for convenient access to the device api.
-
-- ### [SD/server/chart.html](SD/server/chart.html)
-
-Provides a simple graphic UI to access historic data stored in the device.
-
-- ### [SD/server/server.html](SD/server/server.html)
-
-Provides a simple UI to access the api operations of the device.
+The device provides webserver accessible through WiFi. The files in this folder provide a web-application that can be used to administer the device
 
 The files for the webserver are built from the [moth_client_p22](../moth_client_p22/) subproject.
-
----
-
-The GFX Fonts used by the sketch. These need to be copied to your ...\Arduino\libraries\Adafruit_GFX_Library\Fonts directory once the [Adafruit_GFX_Library](https://github.com/adafruit/Adafruit-GFX-Library) has been installed.
-
-## [fonts](fonts)
 
 ---

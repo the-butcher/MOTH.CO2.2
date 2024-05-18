@@ -22,9 +22,9 @@ class ModuleHttp {
     static void serve200Json(AsyncWebServerRequest *request, uint8_t p, uint8_t v);
     static void serve400Json(AsyncWebServerRequest *request, String file);
     static void serve404Json(AsyncWebServerRequest *request, String file);
+    static void serveStatic(AsyncWebServerRequest *request);
     static void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
     static void handleUpdate(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
-
     static int updateCode;
     static int uploadCode;
 
@@ -32,23 +32,22 @@ class ModuleHttp {
     static std::function<void(config_t &config, values_t &values)> requestedReconfiguration;
     static void begin();
     static void handleApiLatest(AsyncWebServerRequest *request);
-    static void handleApiValCsv(AsyncWebServerRequest *request);  // in memory data as csv
-    static void handleApiDatCsv(AsyncWebServerRequest *request);  // file data as csv
-    static void handleApiValOut(AsyncWebServerRequest *request);  // raw in memory data
-    static void handleApiDatOut(AsyncWebServerRequest *request);  // raw file data
-    static void handleApiDatDel(AsyncWebServerRequest *request);
+    static void handleApiValCsv(AsyncWebServerRequest *request);
+    static void handleApiDatCsv(AsyncWebServerRequest *request);
+    static void handleApiValOut(AsyncWebServerRequest *request);
+    static void handleApiDatOut(AsyncWebServerRequest *request);
     static void handleApiDirOut(AsyncWebServerRequest *request);
     static void handleApiUpload(AsyncWebServerRequest *request);
+    static void handleApiDatDel(AsyncWebServerRequest *request);
     static void handleApiDirDel(AsyncWebServerRequest *request);
-    static void handleApiStatus(AsyncWebServerRequest *request);
     static void handleApiDspSet(AsyncWebServerRequest *request);
+    static void handleApiStatus(AsyncWebServerRequest *request);
     static void handleApiNetOut(AsyncWebServerRequest *request);
     static void handleApiNetOff(AsyncWebServerRequest *request);
-    static void handleApiCo2Cal(AsyncWebServerRequest *request);  // calibration with a reference value
+    static void handleApiCo2Cal(AsyncWebServerRequest *request);
     static void handleApiCo2Rst(AsyncWebServerRequest *request);
-    static void handleApiUpdate(AsyncWebServerRequest *request);
     static void handleApiEspRst(AsyncWebServerRequest *request);
-    static void serveStatic(AsyncWebServerRequest *request);
+    static void handleApiUpdate(AsyncWebServerRequest *request);
     static void fillBufferWithCsv(values_all_t *value, uint8_t *data, uint16_t offset);
 };
 

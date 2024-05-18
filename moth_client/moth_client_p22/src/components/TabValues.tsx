@@ -46,11 +46,18 @@ const TabValues = (props: ITabValuesProps) => {
   const latestToRef = useRef<number>(-1);
   const valueRef = createRef<HTMLDivElement>();
 
+  /**
+   * handle an export chart's export complete event
+   */
   const handleExportComplete = () => {
+    console.debug(`📞 handling export complete`);
     setExportTo('');
   }
 
-  const getLatestValues = () => {
+  /**
+   * load the latest set of values from the device
+   */
+  const loadLatestValues = () => {
     new JsonLoader().load(`${boxUrl}/latest`).then((latest: ILatest) => {
       handleUpdate({
         latest
@@ -65,6 +72,9 @@ const TabValues = (props: ITabValuesProps) => {
     });
   }
 
+  /**
+   * load the available date range from the device
+   */
   const loadDateRange = () => {
 
     TimeUtil.collectYears(boxUrl).then(_dateRange => {
@@ -86,6 +96,9 @@ const TabValues = (props: ITabValuesProps) => {
 
   }
 
+  /**
+   * load records from the device, depending on the current date range
+   */
   const loadRecords = () => {
 
     const minInstant = dateRangeUser[0].getTime(); // + TimeUtil.MILLISECONDS_PER_HOUR * 6;
@@ -96,7 +109,6 @@ const TabValues = (props: ITabValuesProps) => {
     const pushInstant = (urlInstant: number) => {
       const urlDate = new Date(urlInstant);
       const url = `${boxUrl}/datout?file=${urlDate.getFullYear()}/${String(urlDate.getMonth() + 1).padStart(2, '0')}/${TimeUtil.toExportDate(urlInstant)}.dat`;
-      // console.log('urlDate', urlDate, url);
       urlset.add(url);
       if (TimeUtil.toExportDate(urlDate.getTime()) === TimeUtil.toExportDate(curDate.getTime())) {
         urlset.add(`${boxUrl}/valout`);
@@ -106,8 +118,6 @@ const TabValues = (props: ITabValuesProps) => {
       pushInstant(instant);
     }
     pushInstant(maxInstant);
-
-    // console.log('urlset', urlset);
 
     new ByteLoader().loadAll(Array.from(urlset)).then(records => {
       records = records.filter(r => r.instant >= minInstant && r.instant <= maxInstant);
@@ -125,17 +135,16 @@ const TabValues = (props: ITabValuesProps) => {
 
   }
 
+  /**
+   * handle a window resize event, hacky due to random number in state
+   */
   const handleResize = () => {
     setResizeCount(Math.random());
   }
 
-  useEffect(() => {
-
-    console.debug(`⚙ updating tab values component (exportTo)`, exportTo);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exportTo]);
-
+  /**
+   * react hook (latest)
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating tab values component (latest)`, latest);
@@ -156,7 +165,7 @@ const TabValues = (props: ITabValuesProps) => {
     const seconds = (Date.now() / 1000) % 60;
     const secwait = 70 - seconds;
     window.clearTimeout(latestToRef.current);
-    latestToRef.current = window.setTimeout(() => getLatestValues(), secwait * 1000);
+    latestToRef.current = window.setTimeout(() => loadLatestValues(), secwait * 1000);
 
     // show appropriate battery icon
     if (latest.bat >= 95) {
@@ -178,6 +187,10 @@ const TabValues = (props: ITabValuesProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latest]);
 
+  /**
+   * react hook (resizeCount)
+   * recalculates chart height (which seems to have some issue with automatic height)
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating tab values component (resizeCount)`, resizeCount);
@@ -191,13 +204,17 @@ const TabValues = (props: ITabValuesProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resizeCount]);
 
+  /**
+   * react hook (dateRangeUser)
+   * loads records according to date range
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating tab values component (dateRangeUser)`, dateRangeUser);
 
     if (dateRangeUser) {
       if (latest.time === '') {
-        getLatestValues();
+        loadLatestValues();
       }
       loadRecords();
     }

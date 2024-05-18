@@ -226,9 +226,10 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
     // turn on wifi, if required and adapt display modus
     if (config.wifi.wifiValPower == WIFI____VAL_P__PND_Y && !ModuleWifi::isPowered()) {  // to be turned on, but currently off
         if (ModuleWifi::powerup(config, true)) {
-            config.disp.displayValSetng = DISPLAY_VAL_S_____QR;
+            config.disp.displayValSetng = DISPLAY_VAL_S_____QR;  // let the display render qr next time
         }
-    } else if (config.wifi.wifiValPower == WIFI____VAL_P__PND_N && ModuleWifi::isPowered()) {  // to be turned off, but current on
+        // } else if (config.wifi.wifiValPower == WIFI____VAL_P__PND_N && ModuleWifi::isPowered()) {  // to be turned off, and currently on
+    } else if (config.wifi.wifiValPower == WIFI____VAL_P__PND_N) {  // to be turned off, no check for powered state since the device could have silently lost connection
         ModuleWifi::depower(config);
     }
 
@@ -270,6 +271,7 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         Device::calibrationResult = SensorScd041::forceReset();  // reset and store result
         config.disp.displayValSetng = DISPLAY_VAL_S____CO2;      // next display should show the calibration result
         config.sco2.requestedCo2Rst = false;
+        SensorScd041::configure(config);  // re-apply temperature offset (or it would be lost by resetting the sensor)
         SensorScd041::depower(config);
     }
 

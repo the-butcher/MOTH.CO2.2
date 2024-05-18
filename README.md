@@ -30,35 +30,30 @@ This projects provides instructions for building a CO₂ sensor from commerciall
 
 - The housing can be wall mounted, with or without theft protection.
 
-The root folder of the project is structured as follows:
-
 ---
+## The root folder of the project is structured as follows:
+### [MOTH Core](moth_core/README.md)
 
 This project is built with [PlatformIO](https://platformio.org/). Please refer to the instructions provided on the PlatformIO website. PlatformIO makes development with the ESP32 microcontroller easier and faster compared to the Arduino IDE. If you have not switched yet i advise you to do so, it will save you time after a very short period of time.
+The PlatformIO project, and configuration files can be found here.
 
-The PlatformIO project, and configuration files can be found here:
+---
+### [MOTH Parts and Assembly](moth_parts/README.md)
 
-## [MOTH Core](moth_core/README.md)
+Building instructions, drawings and printable files for the device.
+
+---
+### [MOTH Client](moth_client/README.md)
+
+A react administration UI for the device.
+
+![web-app client](/images/moth_client.gif)
 
 ---
 
-Building instructions, drawings and printable files for the device:
+### Data access
 
-
-## [MOTH Parts and Assembly](moth_parts/README.md)
-
----
-
-A react administration UI for the device:
-
-
-## [MOTH Client](moth_client_p22/README.md)
-
----
-
-## Data
-
-- ### On display
+- #### On display
 
 The device display supports two display modes, "table" and "chart". In table mode the latest CO₂, temperature and  humidity values are shown numerically
 
@@ -68,33 +63,20 @@ In chart mode one of CO₂, temperature, humidity or pressure are shown in a sim
 
 TODO :: image here
 
-- ### Over Wifi
+- #### Over Wifi
 
-  The device hosts a small react-web-application.
+  The device provides various possibilities to access current and historic data.
 
-  - chart.html
-
-    This page gives access to the full history of measurements. Given the size of the SD-Card, there will be no limit regarding storage, effectively the device will keep an infinite list of measurements.
-
-    ![web-app client](/images/chart_800.png?raw=true)
-
-  - server.html
-
-    This page gives access to the device's api. View status, configuration, data, upload file, calibrate, reset, update firmware, ...
-
-    ![web-app client](/images/server_800.png?raw=true)
-
-
-- ### MQTT
+- #### MQTT
 
   It is possible to configure a mqtt connection and upload a certificate. The device will make connections in configurable intervals und publish it's measurements.
   Even though no POC has been made so far, it should be straightforward to integrate the sensor into i.e. Home Assistant.
 
-- ### TODO :: here or somewhere (!) have a set of basic introductions
+- #### TODO :: here or somewhere (!) have a set of basic introductions
 
 ---
 
-## License
+### License
 
 Please be aware that all software in this project is licensed under the [MIT license](license.txt), while the drawings and 3d-printed parts are licensed under the [Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
 

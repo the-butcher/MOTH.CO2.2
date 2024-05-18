@@ -1,11 +1,41 @@
-import { ContinuousColorConfig, PiecewiseColorConfig } from '@mui/x-charts/models/colorMapping';
 import { TRecordKey } from './IRecord';
+
+export interface IContinuousColorConfig<Value = number | Date> {
+    type: 'continuous';
+    /**
+     * The minimal value of the color scale.
+     * @default 0
+     */
+    min?: Value;
+    /**
+     * The maximal value of the color scale.
+     * @default 100
+     */
+    max?: Value;
+    /**
+     * The colors to render. It can be an array with the extremum colors, or an interpolation function.
+     */
+    color: [string, string] | ((t: number) => string);
+}
+
+export interface IPiecewiseColorConfig<Value = number | Date> {
+    type: 'piecewise';
+    /**
+     * The thresholds where color should change from one category to another.
+     */
+    thresholds: Value[];
+    /**
+     * The colors used for each band defined by `thresholds`.
+     * Should contain N+1 colors, where N is the number of thresholds.
+     */
+    colors: string[];
+}
 
 export interface ISeriesDef {
     id: TRecordKey;
     label: string;
     valueFormatter: (value: number) => string;
-    colorMap?: ContinuousColorConfig | PiecewiseColorConfig;
+    colorMap?: IContinuousColorConfig | IPiecewiseColorConfig;
     min?: number;
 }
 

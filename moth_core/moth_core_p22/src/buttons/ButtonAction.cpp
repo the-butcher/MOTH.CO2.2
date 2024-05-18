@@ -10,11 +10,11 @@ ButtonHelper ButtonAction::A(GPIO_NUM_11);
 ButtonHelper ButtonAction::B(GPIO_NUM_12);
 ButtonHelper ButtonAction::C(GPIO_NUM_6);
 gpio_num_t ButtonAction::actionPin = GPIO_NUM_0;
-std::function<void(std::function<void(config_t& config)>)> ButtonAction::buttonActionCompleteCallback = nullptr;
+std::function<void(std::function<bool(config_t& config)>)> ButtonAction::actionCompleteCallback = nullptr;
 uint64_t ButtonAction::ext1Bitmask = 1ULL << ButtonAction::A.gpin | 1ULL << ButtonAction::B.gpin | 1ULL << ButtonAction::C.gpin;
 
-void ButtonAction::begin(std::function<void(std::function<void(config_t& config)>)> buttonActionCompleteCallback) {
-    ButtonAction::buttonActionCompleteCallback = buttonActionCompleteCallback;
+void ButtonAction::begin(std::function<void(std::function<bool(config_t& config)>)> actionCompleteCallback) {
+    ButtonAction::actionCompleteCallback = actionCompleteCallback;
     ButtonAction::A.begin();
     ButtonAction::B.begin();
     ButtonAction::C.begin();
@@ -158,21 +158,21 @@ void ButtonAction::handleInterruptA() {
     if (ButtonAction::A.isPressed()) {
         ButtonAction::createButtonAction(ButtonAction::A.gpin);
     } else {
-        ButtonAction::buttonActionCompleteCallback(nullptr);
+        ButtonAction::actionCompleteCallback(nullptr);
     }
 }
 void ButtonAction::handleInterruptB() {
     if (ButtonAction::B.isPressed()) {
         ButtonAction::createButtonAction(ButtonAction::B.gpin);  // determine action depending on release time
     } else {
-        ButtonAction::buttonActionCompleteCallback(nullptr);
+        ButtonAction::actionCompleteCallback(nullptr);
     }
 }
 void ButtonAction::handleInterruptC() {
     if (ButtonAction::C.isPressed()) {
         ButtonAction::createButtonAction(ButtonAction::C.gpin);
     } else {
-        ButtonAction::buttonActionCompleteCallback(nullptr);
+        ButtonAction::actionCompleteCallback(nullptr);
     }
 }
 
@@ -194,15 +194,15 @@ gpio_num_t ButtonAction::getPressedPin() {
 /**
  * button action :: set requested co2 reference to the configured co2 ref value
  */
-void ButtonAction::calibrateToCo2Refer(config_t& config) {
-
+bool ButtonAction::calibrateToCo2Refer(config_t& config) {
     config.sco2.requestedCo2Ref = config.sco2.calibrationCo2Ref;
+    return true;
 }
 
 /**
  * button action :: toggle the chart hours to the next higher value
  */
-void ButtonAction::toggleDisplayValHFw(config_t& config) {
+bool ButtonAction::toggleDisplayValHFw(config_t& config) {
     if (config.disp.displayHrsChart == DISPLAY_HRS_C_____01) {
         config.disp.displayHrsChart = DISPLAY_HRS_C_____03;
     } else if (config.disp.displayHrsChart == DISPLAY_HRS_C_____03) {
@@ -215,12 +215,13 @@ void ButtonAction::toggleDisplayValHFw(config_t& config) {
         // already at DISPLAY_HRS_C_____24
     }
     ButtonAction::adapt(config);
+    return true;
 }
 
 /**
  * button action :: toggle the chart hours to the next lower value
  */
-void ButtonAction::toggleDisplayValHBw(config_t& config) {
+bool ButtonAction::toggleDisplayValHBw(config_t& config) {
     if (config.disp.displayHrsChart == DISPLAY_HRS_C_____24) {
         config.disp.displayHrsChart = DISPLAY_HRS_C_____12;
     } else if (config.disp.displayHrsChart == DISPLAY_HRS_C_____12) {
@@ -233,118 +234,128 @@ void ButtonAction::toggleDisplayValHBw(config_t& config) {
         // already at DISPLAY_HRS_C_____01
     }
     ButtonAction::adapt(config);
+    return true;
 }
 
 /**
  * button action :: toggle wifi on or off
  */
-void ButtonAction::toggleWifi(config_t& config) {
+bool ButtonAction::toggleWifi(config_t& config) {
     if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_N) {  // if it is actually off -> set to pending on
         config.wifi.wifiValPower = WIFI____VAL_P__PND_Y;
+        return true;
     } else if (config.wifi.wifiValPower == WIFI____VAL_P__CUR_Y) {  // if it is actually on -> set to pending off
         config.wifi.wifiValPower = WIFI____VAL_P__PND_N;
+        return true;
     } else {
         // already in one of the pending states, do nothing
+        return false;
     }
 }
 
 /**
  * button action :: toggle beep on or off
  */
-void ButtonAction::toggleBeep(config_t& config) {
+bool ButtonAction::toggleBeep(config_t& config) {
     if (config.sign.signalValSound == SIGNAL__VAL______ON) {
         config.sign.signalValSound = SIGNAL__VAL_____OFF;
     } else {
         config.sign.signalValSound = SIGNAL__VAL______ON;
     }
+    return true;
 }
 
 /**
  * button action :: decrement the base altitude by 10m
  */
-void ButtonAction::decrementAltitude10(config_t& config) {
+bool ButtonAction::decrementAltitude10(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel - 10;
     config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
+    return true;
 }
 
 /**
  * button action :: increment the base altitude by 10m
  */
-void ButtonAction::incrementAltitude10(config_t& config) {
+bool ButtonAction::incrementAltitude10(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel + 10;
     config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
+    return true;
 }
 
 /**
  * button action :: decrement the base altitude by 50m
  */
-void ButtonAction::decrementAltitude50(config_t& config) {
+bool ButtonAction::decrementAltitude50(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel - 50;
     config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
+    return true;
 }
 
 /**
  * button action :: increment the base altitude by 10m
  */
-void ButtonAction::incrementAltitude50(config_t& config) {
+bool ButtonAction::incrementAltitude50(config_t& config) {
     config.sbme.altitudeBaselevel = config.sbme.altitudeBaselevel + 50;
     config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, Values::latest().valuesBme.pressure);
+    return true;
 }
 
 /**
  * button action :: toggle the primary table display value forward
  */
-void ButtonAction::toggleDisplayValTFw(config_t& config) {
+bool ButtonAction::toggleDisplayValTFw(config_t& config) {
     uint8_t valueCount = DISPLAY_VAL_T____ALT + 1;
     config.disp.displayValTable = (display_val_t_e)((config.disp.displayValTable + 1) % valueCount);
     ButtonAction::adapt(config);
+    return true;
 }
 
 /**
  * button action :: toggle the primary table display value backward
  */
-void ButtonAction::toggleDisplayValTBw(config_t& config) {
+bool ButtonAction::toggleDisplayValTBw(config_t& config) {
     uint8_t valueCount = DISPLAY_VAL_T____ALT + 1;
     config.disp.displayValTable = (display_val_t_e)((config.disp.displayValTable + valueCount - 1) % valueCount);
     ButtonAction::adapt(config);
+    return true;
 }
 
 /**
  * button action :: toggle the primary table display value forward
  */
-void ButtonAction::toggleDisplayValCFw(config_t& config) {
+bool ButtonAction::toggleDisplayValCFw(config_t& config) {
     uint8_t valueCount = DISPLAY_VAL_C____NRG + 1;
     config.disp.displayValChart = (display_val_c_e)((config.disp.displayValChart + 1) % valueCount);
+    return true;
 }
 
 /**
  * button action :: toggle the primary table display value backward
  */
-void ButtonAction::toggleDisplayValCBw(config_t& config) {
+bool ButtonAction::toggleDisplayValCBw(config_t& config) {
     uint8_t valueCount = DISPLAY_VAL_C____NRG + 1;
     config.disp.displayValChart = (display_val_c_e)((config.disp.displayValChart + valueCount - 1) % valueCount);
+    return true;
 }
 
 /**
  * button action :: toggle between table and chart
  */
-void ButtonAction::toggleDisplayValMod(config_t& config) {
+bool ButtonAction::toggleDisplayValMod(config_t& config) {
     uint8_t valueCount = DISPLAY_VAL_M__CALIB + 1;
     config.disp.displayValModus = (display_val_m_e)((config.disp.displayValModus + 1) % valueCount);
-    // if (config.disp.displayValModus == DISPLAY_VAL_M__TABLE) {
-    //     config.disp.displayValModus = DISPLAY_VAL_M__CHART;
-    // } else {
-    //     config.disp.displayValModus = DISPLAY_VAL_M__TABLE;
-    // }
     ButtonAction::adapt(config);
+    return true;
 }
 
-void ButtonAction::toggleDisplayValThm(config_t& config) {
+bool ButtonAction::toggleDisplayValThm(config_t& config) {
     if (config.disp.displayValTheme == DISPLAY_THM____LIGHT) {
         config.disp.displayValTheme = DISPLAY_THM_____DARK;
     } else {
         config.disp.displayValTheme = DISPLAY_THM____LIGHT;
     }
+    return true;
 }
 
 /**
@@ -353,7 +364,7 @@ void ButtonAction::toggleDisplayValThm(config_t& config) {
 void ButtonAction::createButtonAction(gpio_num_t actionPin) {
     if (ButtonAction::actionPin == 0 && actionPin > 0) {  // only if no other task is still pending
         ButtonAction::actionPin = actionPin;
-        xTaskCreate(ButtonAction::detectButtonActionType, "detect button action", 5000, NULL, 2, NULL);
+        xTaskCreate(ButtonAction::detectButtonActionType, "detect button action", 3000, NULL, 2, NULL);
     }
 }
 
@@ -379,7 +390,7 @@ void ButtonAction::detectButtonActionType(void* parameter) {
  * once it is clear if the button has been pressed short or long retrieve function currently attached to the button, then pass it back to the callback
  */
 void ButtonAction::handleButtonActionType(button_action_e buttonActionType) {
-    std::function<void(config_t & config)> actionFunction = nullptr;
+    std::function<bool(config_t & config)> actionFunction = nullptr;
     if (actionPin == ButtonAction::A.gpin) {
         actionFunction = ButtonAction::getActionFunction(A.buttonAction, buttonActionType);
     } else if (actionPin == ButtonAction::B.gpin) {
@@ -387,11 +398,11 @@ void ButtonAction::handleButtonActionType(button_action_e buttonActionType) {
     } else if (actionPin == ButtonAction::C.gpin) {
         actionFunction = ButtonAction::getActionFunction(C.buttonAction, buttonActionType);
     }
-    ButtonAction::buttonActionCompleteCallback(actionFunction);  // return the function to be executed to main, from where it will be called with the config instance
+    ButtonAction::actionCompleteCallback(actionFunction);  // return the function to be executed to main, from where it will be called with the config instance
     actionPin = GPIO_NUM_0;
 }
 
-std::function<void(config_t& config)> ButtonAction::getActionFunction(button_action_t buttonAction, button_action_e buttonActionType) {
+std::function<bool(config_t& config)> ButtonAction::getActionFunction(button_action_t buttonAction, button_action_e buttonActionType) {
     if (buttonActionType == BUTTON_ACTION_FAST) {
         return buttonAction.functionFast;
     } else if (buttonActionType == BUTTON_ACTION_SLOW) {

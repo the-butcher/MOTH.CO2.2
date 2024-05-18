@@ -67,9 +67,6 @@ co2cal______t Values::getCo2Cal() {
             co2cal.minValue = min(co2cal.minValue, co2cal.values[index]);
             co2cal.maxValue = max(co2cal.maxValue, co2cal.values[index]);
         }
-#ifdef USE___SERIAL
-        Serial.printf("co2cal.values[%d/%d]: %d\n", index, valueIndex, co2cal.values[index]);
-#endif
     }
     uint32_t sumValue = 0;
     uint8_t numValue = 0;
@@ -87,12 +84,5 @@ co2cal______t Values::getCo2Cal() {
         }
     }
     co2cal.devValue = round(sqrt(sumDeviation * 1.0f / numValue));
-
-#ifdef USE___SERIAL
-    Serial.printf("co2cal.minValue: %d\n", co2cal.minValue);
-    Serial.printf("co2cal.maxValue: %d\n", co2cal.maxValue);
-    Serial.printf("co2cal.avgValue: %d\n", co2cal.avgValue);
-    Serial.printf("co2cal.devValue: %d\n", co2cal.devValue);
-#endif
     return co2cal;
 }

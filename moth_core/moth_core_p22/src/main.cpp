@@ -37,16 +37,16 @@ uint16_t actionNum = 0;
 // uint16_t sc = sizeof(device);
 
 /**
- * OK reimplement OTA update, TODO :: test
  * -- MQTT:
- *    -- enable MQTT publishing of non-published data from file?
- *       -- files still having publishable records need to be identifiable (could be by file ending, dap(ublishable) | dar(chive) )
+ *    -- enable MQTT publishing of non-published data from file
  *       -- maybe it is not possible to publish an entire file at once (need to have some portioning strategy)
- *       -- verify that writing a single byte to file is successful
  *    -- mqtt update after MQTT permanent failure freezes the device action cycle (wifi is still responsive though)
- * -- SENSOR: scd041 does not properly reconfigure after i.e. temperatureOffset update through upload
- * -- WIFI: wifi sometimes turns off for unknown reasons (more likely when multiple requests are pending), and sometimes ends up in a state where it can not be turned back on
- * -- MISC: be sure data is written every 60 minutes (not 59 or 61)
+ *    -- there were still some memory issues, especially in combination with active WiFi usage
+ * -- WIFI:
+ *    -- wifi sometimes turns off for unknown reasons (more likely when multiple requests are pending),
+ * -- MISC:
+ *    -- be sure data is written exactly every 60 minutes (not 59 or 61)
+ *    -- save data on HTTP reset (have shorter no-data periods)
  */
 
 // schedule setting and display
@@ -67,21 +67,23 @@ void scheduleDeviceActionPowerup() {
 }
 
 /**
- * handle a detected button action (pin and type)
+ * handle a detected button action or a wifi event
  */
-void handleButtonActionComplete(std::function<void(config_t& config)> actionFunction) {
+void handleActionComplete(std::function<bool(config_t& config)> actionFunction) {
     if (actionFunction != nullptr) {
-        ModuleSignal::beep();           // indicate completed button action
-        actionFunction(config);         // execute the action (which, by convention, only alters the config to not interfere with program flow)
-        scheduleDeviceActionSetting();  // schedule DEVICE_ACTION_SETTING and DEVICE_ACTION_DISPLAY
+        bool actionResult = actionFunction(config);  // execute the action (which, by convention, only alters the config to not interfere with program flow)
+        if (actionResult) {
+            ModuleSignal::beep();           // indicate complete
+            scheduleDeviceActionSetting();  // schedule DEVICE_ACTION_SETTING and DEVICE_ACTION_DISPLAY
+        }
     }
     actionNum++;  // interrupt delay loop
 }
 
 void scheduleDeviceActionDepower() {
     device.actionIndexCur = DEVICE_ACTION_DEPOWER;
-    device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = SensorTime::getSecondstime();  // need to reset, or it will start waiting for DEPOWER again due to secondsNext
-    actionNum++;                                                                             // interrupt delay loop
+    device.deviceActions[DEVICE_ACTION_DEPOWER].secondsNext = SensorTime::getSecondstime();
+    actionNum++;  // interrupt delay loop
 }
 
 void handleWakeupCause() {
@@ -156,11 +158,12 @@ void setup() {
     Device::begin(secondstimeBoot);
 
     // show the correct button hints and have callback in place
-    ButtonAction::begin(handleButtonActionComplete);
+    ButtonAction::begin(handleActionComplete);
     ButtonAction::adapt(config);
 
     // only sets the callback, but does not powerup anything
     ModuleDisp::begin();
+    ModuleWifi::begin(handleActionComplete);
 
     // there can be multiple causes for wakeup, RTC_SQW pin, BUSY pin, Button Pins
     handleWakeupCause();
