@@ -11,7 +11,12 @@ import ApiResponse from './ApiResponse';
 import { IApiProperties } from '../types/IApiProperties';
 import { IResponseProps } from '../types/IResponseProps';
 
-
+/**
+ * component, renders an input field
+ * targets the 'datcsv' endpoint
+ * @param props
+ * @returns
+ */
 const ApiDatcsv = (props: IApiProperties) => {
 
   const apiName = 'datcsv';
@@ -39,6 +44,9 @@ const ApiDatcsv = (props: IApiProperties) => {
     });
   };
 
+  /**
+   * react hook (props[apiName])
+   */
   useEffect(() => {
 
     let href = `${boxUrl}/${apiName}`;
@@ -63,7 +71,6 @@ const ApiDatcsv = (props: IApiProperties) => {
     setFile(event.target.value);
   };
 
-
   return (
     <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
       <AccordionSummary>
@@ -78,7 +85,6 @@ const ApiDatcsv = (props: IApiProperties) => {
             <TextField
               required
               label="file"
-              id="outlined-start-adornment"
               size='small'
               onChange={handleFileChange}
               onKeyUp={handleKeyUp}

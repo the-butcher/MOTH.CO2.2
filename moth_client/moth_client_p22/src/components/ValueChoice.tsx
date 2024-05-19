@@ -2,7 +2,14 @@ import { Avatar, Paper } from '@mui/material';
 import { IValueChoiceProps } from '../types/IValueChoiceProps';
 import { useState } from 'react';
 
+/**
+ * component, renders a value choice button in the TabValues component, i.e CO2, deg, hum, ...
+ * @param props
+ * @returns
+ */
 const ValueChoice = (props: IValueChoiceProps) => {
+
+    const { style } = { ...props };
 
     const [elevation, setElevation] = useState<number>(1);
 
@@ -22,7 +29,7 @@ const ValueChoice = (props: IValueChoiceProps) => {
             onMouseOver={handleMouseOver}
             onMouseOut={handleMouseOut}
             elevation={props.active ? elevation : elevation + 2}
-            sx={{ cursor: 'pointer', flexGrow: props.grow, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '5px', padding: '4px 6px 2px 5px', height: '36px', alignItems: 'center', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}
+            sx={{ ...style, cursor: 'pointer', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '5px', padding: '4px 6px 2px 5px', height: '36px', alignItems: 'center', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}
         >
             <Avatar sx={{ verticalAlign: 'middle', margin: '0px 10px 4px 0px', width: '26px', height: '26px' }} >
                 {props.icon}

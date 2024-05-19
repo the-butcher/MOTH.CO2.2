@@ -31,23 +31,55 @@ export interface IPiecewiseColorConfig<Value = number | Date> {
     colors: string[];
 }
 
+/**
+ * definition for a charts series
+ */
 export interface ISeriesDef {
+    /**
+     * id of the data property
+     */
     id: TRecordKey;
+    /**
+     * a name that can i.e. be labelled on the y-axis of the chart
+     */
     label: string;
+    /**
+     * a formatter that provides human-readable representation of the data
+     */
     valueFormatter: (value: number) => string;
+    /**
+     * optional color map for the series
+     */
     colorMap?: IContinuousColorConfig | IPiecewiseColorConfig;
-    min?: number;
+    /**
+     * a function that can provide a min value for the y-axis
+     * @param min
+     * @returns a speacific min value or undefined (for chart default behaviour)
+     */
+    min: (min: number) => number;
+    /**
+     * a function that can provide a max value for the y-axis
+     * @param max
+     * @returns a speacific max value or undefined (for chart default behaviour)
+     */
+
+    max: (max: number) => number;
 }
 
 export const COLOR_G = '#0ec600';
 export const COLOR_Y = '#c9b800';
 export const COLOR_R = '#e20e00';
 
+/**
+ * a set of predefined series defs for all data-key sprecified in TRecordKey
+ */
 export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
     instant: {
         id: 'instant',
         label: 'time (HH:MM)',
-        valueFormatter: value => Number.isFinite(value) ? value.toString() : 'NA'
+        valueFormatter: value => Number.isFinite(value) ? value.toString() : 'NA',
+        min: () => undefined,
+        max: () => undefined,
     },
     co2Lpf: {
         id: 'co2Lpf',
@@ -58,7 +90,8 @@ export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
             thresholds: [800, 1000],
             colors: [COLOR_G, COLOR_Y, COLOR_R]
         },
-        min: 0
+        min: () => 0,
+        max: () => undefined,
     },
     deg: {
         id: 'deg',
@@ -68,7 +101,9 @@ export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
             type: 'piecewise',
             thresholds: [14, 19, 25, 30],
             colors: [COLOR_R, COLOR_Y, COLOR_G, COLOR_Y, COLOR_R]
-        }
+        },
+        min: () => undefined,
+        max: () => undefined,
     },
     hum: {
         id: 'hum',
@@ -78,7 +113,9 @@ export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
             type: 'piecewise',
             thresholds: [25, 30, 60, 65],
             colors: [COLOR_R, COLOR_Y, COLOR_G, COLOR_Y, COLOR_R]
-        }
+        },
+        min: () => undefined,
+        max: () => undefined,
     },
     co2Raw: {
         id: 'co2Lpf',
@@ -89,16 +126,21 @@ export const SERIES_DEFS: { [K in TRecordKey]: ISeriesDef } = {
             thresholds: [800, 1000],
             colors: [COLOR_G, COLOR_Y, COLOR_R]
         },
-        min: 0
+        min: () => 0,
+        max: () => undefined,
     },
     hpa: {
         id: 'hpa',
         label: 'Pressure hPa',
         valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
+        min: () => undefined,
+        max: () => undefined,
     },
     bat: {
         id: 'bat',
         label: 'Battery %',
         valueFormatter: value => Number.isFinite(value) ? value.toFixed(1) : 'NA',
+        min: min => Math.floor(min),
+        max: max => Math.ceil(max),
     }
 }

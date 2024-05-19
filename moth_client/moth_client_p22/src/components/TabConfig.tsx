@@ -17,7 +17,11 @@ type DeepPartial<T> = T extends object ? {
   [P in keyof T]?: DeepPartial<T[P]>;
 } : T;
 
-
+/**
+ * component, renders the configuration form in the client-ui
+ * @param props
+ * @returns
+ */
 const TabConfig = (props: ITabConfigProps) => {
 
   const { boxUrl, disp, wifi, mqtt, handleUpdate, handleAlertMessage } = { ...props };
@@ -34,27 +38,9 @@ const TabConfig = (props: ITabConfigProps) => {
     return await new JsonLoader().load(`${boxUrl}/datout?file=config/mqtt.json`);
   }
 
-  useEffect(() => {
-
-    console.debug(`⚙ updating tab config component (disp)`, disp);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disp]);
-
-  useEffect(() => {
-
-    console.debug(`⚙ updating tab config component (wifi)`, wifi);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wifi]);
-
-  useEffect(() => {
-
-    console.debug(`⚙ updating tab config component (mqtt)`, mqtt);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mqtt]);
-
+  /**
+   * component init hook, load disp, wifi and mqtt configuration from the device and creates approriate state that will subsequently be rendered in the form
+   */
   useEffect(() => {
 
     console.debug('✨ building tab config component');
@@ -107,6 +93,10 @@ const TabConfig = (props: ITabConfigProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * handles an update to the disp config
+   * @param update
+   */
   const handleDispUpdate = (update: DeepPartial<IDispConfig>) => {
     handleUpdate({
       disp: {
@@ -133,6 +123,10 @@ const TabConfig = (props: ITabConfigProps) => {
     });
   };
 
+  /**
+   * handles an update to the wifi config
+   * @param update
+   */
   const handleWifiUpdate = (update: Partial<IWifiConfig>) => {
     handleUpdate({
       wifi: {
@@ -143,6 +137,10 @@ const TabConfig = (props: ITabConfigProps) => {
     });
   };
 
+  /**
+   * handles an update to the wifi.network config (change, add, remove)
+   * @param update
+   */
   const handleNetworkUpdate = (idx: number, key: string, pwd: string) => {
     if (idx >= 0) { // update
       if (key !== '' && pwd !== '') { // update
@@ -186,6 +184,10 @@ const TabConfig = (props: ITabConfigProps) => {
     }
   }
 
+  /**
+   * evaluates the status of the mqtt config, depending on the properties currently configured
+   * @param update
+   */
   const getMqttConfigStatus = (mqtt: IMqttConfig): TConfigStatus => {
     if (!mqtt.srv || mqtt.srv === '') {
       return 'MODIFIED_INVALID';
@@ -202,6 +204,10 @@ const TabConfig = (props: ITabConfigProps) => {
     return 'MODIFIED_VALID';
   }
 
+  /**
+   * handles an update to the mqtt config
+   * @param update
+   */
   const handleMqttUpdate = (update: Partial<IMqttConfig>) => {
     const _mqtt = {
       ...mqtt,
@@ -216,6 +222,9 @@ const TabConfig = (props: ITabConfigProps) => {
     });
   };
 
+  /**
+   * uploads modified configuration to the device and resets the status flag of the associated config to 'LOADED'
+   */
   const handleConfigUpload = async (): Promise<void> => {
 
     const updates: Partial<ITabConfigProps> = {};
@@ -245,18 +254,22 @@ const TabConfig = (props: ITabConfigProps) => {
 
   }
 
-  const getModifiedFlag = (): number => {
-    let modifiedFlag = 0;
+  /**
+   * evaluates the count of modified configurations
+   * @returns
+   */
+  const getModifiedCount = (): number => {
+    let modifiedCount = 0;
     if (disp.status === 'MODIFIED_VALID') {
-      modifiedFlag++;
+      modifiedCount++;
     }
     if (wifi.status === 'MODIFIED_VALID') {
-      modifiedFlag++;
+      modifiedCount++;
     }
     if (mqtt.status === 'MODIFIED_VALID') {
-      modifiedFlag++;
+      modifiedCount++;
     }
-    return modifiedFlag;
+    return modifiedCount;
   }
 
   return (
@@ -272,8 +285,8 @@ const TabConfig = (props: ITabConfigProps) => {
             color='error'
             // variant='dot'
             overlap='rectangular'
-            badgeContent={getModifiedFlag()}
-            sx={{ color: getModifiedFlag() > 0 ? 'black' : 'gray' }}
+            badgeContent={getModifiedCount()}
+            sx={{ color: getModifiedCount() > 0 ? 'black' : 'gray' }}
           >
             <VideoLabelIcon sx={{ fontSize: '0.8em', position: 'relative', left: '6px' }} />
             <SouthIcon sx={{ fontSize: '0.7em', position: 'relative', left: '-7px', top: '-4px' }} />

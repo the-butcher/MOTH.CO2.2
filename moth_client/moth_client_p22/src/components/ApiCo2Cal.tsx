@@ -16,6 +16,12 @@ import { IApiProperties } from '../types/IApiProperties';
 import ApiResponse from './ApiResponse';
 import { IResponseProps } from '../types/IResponseProps';
 
+/**
+ * component, renders calibration helper stats and an input field
+ * targets the 'api/co2cal' endpoint
+ * @param props
+ * @returns
+ */
 const ApiCo2Cal = (props: IApiProperties) => {
 
   const apiName = 'co2cal';
@@ -34,7 +40,7 @@ const ApiCo2Cal = (props: IApiProperties) => {
 
   const handleKeyUp = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter') {
-      handleClickOpen();
+      handleDialogOpen();
     }
   }
 
@@ -62,6 +68,9 @@ const ApiCo2Cal = (props: IApiProperties) => {
     return value * co2calHeight / (max - min);
   }
 
+  /**
+   * react hook (props[apiName])
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
@@ -103,25 +112,21 @@ const ApiCo2Cal = (props: IApiProperties) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props[apiName]]);
 
-  const [open, setOpen] = useState(false);
-  const handleClickOpen = () => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const handleDialogOpen = () => {
     if (ref === 0) {
       issueApiCall();
     } else {
-      setOpen(true);
+      setDialogOpen(true);
     }
   };
-  const handleCancel = () => {
-    setOpen(false);
+  const handleDialogCancel = () => {
+    setDialogOpen(false);
   };
-  const handleProceed = () => {
-    setOpen(false);
+  const handleDialogCommit = () => {
+    setDialogOpen(false);
     issueApiCall();
   };
-
-
-
-
 
   return (
     <Accordion expanded={panels.indexOf(apiName) >= 0} onChange={(event, expanded) => handlePanel(apiName, expanded)}>
@@ -155,18 +160,17 @@ const ApiCo2Cal = (props: IApiProperties) => {
             <TextField
               label="ref"
               value={ref}
-              id="outlined-start-adornment"
               size='small'
               onChange={handleRefChange}
               required
               onKeyUp={handleKeyUp}
             />
-            <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+            <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleDialogOpen}>
               click to execute
             </Button>
             <Dialog
-              open={open}
-              onClose={handleCancel}
+              open={dialogOpen}
+              onClose={handleDialogCancel}
               aria-labelledby="alert-dialog-title"
               aria-describedby="alert-dialog-description"
             >
@@ -175,8 +179,8 @@ const ApiCo2Cal = (props: IApiProperties) => {
                 <DialogContentText id="alert-dialog-description">this call will perform calibration of the box\'s CO₂ sensor. please expose the sensor to an environment having the co2 concentration that is being used as reference. move away from the sensor during calibration to not let exhaled air alter CO₂ values.</DialogContentText>
               </DialogContent>
               <DialogActions>
-                <Button onClick={handleCancel} autoFocus>cancel</Button>
-                <Button onClick={handleProceed}>{apiName}</Button>
+                <Button onClick={handleDialogCancel} autoFocus>cancel</Button>
+                <Button onClick={handleDialogCommit}>{apiName}</Button>
               </DialogActions>
             </Dialog>
             {

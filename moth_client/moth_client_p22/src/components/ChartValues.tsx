@@ -6,6 +6,11 @@ import { IRecord } from "../types/IRecord";
 import { TICK_DEFINITIONS } from "../types/ITickDefinition";
 import { TimeUtil } from "../util/TimeUtil";
 
+/**
+ * component, renders a chart, using the mui/x-charts component
+ * @param props
+ * @returns
+ */
 const ChartValues = (props: IChartProps) => {
 
     const { width, height, seriesDef, records, exportTo, handleExportComplete } = props;
@@ -13,6 +18,7 @@ const ChartValues = (props: IChartProps) => {
     const [tickDefIndex, setTickDefIndex] = useState<number>(0);
     const [tickInterval, setTickInterval] = useState<number[]>();
     const [stepRecords, setStepRecords] = useState<IRecord[]>([]);
+    const [minmax, setMinMax] = useState<[number, number]>([0, 0]);
     const chartRef = useRef<SVGElement>();
 
     /**
@@ -23,15 +29,26 @@ const ChartValues = (props: IChartProps) => {
     const stringifyStylesheet = (stylesheet: CSSStyleSheet): string => {
         return stylesheet.cssRules ? Array.from(stylesheet.cssRules).map(rule => rule.cssText || '').join('\n') : '';
     }
+    /**
+     * iterates all stylesheets in the document and collects and concatenates all rules from those stylesheets
+     * @returns
+     */
     const collectStyles = (): string => {
         return Array.from(document.styleSheets).map(s => stringifyStylesheet(s)).join('\n');
     }
+    /**
+     * collects all styles in the document and creates a <def/> node from it
+     * needed for exporting when all current styles need to be attached to the <svg/> clone
+     * @returns
+     */
     const collectDefs = (): string => {
         const styles = collectStyles()
-        // console.log('styles', styles);
         return `<defs><style type="text/css"><![CDATA[${styles}]]></style></defs>`
     }
 
+    /**
+     * exports this chart to a png image
+     */
     const exportToPng = () => {
 
         const chartSvg = chartRef.current;
@@ -86,6 +103,9 @@ const ChartValues = (props: IChartProps) => {
 
     }
 
+    /**
+     * recalculates the tick interval of the chart, given the current width and date-range
+     */
     const rebuildTickInterval = () => {
 
         if (chartRef.current && records.length > 0) {
@@ -98,13 +118,11 @@ const ChartValues = (props: IChartProps) => {
 
                 const difInstant = maxInstant - minInstant;
                 const maxTickCount = chartWidth / 15;
-                // console.log('chartWidth', chartWidth, 'maxTickCount', maxTickCount, 'dpr', window.devicePixelRatio);
 
                 let _tickDefIndex = 0;
                 for (; _tickDefIndex < TICK_DEFINITIONS.length; _tickDefIndex++) {
                     const curTickCount = difInstant / TICK_DEFINITIONS[_tickDefIndex].tick;
                     if (curTickCount < maxTickCount) {
-                        // console.log('using definition', TICK_DEFINITIONS[tickDefinitionIndex].step / (1000 * 60 * 60));
                         break;
                     }
                 }
@@ -125,12 +143,21 @@ const ChartValues = (props: IChartProps) => {
 
     }
 
+    /**
+     * calculates a tick instant snapped to the time-step specified
+     * @param instant
+     * @param step
+     * @returns
+     */
     const getTickInstant = (instant: number, step: number) => {
         const offsetInstant = instant - TimeUtil.getTimezoneOffsetSeconds() * 1000;
         const moduloInstant = offsetInstant - offsetInstant % step + step
         return moduloInstant + TimeUtil.getTimezoneOffsetSeconds() * 1000;
     }
 
+    /**
+     * rebuilds a reduced list of records, depending on the current tick definition
+     */
     const rebuildStepRecords = () => {
 
         if (records?.length > 0) {
@@ -163,6 +190,10 @@ const ChartValues = (props: IChartProps) => {
 
     }
 
+    /**
+     * callback, triggered when the chartRef becomes valid
+     * @param ref
+     */
     const handleRefChange = (ref: SVGElement) => {
 
         console.debug(`⚙ updating chart component (ref)`, ref);
@@ -173,14 +204,44 @@ const ChartValues = (props: IChartProps) => {
 
     };
 
+    /**
+     * recalculates the y-axis min and max values
+     */
+    const recalculateMinMax = () => {
+        const values = records.map(r => r[seriesDef.id]);
+        const _min = Math.min(...values);
+        const _max = Math.max(...values);
+        setMinMax([_min, _max]);
+    };
+
+    /**
+     * react hook (records)
+     */
     useEffect(() => {
 
         console.debug(`⚙ updating chart component (records)`, records);
         rebuildTickInterval();
+        recalculateMinMax();
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [records]);
 
+    /**
+     * react hook (seriesDef)
+     * when the series changes, min and max need to calculates too
+     */
+    useEffect(() => {
+
+        console.debug(`⚙ updating chart component (seriesDef)`, seriesDef);
+        recalculateMinMax();
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seriesDef]);
+
+    /**
+     * react hook (tickInterval)
+     * once the tick-interval is built, the reduced set of records can be evaluated
+     */
     useEffect(() => {
 
         console.debug(`⚙ updating chart component (tickInterval)`, tickInterval);
@@ -191,6 +252,10 @@ const ChartValues = (props: IChartProps) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tickInterval]);
 
+    /**
+     * react hook (stepRecords)
+     * when the step-records are complete, the chart can be treated as rendered and, if required, the chart can be exported to png
+     */
     useEffect(() => {
 
         if (stepRecords?.length > 0) {
@@ -207,7 +272,9 @@ const ChartValues = (props: IChartProps) => {
     }, [stepRecords]);
 
 
-
+    /**
+     * component init hook
+     */
     useEffect(() => {
 
         console.debug('✨ building chart component', chartRef);
@@ -240,7 +307,12 @@ const ChartValues = (props: IChartProps) => {
             xAxis={[{
                 dataKey: 'instant',
                 valueFormatter: (instant, context) => {
-                    return TimeUtil.toLocalTime(instant)
+                    if (context.location === 'tooltip') {
+                        return TimeUtil.toLocalDateTime(instant);
+                    } else {
+                        return TimeUtil.toLocalTime(instant);
+                    }
+
                 },
                 min: getXAxisMin(),
                 max: getXAxisMax(),
@@ -256,7 +328,8 @@ const ChartValues = (props: IChartProps) => {
             yAxis={[{
                 colorMap: seriesDef.colorMap,
                 valueFormatter: seriesDef.valueFormatter,
-                min: seriesDef.min,
+                min: seriesDef.min(minmax[0]),
+                max: seriesDef.max(minmax[1]),
                 label: `${seriesDef.label}`
             }]}
             series={[{

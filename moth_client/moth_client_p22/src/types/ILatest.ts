@@ -1,3 +1,6 @@
+/**
+ * definition for the 'api/latest' response
+ */
 export interface ILatest {
     time: string;
     co2_lpf: number;

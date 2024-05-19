@@ -18,6 +18,12 @@ import ApiResponse from './ApiResponse';
 import { IApiProperties } from '../types/IApiProperties';
 import { IResponseProps } from '../types/IResponseProps';
 
+/**
+ * component, renders a file picker
+ * targets the 'api/update' endpoint
+ * @param props
+ * @returns
+ */
 const ApiUpdate = (props: IApiProperties) => {
 
   const apiName = 'update';
@@ -26,6 +32,7 @@ const ApiUpdate = (props: IApiProperties) => {
 
   const { boxUrl, panels, handlePanel } = props;
   const [data, setData] = useState<string>();
+
   const apiHref = `${boxUrl}/${apiName}`;
 
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -33,6 +40,9 @@ const ApiUpdate = (props: IApiProperties) => {
     (document.getElementById('updateform') as HTMLFormElement).submit();
   }
 
+  /**
+   * react hook (props[apiName])
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
@@ -54,15 +64,15 @@ const ApiUpdate = (props: IApiProperties) => {
     setData(event.target.value);
   };
 
-  const [open, setOpen] = useState(false);
-  const handleClickOpen = () => {
-    setOpen(true);
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const handleDialogOpen = () => {
+    setDialogOpen(true);
   };
-  const handleCancel = () => {
-    setOpen(false);
+  const handleDialogCancel = () => {
+    setDialogOpen(false);
   };
-  const handleProceed = () => {
-    setOpen(false);
+  const handleDialogCommit = () => {
+    setDialogOpen(false);
     issueApiCall();
   };
 
@@ -82,7 +92,6 @@ const ApiUpdate = (props: IApiProperties) => {
               <Stack>
                 <TextField
                   type="text"
-                  id="outlined-start-adornment"
                   size='small'
                   label={data && data !== "" ? data : "file"}
                   InputProps={{
@@ -100,12 +109,12 @@ const ApiUpdate = (props: IApiProperties) => {
                     ),
                   }}
                 />
-                <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+                <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleDialogOpen}>
                   click to execute
                 </Button>
                 <Dialog
-                  open={open}
-                  onClose={handleCancel}
+                  open={dialogOpen}
+                  onClose={handleDialogCancel}
                   aria-labelledby="alert-dialog-title"
                   aria-describedby="alert-dialog-description"
                 >
@@ -118,8 +127,8 @@ const ApiUpdate = (props: IApiProperties) => {
                     </DialogContentText>
                   </DialogContent>
                   <DialogActions>
-                    <Button onClick={handleCancel} autoFocus>cancel</Button>
-                    <Button onClick={handleProceed}>{apiName}</Button>
+                    <Button onClick={handleDialogCancel} autoFocus>cancel</Button>
+                    <Button onClick={handleDialogCommit}>{apiName}</Button>
                   </DialogActions>
                 </Dialog>
                 {

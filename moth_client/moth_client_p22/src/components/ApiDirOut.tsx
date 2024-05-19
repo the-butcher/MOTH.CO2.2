@@ -11,7 +11,12 @@ import ApiResponse from './ApiResponse';
 import { IApiProperties } from '../types/IApiProperties';
 import { IResponseProps } from '../types/IResponseProps';
 
-
+/**
+ * component, renders an input field
+ * targets the 'dirout' endpoint
+ * @param props
+ * @returns
+ */
 const ApiDirOut = (props: IApiProperties) => {
 
   const apiName = 'dirout';
@@ -39,6 +44,9 @@ const ApiDirOut = (props: IApiProperties) => {
     });
   };
 
+  /**
+   * react hook (props[apiName])
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
@@ -79,7 +87,6 @@ const ApiDirOut = (props: IApiProperties) => {
           <Stack>
             <TextField
               label="folder"
-              id="outlined-start-adornment"
               size='small'
               onChange={handleFolderChange}
               onKeyUp={handleKeyUp}

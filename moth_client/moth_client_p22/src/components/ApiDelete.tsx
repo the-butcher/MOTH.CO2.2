@@ -16,6 +16,12 @@ interface IApiDeleteProps extends IApiProperties {
   apiName: string;
 }
 
+/**
+ * component, renders an input field
+ * targets either 'api/datdel' or 'api/dirdel'
+ * @param props
+ * @returns
+ */
 const ApiDelete = (props: IApiDeleteProps) => {
 
   const apiName = props.apiName;
@@ -50,6 +56,9 @@ const ApiDelete = (props: IApiDeleteProps) => {
     setParam(event.target.value);
   };
 
+  /**
+   * react hook (props[apiName])
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
@@ -79,7 +88,6 @@ const ApiDelete = (props: IApiDeleteProps) => {
           <Stack>
             <TextField
               label={apiProp}
-              id="outlined-start-adornment"
               size='small'
               onChange={handleParamChange}
               required

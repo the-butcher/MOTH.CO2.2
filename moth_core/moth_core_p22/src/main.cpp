@@ -46,6 +46,7 @@ uint16_t actionNum = 0;
  *    -- wifi sometimes turns off for unknown reasons (more likely when multiple requests are pending),
  * -- MISC:
  *    -- be sure data is written exactly every 60 minutes (not 59 or 61)
+ *    -- ideally data would also be flushed with the full hour
  *    -- save data on HTTP reset (have shorter no-data periods)
  */
 

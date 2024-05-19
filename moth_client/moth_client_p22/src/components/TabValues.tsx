@@ -27,12 +27,17 @@ import { ByteLoader } from '../util/ByteLoader';
 import { JsonLoader } from '../util/JsonLoader';
 import { TimeUtil } from '../util/TimeUtil';
 
+import { TExportTo } from '../types/IChartProps';
 import { SERIES_DEFS } from '../types/ISeriesDef';
 import { ITabValuesProps } from '../types/ITabValuesProps';
 import ChartValues from './ChartValues';
 import ValueChoice from './ValueChoice';
-import { TExportTo } from '../types/IChartProps';
 
+/**
+ * component, renders the chart, associated buttons, ... in the client-ui
+ * @param props
+ * @returns
+ */
 const TabValues = (props: ITabValuesProps) => {
 
   const { boxUrl, latest, dateRangeData, dateRangeUser, records, seriesDef, handleUpdate, handleAlertMessage } = { ...props };
@@ -40,7 +45,9 @@ const TabValues = (props: ITabValuesProps) => {
   const [orientation, setOrientation] = useState<TOrientation>('landscape');
   const [height, setHeight] = useState<number>(400);
   const [resizeCount, setResizeCount] = useState<number>();
+
   const [exportTo, setExportTo] = useState<TExportTo>('');
+
   const [batteryIcon, setBatteryIcon] = useState<JSX.Element>();
 
   const latestToRef = useRef<number>(-1);
@@ -48,6 +55,7 @@ const TabValues = (props: ITabValuesProps) => {
 
   /**
    * handle an export chart's export complete event
+   * reset the exportTo state -> the export chart instance will not be rendered any further
    */
   const handleExportComplete = () => {
     console.debug(`📞 handling export complete`);
@@ -222,6 +230,9 @@ const TabValues = (props: ITabValuesProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRangeUser]);
 
+  /**
+   * component init hook
+   */
   useEffect(() => {
 
     console.debug('✨ building tab values component');
@@ -286,7 +297,7 @@ const TabValues = (props: ITabValuesProps) => {
 
   return (
     <>
-      <Stack spacing={1} sx={{ flexDirection: 'column', position: 'fixed', left: '14px', top: '170px', ...props.style }}>
+      <Stack spacing={1} sx={{ ...props.style, flexDirection: 'column', position: 'fixed', left: '14px', top: '170px' }}>
         <IconButton
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
           title='export csv'
@@ -304,7 +315,7 @@ const TabValues = (props: ITabValuesProps) => {
           <ImageIcon sx={{ fontSize: '1.0em' }} />
         </IconButton>
       </Stack>
-      <Stack spacing={1} sx={{ flexDirection: 'column', position: 'fixed', left: '14px', bottom: '20px', ...props.style }}>
+      <Stack spacing={1} sx={{ ...props.style, flexDirection: 'column', position: 'fixed', left: '14px', bottom: '20px', zIndex: 500 }}>
         <IconButton
           sx={{ boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.2),0px 4px 5px 0px rgba(0,0,0,0.14),0px 1px 10px 0px rgba(0,0,0,0.12)' }}
           title='battery'
@@ -316,7 +327,7 @@ const TabValues = (props: ITabValuesProps) => {
           }
         </IconButton>
       </Stack>
-      <Stack spacing={0} sx={{ padding: '0px', flexGrow: 10, display: 'flex', ...props.style }}>
+      <Stack spacing={0} sx={{ ...props.style, padding: '0px', flexGrow: 10 }}>
         <LocalizationProvider dateAdapter={AdapterMoment}>
           <div ref={valueRef} style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '0px', flexGrow: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', flexGrow: 10 }}>
@@ -324,17 +335,17 @@ const TabValues = (props: ITabValuesProps) => {
                 icon={<Co2Icon sx={{ fontSize: '0.8em' }} />}
                 value={latest.co2_lpf.toFixed(0)}
                 unit='ppm'
-                grow='5'
                 active={seriesDef.id === 'co2Lpf'}
                 handleClick={() => handleValueClick('co2Lpf')}
+                style={{ flexGrow: 10 }}
               ></ValueChoice>
               <ValueChoice
                 icon={<DeviceThermostatIcon sx={{ fontSize: '0.8em' }} />}
                 value={latest.deg.toFixed(1)}
                 unit='°C'
-                grow='5'
                 active={seriesDef.id === 'deg'}
                 handleClick={() => handleValueClick('deg')}
+                style={{ flexGrow: 10 }}
               ></ValueChoice>
             </div>
             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', flexGrow: 10 }}>
@@ -342,17 +353,17 @@ const TabValues = (props: ITabValuesProps) => {
                 icon={<WaterDropIcon sx={{ fontSize: '0.8em' }} />}
                 value={latest.hum.toFixed(1)}
                 unit='%'
-                grow='5'
                 active={seriesDef.id === 'hum'}
                 handleClick={() => handleValueClick('hum')}
+                style={{ flexGrow: 10 }}
               ></ValueChoice>
               <ValueChoice
                 icon={<SpeedIcon sx={{ fontSize: '0.8em' }} />}
                 value={latest.hpa.toFixed(1)}
                 unit='hPa'
-                grow='5'
                 active={seriesDef.id === 'hpa'}
                 handleClick={() => handleValueClick('hpa')}
+                style={{ flexGrow: 10 }}
               ></ValueChoice>
             </div>
           </div>

@@ -3,7 +3,6 @@ import { Theme, createTheme } from "@mui/material";
 export class ThemeUtil {
 
     static createTheme(): Theme {
-
         return createTheme({
             typography: {
                 fontFamily: [
@@ -100,7 +99,6 @@ export class ThemeUtil {
 
             // .css-1w301fc-MuiFormLabel-root-MuiInputLabel-root
         });
-
     }
 
 

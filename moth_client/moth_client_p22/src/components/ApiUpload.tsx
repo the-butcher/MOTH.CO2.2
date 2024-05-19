@@ -18,6 +18,12 @@ import ApiResponse from './ApiResponse';
 import { IApiProperties } from '../types/IApiProperties';
 import { IResponseProps } from '../types/IResponseProps';
 
+/**
+ * component, renders a file name and an actual file picker
+ * targets the 'api/upload' endpoint
+ * @param props
+ * @returns
+ */
 const ApiUpload = (props: IApiProperties) => {
 
   const apiName = 'upload';
@@ -25,8 +31,10 @@ const ApiUpload = (props: IApiProperties) => {
   const apiType = 'json';
 
   const { boxUrl, panels, handlePanel } = props;
+
   const [file, setFile] = useState<string>();
   const [data, setData] = useState<string>();
+
   const apiHref = `${boxUrl}/${apiName}`;
 
   const [responseProps, setResponseProps] = useState<IResponseProps>();
@@ -34,6 +42,9 @@ const ApiUpload = (props: IApiProperties) => {
     (document.getElementById('uploadform') as HTMLFormElement).submit();
   }
 
+  /**
+   * react hook (props[apiName])
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
@@ -58,15 +69,15 @@ const ApiUpload = (props: IApiProperties) => {
     setData(event.target.value);
   };
 
-  const [open, setOpen] = useState(false);
-  const handleClickOpen = () => {
-    setOpen(true);
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const handleDialogOpen = () => {
+    setDialogOpen(true);
   };
-  const handleCancel = () => {
-    setOpen(false);
+  const handleDialogCancel = () => {
+    setDialogOpen(false);
   };
-  const handleProceed = () => {
-    setOpen(false);
+  const handleDialogCommit = () => {
+    setDialogOpen(false);
     issueApiCall();
   };
 
@@ -88,14 +99,12 @@ const ApiUpload = (props: IApiProperties) => {
                   required
                   label="file name"
                   name="file"
-                  id="outlined-start-adornment"
                   size='small'
                   onChange={handleFileChange}
                   value={file}
                 />
                 <TextField
                   type="text"
-                  id="outlined-start-adornment"
                   size='small'
                   label={data && data !== "" ? data : "file"}
                   InputProps={{
@@ -112,12 +121,12 @@ const ApiUpload = (props: IApiProperties) => {
                     ),
                   }}
                 />
-                <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleClickOpen}>
+                <Button variant="contained" endIcon={<WarningAmberIcon />} onClick={handleDialogOpen}>
                   click to execute
                 </Button>
                 <Dialog
-                  open={open}
-                  onClose={handleCancel}
+                  open={dialogOpen}
+                  onClose={handleDialogCancel}
                   aria-labelledby="alert-dialog-title"
                   aria-describedby="alert-dialog-description"
                 >
@@ -130,8 +139,8 @@ const ApiUpload = (props: IApiProperties) => {
                     </DialogContentText>
                   </DialogContent>
                   <DialogActions>
-                    <Button onClick={handleCancel} autoFocus>cancel</Button>
-                    <Button onClick={handleProceed}>{apiName}</Button>
+                    <Button onClick={handleDialogCancel} autoFocus>cancel</Button>
+                    <Button onClick={handleDialogCommit}>{apiName}</Button>
                   </DialogActions>
                 </Dialog>
                 {

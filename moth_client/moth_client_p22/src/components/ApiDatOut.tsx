@@ -11,7 +11,12 @@ import ApiResponse from './ApiResponse';
 import { IApiProperties } from '../types/IApiProperties';
 import { IResponseProps } from '../types/IResponseProps';
 
-
+/**
+ * component, renders an input field
+ * targets the 'datout' endpoint
+ * @param props
+ * @returns
+ */
 const ApiDatOut = (props: IApiProperties) => {
 
   const apiName = 'datout';
@@ -39,6 +44,9 @@ const ApiDatOut = (props: IApiProperties) => {
     });
   };
 
+  /**
+   * react hook (props[apiName])
+   */
   useEffect(() => {
 
     console.debug(`⚙ updating ${apiName} component`, props[apiName]);
@@ -78,7 +86,6 @@ const ApiDatOut = (props: IApiProperties) => {
           <Stack>
             <TextField
               label="file"
-              id="outlined-start-adornment"
               size='small'
               onChange={handleFileChange}
               onKeyUp={handleKeyUp}

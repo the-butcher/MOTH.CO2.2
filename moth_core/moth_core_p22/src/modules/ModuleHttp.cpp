@@ -418,6 +418,8 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     JsonObject &scd041Jo = root.createNestedObject("scd041");
     scd041Jo["toff"] = SensorScd041::getTemperatureOffset();
     scd041Jo["iasc"] = SensorScd041::isAutomaticSelfCalibration();
+
+    JsonObject &bme280Jo = root.createNestedObject("bme280");
     scd041Jo["calt"] = SensorScd041::getCompensationAltitude();
 
     // mqtt attaches status to config. either config or just the status should be available here

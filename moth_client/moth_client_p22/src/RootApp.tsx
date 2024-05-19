@@ -6,25 +6,32 @@ import { useEffect, useRef, useState } from 'react';
 import TabConfig from './components/TabConfig';
 import TabServer from './components/TabServer';
 import TabValues from './components/TabValues';
-import { IPiecewiseColorConfig, SERIES_DEFS } from './types/ISeriesDef';
-import { ITabValuesProps } from './types/ITabValuesProps';
-import { ThemeUtil } from './util/ThemeUtil';
-import { ITabConfigProps } from './types/ITabConfigProps';
 import { DISP_CONFIG_DEFAULT } from './types/IDispConfig';
-import { WIFI_CONFIG_DEFAULT } from './types/IWifiConfig';
 import { MQTT_CONFIG_DEFAULT } from './types/IMqttConfig';
+import { IPiecewiseColorConfig, SERIES_DEFS } from './types/ISeriesDef';
+import { IStatus } from './types/IStatus';
+import { ITabConfigProps } from './types/ITabConfigProps';
 import { IMessage } from './types/ITabProps';
+import { ITabValuesProps } from './types/ITabValuesProps';
+import { WIFI_CONFIG_DEFAULT } from './types/IWifiConfig';
+import { JsonLoader } from './util/JsonLoader';
+import { ThemeUtil } from './util/ThemeUtil';
 
 type VIEW_TYPE = 'values' | 'config' | 'server';
 
+const theme = ThemeUtil.createTheme();
+
 const RootApp = () => {
 
-  const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  // const boxUrl = `http://192.168.0.178/api`; // when running directly from device
+  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  const boxUrl = `http://192.168.0.178/api`; // when running directly from device
 
   /**
-   * TODO :: initial step to establish and validate connection (i.e. do not show an empty chart)
-   * TODO :: add more timezones
+   * steps needed to deploy a new version
+   * -- build (will create gzipped versions of root.html and root.js)
+   * -- delete non-zipped versions and rename zipped
+   * -- upload to device
+   * -- replace in the SD/server directory
    */
 
   const [viewType, setViewType] = useState<VIEW_TYPE>('values');
@@ -33,6 +40,35 @@ const RootApp = () => {
     severity: 'success',
     active: false
   });
+
+  const loadStatusToRef = useRef<number>(-1);
+  const [status, setStatus] = useState<IStatus>();
+
+  /**
+   * load device status
+   */
+  const loadStatus = () => {
+
+    new JsonLoader().load(`${boxUrl}/status`).then((status: IStatus) => {
+      setStatus(status);
+      handleAlertMessage({
+        ...alertMessage,
+        active: false
+      })
+    }).catch((e: Error) => {
+      console.error('e', e);
+      handleAlertMessage({
+        message: e.message ? e.message : 'failed to connect to device',
+        severity: 'error',
+        active: true
+      });
+      window.clearTimeout(loadStatusToRef.current);
+      loadStatusToRef.current = window.setTimeout(() => {
+        loadStatus();
+      }, 60000);
+    });
+
+  }
 
   /**
    * handle closing of the snackbar message
@@ -181,19 +217,28 @@ const RootApp = () => {
   const [tabConfigProps, setTabConfigProps] = useState<ITabConfigProps>(tabConfigPropsRef.current);
 
   /**
-   * component init hook (no-op)
+   * component init hook
    */
   useEffect(() => {
+
     console.debug('✨ building root component');
+
+    handleAlertMessage({
+      severity: 'info',
+      message: 'connecting to device',
+      active: true
+    });
+    loadStatus();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <ThemeProvider theme={ThemeUtil.createTheme()}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Snackbar
         open={alertMessage.active}
-        // autoHideDuration={5000}
+        autoHideDuration={30000}
         onClose={handleSnackbarClose}
         sx={{ left: '72px' }}
       >
@@ -208,20 +253,24 @@ const RootApp = () => {
       </Snackbar>
       <Stack direction={'row'} spacing={0} sx={{ height: '100%' }}>
         <Paper elevation={4} sx={{ display: 'flex', flexDirection: 'column', position: 'fixed', marginTop: '5px', backgroundColor: '#FAFAFA', border: '1px solid #DDDDDD' }}>
-          <IconButton size='small' title='data' onClick={() => setViewType('values')} sx={{ color: viewType === 'values' ? 'black' : 'gray' }}>
+          <IconButton disabled={!status} size='small' title='data' onClick={() => setViewType('values')} sx={{ color: viewType === 'values' ? 'black' : 'gray' }}>
             <ShowChartIcon />
           </IconButton>
-          <IconButton size='small' title='configuration' onClick={() => setViewType('config')} sx={{ color: viewType === 'config' ? 'black' : 'gray' }}>
+          <IconButton disabled={!status} size='small' title='configuration' onClick={() => setViewType('config')} sx={{ color: viewType === 'config' ? 'black' : 'gray' }}>
             <TuneIcon />
           </IconButton>
-          <IconButton size='small' title='server api' onClick={() => setViewType('server')} sx={{ color: viewType === 'server' ? 'black' : 'gray' }}>
+          <IconButton disabled={!status} size='small' title='server api' onClick={() => setViewType('server')} sx={{ color: viewType === 'server' ? 'black' : 'gray' }}>
             <TocIcon />
           </IconButton>
         </Paper>
         <div style={{ minWidth: '45px' }}></div>
-        <TabValues {...tabValuesProps} style={{ display: viewType === 'values' ? 'flex' : 'none' }} />
-        <TabConfig {...tabConfigProps} style={{ display: viewType === 'config' ? 'flex' : 'none' }} />
-        <TabServer boxUrl={boxUrl} handleAlertMessage={handleAlertMessage} style={{ display: viewType === 'server' ? 'flex' : 'none' }} />
+        {
+          status ? <>
+            <TabValues {...tabValuesProps} style={{ display: viewType === 'values' ? 'flex' : 'none' }} />
+            <TabConfig {...tabConfigProps} style={{ display: viewType === 'config' ? 'flex' : 'none' }} />
+            <TabServer boxUrl={boxUrl} handleAlertMessage={handleAlertMessage} style={{ display: viewType === 'server' ? 'flex' : 'none' }} />
+          </> : null
+        }
       </Stack >
     </ThemeProvider >
   );
