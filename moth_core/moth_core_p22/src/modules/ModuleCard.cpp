@@ -11,49 +11,12 @@ void ModuleCard::begin() {
         ModuleCard::sd32.begin(SD_CS, SPI_CLOCK);
         FsDateTime::setCallback(SensorTime::dateTimeCallback);
         ModuleCard::hasBegun = true;
-
-        // ModuleCard::renameFile32("/2024/04/20240411.dat", "/2024/04/20240411.dar");
-        // ModuleCard::renameFile32("/2024/04/20240412.dat", "/2024/04/20240412.dar");
-        // ModuleCard::renameFile32("/2024/04/20240413.dat", "/2024/04/20240413.dar");
-        // ModuleCard::renameFile32("/2024/04/20240414.dat", "/2024/04/20240414.dar");
-        // ModuleCard::renameFile32("/2024/04/20240415.dat", "/2024/04/20240415.dar");
-        // ModuleCard::renameFile32("/2024/04/20240416.dat", "/2024/04/20240416.dar");
-        // ModuleCard::renameFile32("/2024/04/20240417.dat", "/2024/04/20240417.dar");
-        // ModuleCard::renameFile32("/2024/04/20240418.dat", "/2024/04/20240418.dar");
-        // ModuleCard::renameFile32("/2024/04/20240419.dat", "/2024/04/20240419.dar");
-        // ModuleCard::renameFile32("/2024/04/20240420.dat", "/2024/04/20240420.dar");
-        // ModuleCard::renameFile32("/2024/04/20240421.dat", "/2024/04/20240421.dar");
-        // ModuleCard::renameFile32("/2024/04/20240422.dat", "/2024/04/20240422.dar");
-        // ModuleCard::renameFile32("/2024/04/20240423.dat", "/2024/04/20240423.dar");
-        // ModuleCard::renameFile32("/2024/04/20240424.dat", "/2024/04/20240424.dar");
-        // ModuleCard::renameFile32("/2024/04/20240425.dat", "/2024/04/20240425.dar");
-        // ModuleCard::renameFile32("/2024/04/20240426.dat", "/2024/04/20240426.dar");
-        // ModuleCard::renameFile32("/2024/04/20240427.dat", "/2024/04/20240427.dar");
-        // ModuleCard::renameFile32("/2024/04/20240428.dat", "/2024/04/20240428.dar");
-        // ModuleCard::renameFile32("/2024/04/20240429.dat", "/2024/04/20240429.dar");
-        // ModuleCard::renameFile32("/2024/04/20240430.dat", "/2024/04/20240430.dar");
-        // ModuleCard::renameFile32("/2024/05/20240501.dat", "/2024/05/20240501.dar");
-        // ModuleCard::renameFile32("/2024/05/20240502.dat", "/2024/05/20240502.dar");
-        // ModuleCard::renameFile32("/2024/05/20240503.dat", "/2024/05/20240503.dar");
-        // ModuleCard::renameFile32("/2024/05/20240504.dat", "/2024/05/20240504.dar");
-        // ModuleCard::renameFile32("/2024/05/20240505.dat", "/2024/05/20240505.dar");
-        // ModuleCard::renameFile32("/2024/05/20240506.dat", "/2024/05/20240506.dar");
-        // ModuleCard::renameFile32("/2024/05/20240507.dat", "/2024/05/20240507.dar");
-        // ModuleCard::renameFile32("/2024/05/20240508.dat", "/2024/05/20240508.dar");
-        // ModuleCard::renameFile32("/2024/05/20240509.dat", "/2024/05/20240509.dar");
-        // ModuleCard::renameFile32("/2024/05/20240510.dat", "/2024/05/20240510.dar");
-        // ModuleCard::renameFile32("/2024/05/20240511.dat", "/2024/05/20240511.dar");
-        // ModuleCard::renameFile32("/2024/05/20240512.dat", "/2024/05/20240512.dar");
-        // ModuleCard::renameFile32("/2024/05/20240513.dat", "/2024/05/20240513.dar");
-        // ModuleCard::renameFile32("/2024/05/20240514.dat", "/2024/05/20240514.dar");
-        // ModuleCard::renameFile32("/2024/05/20240515.dat", "/2024/05/20240515.dar");
-        // ModuleCard::renameFile32("/2024/05/20240516.dat", "/2024/05/20240516.dap");
+        // ModuleCard::renameFile32("/2024/05/20240519.dar", "/2024/05/20240519.dap");
     }
 }
 
 void ModuleCard::historyValues(config_t& config, values_all_t history[HISTORY_____BUFFER_SIZE]) {
 
-    // setup search seconds
     uint32_t nextMeasureIndex = Values::values->nextMeasureIndex;
     uint32_t secondstimeIncr = config.disp.displayHrsChart * SECONDS_PER_____________HOUR / HISTORY_____BUFFER_SIZE;
     uint32_t secondstimeBase = Values::latest().secondstime - secondstimeIncr * (HISTORY_____BUFFER_SIZE - 1);  // secondstime of the first history measurement being searched for

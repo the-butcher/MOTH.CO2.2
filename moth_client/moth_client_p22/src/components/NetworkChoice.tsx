@@ -66,10 +66,8 @@ const NetworkChoice = (props: INetworkChoiceProperties) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pwdCreate]);
 
-
-
     return (
-        <Stack direction={'row'} sx={{ alignItems: 'center', padding: '0px' }}>
+        <Stack direction={'row'} sx={{ padding: '0px' }}>
             {
                 idx === 0 ? <Typography className='fieldlabel'>network connections</Typography> : null
             }

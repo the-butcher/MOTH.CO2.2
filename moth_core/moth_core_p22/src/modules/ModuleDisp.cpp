@@ -39,50 +39,50 @@ void ModuleDisp::configure(config_t& config) {
     File32 dispFileJson;
     bool dispSuccess = dispFileJson.open(DISP_CONFIG_JSON.c_str(), O_RDONLY);
     if (dispSuccess) {
-        StaticJsonBuffer<1024> jsonBuffer;
-        JsonObject& root = jsonBuffer.parseObject(dispFileJson);
-        if (root.success()) {
+        JsonDocument jsonDocument;
+        DeserializationError error = deserializeJson(jsonDocument, dispFileJson);
+        if (!error) {
 
             config.disp.configStatus = CONFIG_STAT__APPLIED;
 
             // display minutes
-            config.disp.displayUpdateMinutes = root[JSON_KEY___MINUTES] | config.disp.displayUpdateMinutes;  // apply network expiry (independant from networks)
+            config.disp.displayUpdateMinutes = jsonDocument[JSON_KEY___MINUTES] | config.disp.displayUpdateMinutes;  // apply network expiry (independant from networks)
 
             // show significant scale
-            bool isShowSignificant = root[JSON_KEY_______SSC] | config.disp.displayValCycle == DISPLAY_VAL_Y____SIG;
+            bool isShowSignificant = jsonDocument[JSON_KEY_______SSC] | config.disp.displayValCycle == DISPLAY_VAL_Y____SIG;
             config.disp.displayValCycle = isShowSignificant ? DISPLAY_VAL_Y____SIG : DISPLAY_VAL_Y____FIX;
 
             // display co2 threshold and reference
-            config.disp.thresholdsCo2.wHi = root[JSON_KEY_______CO2][JSON_KEY_WARN_HIGH] | config.disp.thresholdsCo2.wHi;
-            config.disp.thresholdsCo2.rHi = root[JSON_KEY_______CO2][JSON_KEY_RISK_HIGH] | config.disp.thresholdsCo2.rHi;
-            config.disp.thresholdsCo2.ref = root[JSON_KEY_______CO2][JSON_KEY_REFERENCE] | config.disp.thresholdsCo2.ref;
+            config.disp.thresholdsCo2.wHi = jsonDocument[JSON_KEY_______CO2][JSON_KEY_WARN_HIGH] | config.disp.thresholdsCo2.wHi;
+            config.disp.thresholdsCo2.rHi = jsonDocument[JSON_KEY_______CO2][JSON_KEY_RISK_HIGH] | config.disp.thresholdsCo2.rHi;
+            config.disp.thresholdsCo2.ref = jsonDocument[JSON_KEY_______CO2][JSON_KEY_REFERENCE] | config.disp.thresholdsCo2.ref;
 
             // display deg thresholds
-            config.disp.thresholdsDeg.rLo = root[JSON_KEY_______DEG][JSON_KEY_RISK__LOW] | config.disp.thresholdsDeg.rLo;
-            config.disp.thresholdsDeg.wLo = root[JSON_KEY_______DEG][JSON_KEY_WARN__LOW] | config.disp.thresholdsDeg.wLo;
-            config.disp.thresholdsDeg.wHi = root[JSON_KEY_______DEG][JSON_KEY_WARN_HIGH] | config.disp.thresholdsDeg.wHi;
-            config.disp.thresholdsDeg.rHi = root[JSON_KEY_______DEG][JSON_KEY_RISK_HIGH] | config.disp.thresholdsDeg.rHi;
+            config.disp.thresholdsDeg.rLo = jsonDocument[JSON_KEY_______DEG][JSON_KEY_RISK__LOW] | config.disp.thresholdsDeg.rLo;
+            config.disp.thresholdsDeg.wLo = jsonDocument[JSON_KEY_______DEG][JSON_KEY_WARN__LOW] | config.disp.thresholdsDeg.wLo;
+            config.disp.thresholdsDeg.wHi = jsonDocument[JSON_KEY_______DEG][JSON_KEY_WARN_HIGH] | config.disp.thresholdsDeg.wHi;
+            config.disp.thresholdsDeg.rHi = jsonDocument[JSON_KEY_______DEG][JSON_KEY_RISK_HIGH] | config.disp.thresholdsDeg.rHi;
 
             // display deg scale (unit)
-            bool isFahrenheit = root[JSON_KEY_______DEG][JSON_KEY_______C2F] | config.disp.displayDegScale == DISPLAY_VAL_D______F;
+            bool isFahrenheit = jsonDocument[JSON_KEY_______DEG][JSON_KEY_______C2F] | config.disp.displayDegScale == DISPLAY_VAL_D______F;
             config.disp.displayDegScale = isFahrenheit ? DISPLAY_VAL_D______F : DISPLAY_VAL_D______C;
 
             // display deg offset
-            config.sco2.temperatureOffset = root[JSON_KEY_______DEG][JSON_KEY____OFFSET] | config.sco2.temperatureOffset;
-            config.sco2.lpFilterRatioCurr = root[JSON_KEY_______CO2][JSON_KEY_______LPA] | config.sco2.lpFilterRatioCurr;
-            config.sco2.calibrationCo2Ref = root[JSON_KEY_______CO2][JSON_KEY_______CAL] | config.sco2.calibrationCo2Ref;
+            config.sco2.temperatureOffset = jsonDocument[JSON_KEY_______DEG][JSON_KEY____OFFSET] | config.sco2.temperatureOffset;
+            config.sco2.lpFilterRatioCurr = jsonDocument[JSON_KEY_______CO2][JSON_KEY_______LPA] | config.sco2.lpFilterRatioCurr;
+            config.sco2.calibrationCo2Ref = jsonDocument[JSON_KEY_______CO2][JSON_KEY_______CAL] | config.sco2.calibrationCo2Ref;
 
             // display hum thresholds
-            config.disp.thresholdsHum.rLo = root[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | config.disp.thresholdsHum.rLo;
-            config.disp.thresholdsHum.wLo = root[JSON_KEY_______HUM][JSON_KEY_WARN__LOW] | config.disp.thresholdsHum.wLo;
-            config.disp.thresholdsHum.wHi = root[JSON_KEY_______HUM][JSON_KEY_WARN_HIGH] | config.disp.thresholdsHum.wHi;
-            config.disp.thresholdsHum.rHi = root[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | config.disp.thresholdsHum.rHi;
+            config.disp.thresholdsHum.rLo = jsonDocument[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | config.disp.thresholdsHum.rLo;
+            config.disp.thresholdsHum.wLo = jsonDocument[JSON_KEY_______HUM][JSON_KEY_WARN__LOW] | config.disp.thresholdsHum.wLo;
+            config.disp.thresholdsHum.wHi = jsonDocument[JSON_KEY_______HUM][JSON_KEY_WARN_HIGH] | config.disp.thresholdsHum.wHi;
+            config.disp.thresholdsHum.rHi = jsonDocument[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | config.disp.thresholdsHum.rHi;
 
             // altitude base level (home altitude of sensor)
-            config.sbme.altitudeBaselevel = root[JSON_KEY_______BME][JSON_KEY__ALTITUDE] | config.sbme.altitudeBaselevel;
-            config.sbme.lpFilterRatioCurr = root[JSON_KEY_______BME][JSON_KEY_______LPA] | config.sbme.lpFilterRatioCurr;
+            config.sbme.altitudeBaselevel = jsonDocument[JSON_KEY_______BME][JSON_KEY__ALTITUDE] | config.sbme.altitudeBaselevel;
+            config.sbme.lpFilterRatioCurr = jsonDocument[JSON_KEY_______BME][JSON_KEY_______LPA] | config.sbme.lpFilterRatioCurr;
 
-            String timezone = root[JSON_KEY__TIMEZONE] | "";
+            String timezone = jsonDocument[JSON_KEY__TIMEZONE] | "";
             if (timezone != "") {
                 timezone.toCharArray(config.time.timezone, 64);
             }

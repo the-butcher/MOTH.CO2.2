@@ -12,6 +12,7 @@ import LabelledDivider from './LabelledDivider';
 import NetworkChoice from './NetworkChoice';
 import { InstLoader } from '../util/InstLoader';
 import { TConfigStatus } from '../types/IConfig';
+import CertificateChoice from './CertificateChoice';
 
 type DeepPartial<T> = T extends object ? {
   [P in keyof T]?: DeepPartial<T[P]>;
@@ -326,9 +327,19 @@ const TabConfig = (props: ITabConfigProps) => {
             value={{
               type: 'string',
               value: disp.tzn,
+              // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
               items: {
-                'London (GMT/BST)': 'GMT0BST,M3.5.0/1,M10.5.0',
-                'Berlin, Vienna (CET/CEST)': 'CET-1CEST,M3.5.0,M10.5.0/3'
+                'Los Angeles (PST8PDT)': 'PST8PDT,M3.2.0,M11.1.0',
+                'Denver (MST7MDT)': 'MST7MDT,M3.2.0,M11.1.0',
+                'Chicago (CST6CDT)': 'CST6CDT,M3.2.0,M11.1.0',
+                'New York (EST5EDT)': 'EST5EDT,M3.2.0,M11.1.0',
+                'Atlantic (AST4ADT)': 'AST4ADT,M3.2.0,M11.1.0',
+                'Lisbon (WET0WEST)': ' WET0WEST,M3.5.0/1,M10.5.0',
+                'London (GMT0BST)': 'GMT0BST,M3.5.0/1,M10.5.0',
+                'Vienna (CET-1CEST)': 'CET-1CEST,M3.5.0,M10.5.0/3',
+                'Athens (EET-2EEST)': 'EET-2EEST,M3.5.0/3,M10.5.0/4',
+                'Sydney (AEST-10AEDT)': 'AEST-10AEDT,M10.1.0,M4.1.0/3',
+                'Auckland (NZST-12NZDT)': 'NZST-12NZDT,M9.5.0,M4.1.0/3',
               },
               handleUpdate: value => handleDispUpdate({ tzn: value })
             }}
@@ -583,38 +594,44 @@ const TabConfig = (props: ITabConfigProps) => {
           />
           <LabelledDivider label='mqtt settings' style={{ paddingTop: '32px' }} />
           <ConfigChoice
-            caption='broker address'
+            caption='use mqtt'
             value={{
-              type: 'string',
-              value: mqtt.srv,
-              help: 'i.e. 192.186.1.1 or mybroker.mynetwork.com',
-              handleUpdate: value => handleMqttUpdate({ srv: value })
+              type: 'toggle',
+              value: mqtt.use,
+              handleUpdate: value => handleMqttUpdate({ use: value })
             }}
           />
           {
-            mqtt.srv ? <ConfigChoice
-              caption='broker port'
-              value={{
-                type: 'number',
-                fixed: true,
-                value: mqtt.prt,
-                step: 1000,
-                min: 1,
-                max: 65535,
-                handleUpdate: value => handleMqttUpdate({ prt: value })
-              }}
-            /> : null
-          }
-          {
-            mqtt.srv && mqtt.prt ? <>
+            mqtt.use ? <>
               <ConfigChoice
-                caption='certificate path'
+                caption='broker address'
                 value={{
                   type: 'string',
-                  value: mqtt.crt,
-                  help: 'certificate must be uploaded to this path',
-                  handleUpdate: value => handleMqttUpdate({ crt: value })
+                  value: mqtt.srv,
+                  help: 'i.e. 192.186.1.1 or mybroker.mynetwork.com',
+                  handleUpdate: value => handleMqttUpdate({ srv: value })
                 }}
+              />
+              <ConfigChoice
+                caption='broker port'
+                value={{
+                  type: 'number',
+                  fixed: true,
+                  value: mqtt.prt,
+                  step: 1000,
+                  min: 1,
+                  max: 65535,
+                  handleUpdate: value => handleMqttUpdate({ prt: value })
+                }}
+              />
+              <CertificateChoice
+                boxUrl={boxUrl}
+                type='string'
+                caption='certificate path'
+                value={mqtt.crt}
+                help='certificate must be uploaded to this path'
+                handleUpdate={value => handleMqttUpdate({ crt: value })}
+                handleAlertMessage={handleAlertMessage}
               />
               <ConfigChoice
                 caption='username'
@@ -655,6 +672,8 @@ const TabConfig = (props: ITabConfigProps) => {
               />
             </> : null
           }
+
+
 
 
         </Stack>

@@ -2,6 +2,7 @@
 #define ModuleMqtt_h
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <PubSubClient.h>
 
 #include "types/Config.h"
@@ -10,8 +11,12 @@
 const String MQTT_CONFIG_JSON = "/config/mqtt.json";
 const String MQTT_CONFIG__DAT = "/config/mqtt.dat";
 const uint32_t MQTT_PUBLISH___NEVER = 0xFFFFFFFF;
+const uint32_t MQTT_PUBLISH_RECOVER = 60;
+const uint8_t MAX_PUB_COUNT = 20;
+const uint8_t ERR_PUB_COUNT = 128;
 
 typedef struct {
+    bool use;
     uint16_t prt;
     uint8_t min;
     char srv[64];

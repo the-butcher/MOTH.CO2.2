@@ -41,7 +41,7 @@ class ModuleWifi {
     static void begin(std::function<void(std::function<bool(config_t& config)>)> actionCompleteCallback);
     static void configure(config_t& config);  // loads json configuration and creates a dat version for faster future accessibility
     static void createDat(config_t& config);
-    static bool powerup(config_t& config, bool allowApMode);
+    static bool powerup(config_t& config, bool isManualActivation);
     static bool isPowered();
     static void depower(config_t& config);
     static void access();

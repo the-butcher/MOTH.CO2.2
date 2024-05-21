@@ -7,6 +7,7 @@ const String JSON_KEY_______CO2 = "co2";  // co2 thresholds
 const String JSON_KEY_______DEG = "deg";  // temperature thresholds
 const String JSON_KEY_______HUM = "hum";  // humidity thresholds
 const String JSON_KEY_______BME = "bme";  // altitude and low pass
+const String JSON_KEY_______USE = "use";
 const String JSON_KEY____SERVER = "srv";
 const String JSON_KEY______PORT = "prt";
 const String JSON_KEY______USER = "usr";
@@ -152,18 +153,20 @@ typedef enum : uint8_t {
     MQTT_TIMEOUT____CONN = 20,
     MQTT_LOST_______CONN = 21,  // connection was lost
     MQTT_FAIL_______CONN = 22,  // connect failed
-    MQTT_BAD____PROTOCOL = 23,
-    MQTT_BAD_________CLI = 24,
-    MQTT_UNAVAIL____CONN = 25,
-    MQTT_BAD_CREDENTIALS = 26,
-    MQTT_NO_________AUTH = 27,
     MQTT_FAIL____PUBLISH = 30,  // failure during publishing
-    // configuration issues
-    MQTT_CNF_________SRV = 50,
-    MQTT_CNF_________PRT = 51,
-    MQTT_CNF_________CLI = 52,
-    MQTT_FAIL________DAT = 53,
-    MQTT_NO__________DAT = 54,
+    // unrecoverable issues
+    MQTT_BAD____PROTOCOL = 40,
+    MQTT_BAD_________CLI = 41,
+    MQTT_UNAVAIL____CONN = 42,
+    MQTT_BAD_CREDENTIALS = 43,
+    MQTT_NO_________AUTH = 44,
+    // configuration issues, unrecoverable
+    MQTT_CNF____NOT_USED = 50,
+    MQTT_CNF_________SRV = 60,
+    MQTT_CNF_________PRT = 61,
+    MQTT_CNF_________CLI = 62,
+    MQTT_FAIL________DAT = 63,
+    MQTT_NO__________DAT = 64,
     // unknown issues
     MQTT_________UNKNOWN = 99,
 
@@ -184,9 +187,9 @@ typedef struct {
 typedef struct {
     float temperatureOffset;
     uint16_t calibrationCo2Ref;  // the co2 value to be calibrated to on button-action
-    float lpFilterRatioCurr;   // low pass filter alpha
-    uint16_t requestedCo2Ref;  // only to hold a value if calibration should be performed
-    bool requestedCo2Rst;      // only to be true when a reset should be performed
+    float lpFilterRatioCurr;     // low pass filter alpha
+    uint16_t requestedCo2Ref;    // only to hold a value if calibration should be performed
+    bool requestedCo2Rst;        // only to be true when a reset should be performed
 } sco2____all___t;
 
 typedef struct {

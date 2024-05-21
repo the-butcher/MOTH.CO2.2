@@ -51,9 +51,9 @@ void ModuleWifi::createDat(config_t& config) {
     File32 wifiFileJson;
     bool jsonSuccess = wifiFileJson.open(WIFI_CONFIG_JSON.c_str(), O_RDONLY);
     if (jsonSuccess) {
-        StaticJsonBuffer<512> jsonBuffer;
-        JsonObject& root = jsonBuffer.parseObject(wifiFileJson);
-        if (root.success()) {
+        JsonDocument jsonDocument;
+        DeserializationError error = deserializeJson(jsonDocument, wifiFileJson);
+        if (!error) {
 
             config.wifi.configStatus = CONFIG_STAT__APPLIED;
 
@@ -61,17 +61,17 @@ void ModuleWifi::createDat(config_t& config) {
             bool datSuccess = wifiFileDat.open(WIFI_CONFIG__DAT.c_str(), O_RDWR | O_CREAT | O_AT_END);  // the file has been checked to not exist
             if (datSuccess) {
 
-                int jsonNetworkCount = root[JSON_KEY__NETWORKS].as<JsonArray>().size();
+                int jsonNetworkCount = jsonDocument[JSON_KEY__NETWORKS].as<JsonArray>().size();
 
                 // problem: runs only when the dat file loads first
-                config.wifi.networkExpiryMinutes = root[JSON_KEY___MINUTES] | 5;  // apply network expiry (independant from networks)
+                config.wifi.networkExpiryMinutes = jsonDocument[JSON_KEY___MINUTES] | 5;  // apply network expiry (independant from networks)
 
                 String key;
                 String pwd;
                 network_t network;
                 for (uint8_t jsonNetworkIndex = 0; jsonNetworkIndex < jsonNetworkCount; jsonNetworkIndex++) {
-                    key = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______KEY] | "";
-                    pwd = root[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______PWD] | "";
+                    key = jsonDocument[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______KEY] | "";
+                    pwd = jsonDocument[JSON_KEY__NETWORKS][jsonNetworkIndex][JSON_KEY_______PWD] | "";
                     network = {0};
                     key.toCharArray(network.key, 64);
                     pwd.toCharArray(network.pwd, 64);
@@ -89,7 +89,7 @@ void ModuleWifi::createDat(config_t& config) {
     }
 }
 
-bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
+bool ModuleWifi::powerup(config_t& config, bool isManualActivation) {
 
     ModuleCard::begin();
 
@@ -119,7 +119,7 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     bool powerupSuccess = false;
 
     // in case of auto connect, try to do a fast connect to the last network
-    if (!allowApMode && config.wifi.networkConnIndexLast >= 0) {
+    if (!isManualActivation && config.wifi.networkConnIndexLast >= 0) {
         if (ModuleWifi::connectToNetwork(config, configuredNetworks[config.wifi.networkConnIndexLast])) {
             powerupSuccess = true;
         } else {
@@ -141,6 +141,7 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
         for (; ssidIndex < NETWORKS_BUFFER_SIZE; ssidIndex++) {
             ModuleWifi::discoveredNetworks[ssidIndex] = {NETWORK_RSSI_INVALID};
         }
+        WiFi.scanDelete();  // free memory from WiFi.scanNetworks() (we keep our own network information)
 
         // Ssort ModuleWifi::discoveredNetworks by network strength
         qsort(ModuleWifi::discoveredNetworks, NETWORKS_BUFFER_SIZE, sizeof(network_t), ModuleWifi::compareByRssi);
@@ -170,14 +171,16 @@ bool ModuleWifi::powerup(config_t& config, bool allowApMode) {
     }
 
     // no connection through any of the configured networks, start in ap mode
-    if (!powerupSuccess && allowApMode) {
+    if (!powerupSuccess && isManualActivation) {
         ModuleWifi::depower(config);  // sets valPower to WIFI____VAL_P__CUR_N
         delay(500);
         powerupSuccess = ModuleWifi::enableSoftAP(config);
     }
 
     if (powerupSuccess) {
-        ModuleHttp::begin();
+        if (isManualActivation) {
+            ModuleHttp::begin();
+        }
         ModuleWifi::access();
     } else {
         ModuleWifi::depower(config);  // if no connection could be established, set valPower to WIFI____VAL_P__CUR_N
@@ -257,10 +260,6 @@ void ModuleWifi::depower(config_t& config) {
     WiFi.mode(WIFI_OFF);
 }
 
-/**
- * awkward code for incrementing a single variable
- * there were problems, when the main code would not see the correct expiry time while the async web requests were updating
- */
 void ModuleWifi::access() {
     ModuleWifi::secondstimeExpiry = SensorTime::getSecondstime() + ModuleWifi::expiryMinutes * SECONDS_PER___________MINUTE;
 }

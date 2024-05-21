@@ -36,12 +36,10 @@ void ModuleHttp::begin() {
         server.on("/api/status", HTTP_GET, handleApiStatus);
         server.on("/api/netout", HTTP_GET, handleApiNetOut);
         server.on("/api/netoff", HTTP_GET, handleApiNetOff);
-
         server.on("/api/co2cal", HTTP_GET, handleApiCo2Cal);
         server.on("/api/co2rst", HTTP_GET, handleApiCo2Rst);
         server.on("/api/esprst", HTTP_GET, handleApiEspRst);
         server.on("/api/update", HTTP_POST, handleApiUpdate, ModuleHttp::handleUpdate);
-
         server.onNotFound(serveStatic);
         DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
         server.begin();
@@ -57,26 +55,25 @@ void ModuleHttp::handleApiLatest(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
 
     values_all_t latestValue = Values::latest();
 
-    root[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(latestValue.secondstime);
-    root[FIELD_NAME_CO2_LPF] = (uint16_t)round(latestValue.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
-    root[FIELD_NAME_CO2_RAW] = latestValue.valuesCo2.co2Raw;
-    root[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(latestValue.valuesCo2.deg) * 10) / 10.0;
-    root[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(latestValue.valuesCo2.hum) * 10) / 10.0;
-    root[FIELD_NAME_____HPA] = latestValue.valuesBme.pressure;
-    root[FIELD_NAME_____BAT] = SensorEnergy::toFloatPercent(latestValue.valuesNrg.percent);
+    jsonDocument[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(latestValue.secondstime);
+    jsonDocument[FIELD_NAME_CO2_LPF] = (uint16_t)round(latestValue.valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
+    jsonDocument[FIELD_NAME_CO2_RAW] = latestValue.valuesCo2.co2Raw;
+    jsonDocument[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(latestValue.valuesCo2.deg) * 10) / 10.0;
+    jsonDocument[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(latestValue.valuesCo2.hum) * 10) / 10.0;
+    jsonDocument[FIELD_NAME_____HPA] = latestValue.valuesBme.pressure;
+    jsonDocument[FIELD_NAME_____BAT] = SensorEnergy::toFloatPercent(latestValue.valuesNrg.percent);
 
     int maxAge = SECONDS_PER___________MINUTE + 10 - SensorTime::getSecondstime() % SECONDS_PER___________MINUTE;  // 10 seconds extra to account for measure time being some seconds behind the full minute
     char maxAgeBuf[16];
     sprintf(maxAgeBuf, "max-age=%s", String(maxAge));
     response->addHeader("Cache-Control", maxAgeBuf);
 
-    root.printTo(*response);
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -169,12 +166,11 @@ void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=10");
 
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
 
-    JsonArray &foldersJa = root.createNestedArray("folders");
-    JsonArray &filesJa = root.createNestedArray("files");
+    JsonArray foldersJa = jsonDocument["folders"].to<JsonArray>();
+    JsonArray filesJa = jsonDocument["files"].to<JsonArray>();
 
     String folderName = "/";
     if (request->hasParam("folder")) {
@@ -199,11 +195,11 @@ void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
             String lastModified = String(lastModifiedBuffer);
 
             if (file.isDirectory()) {
-                JsonObject &itemJo = foldersJa.createNestedObject();
+                JsonObject itemJo = foldersJa.add<JsonObject>();
                 itemJo["folder"] = name;
                 itemJo["last"] = lastModified;
             } else {
-                JsonObject &itemJo = filesJa.createNestedObject();
+                JsonObject itemJo = filesJa.add<JsonObject>();
                 itemJo["size"] = file.size();
                 itemJo["file"] = name;
                 itemJo["last"] = lastModified;
@@ -213,7 +209,7 @@ void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
     }
     folder.close();
 
-    root.printTo(*response);
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -223,11 +219,10 @@ void ModuleHttp::handleApiDirOut(AsyncWebServerRequest *request) {
 void ModuleHttp::handleApiUpload(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = ModuleHttp::uploadCode;
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = ModuleHttp::uploadCode;
     ModuleHttp::uploadCode = -1;  // reset for next usage
-    root.printTo(*response);
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -243,11 +238,10 @@ void ModuleHttp::handleApiDatDel(AsyncWebServerRequest *request) {
             bool success = ModuleCard::removeFile32(path);
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            DynamicJsonBuffer jsonBuffer;
-            JsonObject &root = jsonBuffer.createObject();
-            root["code"] = success ? 200 : 500;
-            root["file"] = path;
-            root.printTo(*response);
+            JsonDocument jsonDocument;
+            jsonDocument["code"] = success ? 200 : 500;
+            jsonDocument["file"] = path;
+            serializeJson(jsonDocument, *response);
             request->send(response);
 
         } else {
@@ -270,11 +264,10 @@ void ModuleHttp::handleApiDirDel(AsyncWebServerRequest *request) {
             bool success = ModuleCard::removeFolder(path);
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            DynamicJsonBuffer jsonBuffer;
-            JsonObject &root = jsonBuffer.createObject();
-            root["code"] = success ? 200 : 500;
-            root["folder"] = path;
-            root.printTo(*response);
+            JsonDocument jsonDocument;
+            jsonDocument["code"] = success ? 200 : 500;
+            jsonDocument["folder"] = path;
+            serializeJson(jsonDocument, *response);
             request->send(response);
 
         } else {
@@ -378,65 +371,53 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
-    root["vnum"] = VNUM;
-    root["boot"] = SensorTime::getDateTimeSecondsString(Device::secondstimeBoot);
-    root["heap"] = ESP.getFreeHeap();
-    root["sram"] = ESP.getPsramSize();
-    root["freq"] = ESP.getCpuFreqMHz();
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
+    jsonDocument["vnum"] = VNUM;
+    jsonDocument["boot"] = SensorTime::getDateTimeSecondsString(Device::secondstimeBoot);
+    jsonDocument["heap"] = ESP.getFreeHeap();
+    jsonDocument["sram"] = ESP.getPsramSize();
+    jsonDocument["freq"] = ESP.getCpuFreqMHz();
 
 #ifdef USE____DELAY
-    root["ddel"] = true;
+    jsonDocument["ddel"] = true;
 #else
-    root["ddel"] = false;
+    jsonDocument["ddel"] = false;
 #endif
 #ifdef USE___SERIAL
-    root["dser"] = true;
+    jsonDocument["dser"] = true;
 #else
-    root["dser"] = false;
+    jsonDocument["dser"] = false;
 #endif
 #ifdef USE_NEOPIXEL
-    root["dneo"] = true;
+    jsonDocument["dneo"] = true;
 #else
-    root["dneo"] = false;
+    jsonDocument["dneo"] = false;
 #endif
 #ifdef USE_PERIODIC
-    root["dper"] = true;
+    jsonDocument["dper"] = true;
 #else
-    root["dper"] = false;
+    jsonDocument["dper"] = false;
 #endif
 
-    JsonObject &values = root.createNestedObject("values");
+    JsonObject values = jsonDocument["values"].to<JsonObject>();
     values["nmsr"] = Values::values->nextMeasureIndex;
     values["mmsr"] = Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE;
     values["ndsp"] = Values::values->nextDisplayIndex;
     values["nntp"] = Values::values->nextAutoNtpIndex;
     values["npub"] = Values::values->nextAutoPubIndex;
 
-    JsonObject &scd041Jo = root.createNestedObject("scd041");
+    JsonObject scd041Jo = jsonDocument["scd041"].to<JsonObject>();
     scd041Jo["toff"] = SensorScd041::getTemperatureOffset();
     scd041Jo["iasc"] = SensorScd041::isAutomaticSelfCalibration();
 
-    JsonObject &bme280Jo = root.createNestedObject("bme280");
-    scd041Jo["calt"] = SensorScd041::getCompensationAltitude();
+    JsonObject bme280Jo = jsonDocument["bme280"].to<JsonObject>();
+    bme280Jo["calt"] = SensorScd041::getCompensationAltitude();
 
-    // mqtt attaches status to config. either config or just the status should be available here
-
-    // JsonObject &wifiJo = root.createNestedObject("wifi");
-    // wifiJo["config"] = BoxConn::formatConfigStatus(BoxConn::configStatus);
-
-    // JsonObject &dispJo = root.createNestedObject("disp");
-    // dispJo["config"] = BoxConn::formatConfigStatus(BoxDisplay::configStatus);
-
-    JsonObject &mqttJo = root.createNestedObject("mqtt");
+    JsonObject mqttJo = jsonDocument["mqtt"].to<JsonObject>();
     mqttJo["stat"] = (int)Config::getMqttStatus();
-    // mqttJo["config"] = BoxConn::formatConfigStatus(BoxMqtt::configStatus);
-    // mqttJo["active"] = BoxMqtt::isConfiguredToBeActive();
-    // mqttJo["pcount"] = Measurements::getPublishableCount();
 
-    root.printTo(*response);
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -446,21 +427,20 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
 void ModuleHttp::handleApiNetOut(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
 
-    JsonArray &networksJa = root.createNestedArray("networks");
+    JsonArray networksJa = jsonDocument["networks"].to<JsonArray>();
     network_t network;
     for (int networkIndex = 0; networkIndex < NETWORKS_BUFFER_SIZE; networkIndex++) {
         network = ModuleWifi::discoveredNetworks[networkIndex];
         if (network.rssi > NETWORK_RSSI_INVALID) {
-            JsonObject &networkJo = networksJa.createNestedObject();
+            JsonObject networkJo = networksJa.add<JsonObject>();
             networkJo["ssid"] = network.key;
             networkJo["rssi"] = network.rssi;
         }
     }
-    root.printTo(*response);
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -471,10 +451,9 @@ void ModuleHttp::handleApiNetOff(AsyncWebServerRequest *request) {
     ModuleWifi::expire();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=10");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
-    root.printTo(*response);
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -492,17 +471,16 @@ void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
             int ref = refRaw.toInt();
 
             AsyncResponseStream *response = request->beginResponseStream("application/json");
-            DynamicJsonBuffer jsonBuffer;
-            JsonObject &root = jsonBuffer.createObject();
-            root["code"] = 200;
+            JsonDocument jsonDocument;
+            jsonDocument["code"] = 200;
 
             co2cal______t co2cal = Values::getCo2Cal();
-            root["minValue"] = co2cal.minValue;
-            root["maxValue"] = co2cal.maxValue;
-            root["avgValue"] = co2cal.avgValue;
-            root["devValue"] = co2cal.devValue;
-            root["refValue"] = ref;
-            JsonArray &valuesJa = root.createNestedArray("values");
+            jsonDocument["minValue"] = co2cal.minValue;
+            jsonDocument["maxValue"] = co2cal.maxValue;
+            jsonDocument["avgValue"] = co2cal.avgValue;
+            jsonDocument["devValue"] = co2cal.devValue;
+            jsonDocument["refValue"] = ref;
+            JsonArray valuesJa = jsonDocument["values"].to<JsonArray>();
             network_t network;
             for (int index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {
                 valuesJa.add(co2cal.values[index]);
@@ -515,7 +493,7 @@ void ModuleHttp::handleApiCo2Cal(AsyncWebServerRequest *request) {
                 };
             }
 
-            root.printTo(*response);
+            serializeJson(jsonDocument, *response);
             request->send(response);
 
         } else {
@@ -537,15 +515,14 @@ void ModuleHttp::handleApiCo2Rst(AsyncWebServerRequest *request) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=180");
 
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
 
     ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
         config.sco2.requestedCo2Rst = true;
     };
 
-    root.printTo(*response);
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -570,21 +547,19 @@ void ModuleHttp::handleApiEspRst(AsyncWebServerRequest *request) {
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=10");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
-    root.printTo(*response);
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
 void ModuleHttp::handleApiUpdate(AsyncWebServerRequest *request) {
     ModuleWifi::access();
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = ModuleHttp::updateCode;
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = ModuleHttp::updateCode;
     ModuleHttp::updateCode = -1;  // reset for next usage
-    root.printTo(*response);
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
@@ -641,35 +616,32 @@ void ModuleHttp::serveFile32(AsyncWebServerRequest *request, String path) {
 void ModuleHttp::serve200Json(AsyncWebServerRequest *request, uint8_t p, uint8_t v) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 200;
-    root["p"] = p;
-    root["v"] = v;
-    root.printTo(*response);
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 200;
+    jsonDocument["p"] = p;
+    jsonDocument["v"] = v;
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
 void ModuleHttp::serve400Json(AsyncWebServerRequest *request, String description) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 400;
-    root["desc"] = description;
-    root.printTo(*response);
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 400;
+    jsonDocument["desc"] = description;
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 
 void ModuleHttp::serve404Json(AsyncWebServerRequest *request, String file) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     response->addHeader("Cache-Control", "max-age=60");  // CHECK_MEASURE_INTERVAL
-    DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    root["code"] = 404;
-    root["file"] = file;
-    root["desc"] = "file not found";
-    root.printTo(*response);
+    JsonDocument jsonDocument;
+    jsonDocument["code"] = 404;
+    jsonDocument["file"] = file;
+    jsonDocument["desc"] = "file not found";
+    serializeJson(jsonDocument, *response);
     request->send(response);
 }
 

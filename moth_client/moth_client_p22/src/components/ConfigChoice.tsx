@@ -9,7 +9,7 @@ const ConfigChoice = (props: IConfigChoiceProps) => {
     const { value } = { ...props };
 
     return (
-        <Stack direction={'row'} sx={{ alignItems: 'center' }}>
+        <Stack direction={'row'}>
             <Typography className='fieldlabel'>{props.caption}</Typography>
             <div style={{ flexGrow: 1 }}></div>
             <FormControl sx={{ minWidth: '200px', maxWidth: '450px', flexGrow: 10 }}>

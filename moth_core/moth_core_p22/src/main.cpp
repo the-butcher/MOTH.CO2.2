@@ -38,10 +38,8 @@ uint16_t actionNum = 0;
 
 /**
  * -- MQTT:
- *    -- enable MQTT publishing of non-published data from file
- *       -- maybe it is not possible to publish an entire file at once (need to have some portioning strategy)
- *    -- mqtt update after MQTT permanent failure freezes the device action cycle (wifi is still responsive though)
- *    -- there were still some memory issues, especially in combination with active WiFi usage
+ *    -- remove heap property from published message eventually
+ *    -- occasional timeouts in mosquitto log
  * -- WIFI:
  *    -- wifi sometimes turns off for unknown reasons (more likely when multiple requests are pending),
  * -- MISC:

@@ -1,6 +1,7 @@
 import { IConfig } from "./IConfig";
 
 export interface IMqttConfig extends IConfig {
+    use: boolean;
     srv?: string;
     prt?: number;
     crt?: string; // TODO :: handle file upload (must be an extra file field, "crt" just manages the path on the device)
@@ -12,11 +13,12 @@ export interface IMqttConfig extends IConfig {
 
 export const MQTT_CONFIG_DEFAULT: IMqttConfig = {
     status: 'DEFAULT',
-    // srv: '',
-    // prt: 0,
-    // crt: '',
-    // usr: '',
-    // pwd: '',
-    // cli: '',
-    // min: 0
+    use: false,
+    srv: '',
+    prt: 5,
+    crt: '',
+    usr: '',
+    pwd: '',
+    cli: '',
+    min: 5
 };

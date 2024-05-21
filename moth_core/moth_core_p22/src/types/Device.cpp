@@ -224,39 +224,41 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
 
     // turn on wifi, if required and adapt display modus
+    bool isOrWasWifiPowered = ModuleWifi::isPowered();
     if (config.wifi.wifiValPower == WIFI____VAL_P__PND_Y && !ModuleWifi::isPowered()) {  // to be turned on, but currently off
         if (ModuleWifi::powerup(config, true)) {
             config.disp.displayValSetng = DISPLAY_VAL_S_____QR;  // let the display render qr next time
         }
-        // } else if (config.wifi.wifiValPower == WIFI____VAL_P__PND_N && ModuleWifi::isPowered()) {  // to be turned off, and currently on
+        isOrWasWifiPowered = true;
     } else if (config.wifi.wifiValPower == WIFI____VAL_P__PND_N) {  // to be turned off, no check for powered state since the device could have silently lost connection
         ModuleWifi::depower(config);
+        isOrWasWifiPowered = true;
     }
 
-    bool autoNtpConn = Values::values->nextAutoNtpIndex <= Values::values->nextMeasureIndex;
-    bool autoPubConn = Values::values->nextAutoPubIndex <= Values::values->nextMeasureIndex;
     bool autoDepower = false;
-    if (autoNtpConn || autoPubConn) {
-        if (!ModuleWifi::isPowered()) {                        // is not on already
+    if (!isOrWasWifiPowered) {  // only auto connect while wifi is not on (or was recently on) to prevent memory race conditions
+        bool autoNtpConn = Values::values->nextAutoNtpIndex <= Values::values->nextMeasureIndex;
+        bool autoPubConn = Values::values->nextAutoPubIndex <= Values::values->nextMeasureIndex;
+        if (autoNtpConn || autoPubConn) {
             autoDepower = ModuleWifi::powerup(config, false);  // if the connection was successful, it also needs to be autoShutoff
-        }
-        if (autoNtpConn) {
-            SensorTime::setupNtpUpdate(config);                                                  // apply timezone
-            Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
-        }
-        if (autoPubConn) {
-            // try to publish (call with config, so mqtt gets the opportunity to )
-            ModuleMqtt::publish(config);
-            Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
-        }
-        if (autoDepower) {
-            for (int i = 0; i < 25; i++) {
-                if (!SensorTime::isNtpWait()) {
-                    break;
+            if (autoDepower) {                                 // was connected
+                if (autoPubConn) {
+                    // try to publish (call with config, so mqtt gets the opportunity to )
+                    ModuleMqtt::publish(config);
+                    Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
                 }
-                delay(100);
+                if (autoNtpConn) {
+                    SensorTime::setupNtpUpdate(config);                                                  // apply timezone
+                    Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
+                    for (int i = 0; i < 25; i++) {
+                        if (!SensorTime::isNtpWait()) {
+                            break;
+                        }
+                        delay(100);
+                    }
+                }
+                ModuleWifi::depower(config);
             }
-            ModuleWifi::depower(config);
         }
     }
 
