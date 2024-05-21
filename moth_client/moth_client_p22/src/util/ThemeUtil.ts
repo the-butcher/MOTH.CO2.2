@@ -59,6 +59,11 @@ export class ThemeUtil {
                             '&.MuiOutlinedInput-input': {
                                 padding: '10px'
                                 // backgroundColor: '#F0F0F0'
+                            },
+                            '&.MuiInputBase-inputMultiline': {
+                                whiteSpace: 'pre',
+                                // fontSize: '12px',
+                                padding: '0px'
                             }
                         }
                     }

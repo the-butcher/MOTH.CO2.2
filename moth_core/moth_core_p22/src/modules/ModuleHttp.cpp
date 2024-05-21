@@ -688,7 +688,7 @@ void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, s
         targetFile.sync();
         targetFile.close();
 
-        if (dataFileName == MQTT_CONFIG_JSON) {
+        if (dataFileName == MQTT_CONFIG_JSON || dataFileName == MQTT_CONFIG__CRT) {
             ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
                 ModuleMqtt::configure(config);  // deletes and rebuilds the mqtt dat
                 values.nextAutoPubIndex = 0;    // resetting this value will trigger a republish attempt (and this rebuilds the mqtt dat)

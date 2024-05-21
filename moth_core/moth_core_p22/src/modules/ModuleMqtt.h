@@ -10,6 +10,7 @@
 
 const String MQTT_CONFIG_JSON = "/config/mqtt.json";
 const String MQTT_CONFIG__DAT = "/config/mqtt.dat";
+const String MQTT_CONFIG__CRT = "/config/ca.crt";
 const uint32_t MQTT_PUBLISH___NEVER = 0xFFFFFFFF;
 const uint32_t MQTT_PUBLISH_RECOVER = 60;
 const uint8_t MAX_PUB_COUNT = 20;
@@ -23,7 +24,6 @@ typedef struct {
     char usr[64];
     char pwd[64];
     char cli[16];
-    char crt[16];
 } mqtt____t;
 
 class ModuleMqtt {

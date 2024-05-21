@@ -96,7 +96,7 @@ const ChartValues = (props: IChartProps) => {
 
         };
         image.onerror = (e) => {
-            console.error('e', e);
+            console.error('failed to complete export', e);
             handleExportComplete();
         };
         image.src = svgDataUrl;

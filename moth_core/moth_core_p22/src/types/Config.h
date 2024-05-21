@@ -13,7 +13,6 @@ const String JSON_KEY______PORT = "prt";
 const String JSON_KEY______USER = "usr";
 const String JSON_KEY_______PWD = "pwd";
 const String JSON_KEY____CLIENT = "cli";
-const String JSON_KEY______CERT = "crt";
 const String JSON_KEY___MINUTES = "min";
 const String JSON_KEY__NETWORKS = "ntw";
 const String JSON_KEY_______KEY = "key";

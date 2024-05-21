@@ -38,7 +38,6 @@ uint16_t actionNum = 0;
 
 /**
  * -- MQTT:
- *    -- remove heap property from published message eventually
  *    -- occasional timeouts in mosquitto log
  * -- WIFI:
  *    -- wifi sometimes turns off for unknown reasons (more likely when multiple requests are pending),
@@ -46,6 +45,7 @@ uint16_t actionNum = 0;
  *    -- be sure data is written exactly every 60 minutes (not 59 or 61)
  *    -- ideally data would also be flushed with the full hour
  *    -- save data on HTTP reset (have shorter no-data periods)
+ *    -- do not allow button calibration when the variance is too large (just do not instantiate a button action)
  */
 
 // schedule setting and display
@@ -102,7 +102,7 @@ void handleWakeupCause() {
 
 void setup() {
 
-    esp_log_level_set("*", ESP_LOG_ERROR);
+    esp_log_level_set("*", ESP_LOG_NONE);
 
     // turn on I2C power
     rtc_gpio_deinit((gpio_num_t)I2C_POWER);
@@ -200,21 +200,8 @@ void secondsSleep(uint32_t seconds) {
         esp_sleep_enable_ext1_wakeup(device.ext1Bitmask, ESP_EXT1_WAKEUP_ANY_LOW);
     }
 
-#ifdef USE_PERIODIC
     esp_sleep_enable_timer_wakeup(sleepMicros);
     gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
-#else
-    esp_sleep_enable_timer_wakeup(sleepMicros);
-    gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
-    // if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {  // next action is DEVICE_ACTION_POWERUP, therfore no timer wakeup, RTC pulse will take care of wakeup
-    //     pinMode(I2C_POWER, OUTPUT);
-    //     digitalWrite(I2C_POWER, LOW);
-    //     gpio_hold_dis((gpio_num_t)I2C_POWER);
-    // } else {
-    //     esp_sleep_enable_timer_wakeup(sleepMicros);
-    //     gpio_hold_en((gpio_num_t)I2C_POWER);  // power needs to be help or sensors will not measure
-    // }
-#endif
 
     Wire.end();
 

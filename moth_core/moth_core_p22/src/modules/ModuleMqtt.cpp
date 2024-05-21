@@ -16,11 +16,6 @@ void ModuleMqtt::configure(config_t& config) {
 
 void ModuleMqtt::createDat(config_t& config) {
 
-    // ModuleSignal::beep(523);
-    // delay(100);
-    // ModuleSignal::beep(659);
-    // delay(100);
-
     File32 mqttFileJson;
     bool jsonSuccess = mqttFileJson.open(MQTT_CONFIG_JSON.c_str(), O_RDONLY);
     if (jsonSuccess) {
@@ -35,16 +30,11 @@ void ModuleMqtt::createDat(config_t& config) {
             if (datSuccess) {
 
                 bool use = jsonDocument[JSON_KEY_______USE] | false;
-#ifdef USE___SERIAL
-                Serial.printf("mqtt, use: %d\n", use);
-#endif
-
                 String srv = jsonDocument[JSON_KEY____SERVER] | "";
                 uint16_t prt = jsonDocument[JSON_KEY______PORT] | 0;
                 String usr = jsonDocument[JSON_KEY______USER] | "";
                 String pwd = jsonDocument[JSON_KEY_______PWD] | "";
                 String cli = jsonDocument[JSON_KEY____CLIENT] | "";
-                String crt = jsonDocument[JSON_KEY______CERT] | "";
                 uint8_t min = jsonDocument[JSON_KEY___MINUTES] | 15;
 
                 mqtt____t mqtt;
@@ -55,7 +45,6 @@ void ModuleMqtt::createDat(config_t& config) {
                 usr.toCharArray(mqtt.usr, 64);
                 pwd.toCharArray(mqtt.pwd, 64);
                 cli.toCharArray(mqtt.cli, 16);
-                crt.toCharArray(mqtt.crt, 16);
 
                 mqttFileDat.write((byte*)&mqtt, sizeof(mqtt));
                 mqttFileDat.close();
@@ -136,10 +125,10 @@ void ModuleMqtt::publish(config_t& config) {
 
                 WiFiClient* wifiClient;
                 char* certFileData = NULL;
-                if (mqtt.crt != "" && ModuleCard::existsPath(mqtt.crt)) {
+                if (ModuleCard::existsPath(MQTT_CONFIG__CRT)) {
                     wifiClient = new WiFiClientSecure();
                     File32 certFile;
-                    certFile.open(mqtt.crt, O_RDONLY);
+                    certFile.open(MQTT_CONFIG__CRT.c_str(), O_RDONLY);
                     certFileData = (char*)malloc(certFile.size() + 1);
                     certFile.readBytes(certFileData, certFile.size());
                     ((WiFiClientSecure*)wifiClient)->setCACert(certFileData);
@@ -314,14 +303,12 @@ void ModuleMqtt::publish(config_t& config) {
                     int loopExecutionCount = 0;
                     mqttClient->loop();
                     while (wifiClient->available() && loopExecutionCount++ < 5) {
-                        ModuleSignal::beep(1000);
                         mqttClient->loop();
                     }
 
 #ifdef USE___SERIAL
                     Serial.printf("disconnecting mqtt\n");
 #endif
-                    ModuleSignal::beep(500);
                     mqttClient->disconnect();  // calls stop() on wificlient
 
                 } else {
@@ -356,18 +343,21 @@ void ModuleMqtt::publish(config_t& config) {
     // TODO :: appropriate config and values for status
     if (config.mqtt.mqttStatus != MQTT______________OK) {
 
-        if (config.mqtt.mqttStatus >= 40) {                         // non-recoverable
+        if (config.mqtt.mqttStatus >= 40) {  // non-recoverable
+#ifdef USE___SERIAL
+            Serial.printf("returning from mqtt failure (non----recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
+#endif
             config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // new-config needs to be uploaded for retry
         } else {                                                    // recoverable
             config.mqtt.mqttFailureCount++;
             if (config.mqtt.mqttFailureCount > 3) {
 #ifdef USE___SERIAL
-                Serial.printf("returning from mqtt failure (non-recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
+                Serial.printf("returning from mqtt failure (medium-recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
 #endif
                 config.mqtt.mqttPublishMinutes = MQTT_PUBLISH_RECOVER;  // try to recover after one hour
             } else {
 #ifdef USE___SERIAL
-                Serial.printf("returning from mqtt failure (recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
+                Serial.printf("returning from mqtt failure (short--recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
 #endif
             }
         }
@@ -390,20 +380,9 @@ bool ModuleMqtt::publishMeasurement(config_t& config, values_all_t* value, char*
     jsonDocument[FIELD_NAME_____HUM] = round(SensorScd041::toFloatHum(value->valuesCo2.hum) * 10) / 10.0;
     jsonDocument[FIELD_NAME_____HPA] = value->valuesBme.pressure;
     jsonDocument[FIELD_NAME_____BAT] = round(SensorEnergy::toFloatPercent(value->valuesNrg.percent) * 10) / 10.0;
-    jsonDocument["heap"] = ESP.getFreeHeap();
 
     // https://arduinojson.org/v7/how-to/use-arduinojson-with-pubsubclient/
     char outputBuf[128];
     serializeJson(jsonDocument, outputBuf);
     return mqttClient->publish(client, outputBuf);
-
-    // // print json to string
-    // String outputStr;
-    // serializeJson(jsonDocument, outputStr);
-    // int outputLen = outputStr.length() + 1;
-
-    // char outputBuf[outputLen];
-    // outputStr.toCharArray(outputBuf, outputLen);
-
-    // return mqttClient->publish(client, (uint8_t const*)outputBuf, outputLen);
 }

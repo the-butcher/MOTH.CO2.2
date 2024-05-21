@@ -1,18 +1,21 @@
 import SouthIcon from '@mui/icons-material/South';
 import VideoLabelIcon from '@mui/icons-material/VideoLabel';
 import { Badge, IconButton, Stack } from '@mui/material';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { ICertConfig } from '../types/ICertConfig';
+import { TConfigStatus } from '../types/IConfig';
 import { IDispConfig } from '../types/IDispConfig';
 import { IMqttConfig } from '../types/IMqttConfig';
 import { ITabConfigProps } from '../types/ITabConfigProps';
 import { IWifiConfig } from '../types/IWifiConfig';
+import { InstLoader } from '../util/InstLoader';
 import { JsonLoader } from '../util/JsonLoader';
+import { TextLoader } from '../util/TextLoader';
+import CertificateChoice from './CertificateChoice';
 import ConfigChoice from './ConfigChoice';
 import LabelledDivider from './LabelledDivider';
 import NetworkChoice from './NetworkChoice';
-import { InstLoader } from '../util/InstLoader';
-import { TConfigStatus } from '../types/IConfig';
-import CertificateChoice from './CertificateChoice';
+// var forge = require('node-forge');
 
 type DeepPartial<T> = T extends object ? {
   [P in keyof T]?: DeepPartial<T[P]>;
@@ -25,7 +28,9 @@ type DeepPartial<T> = T extends object ? {
  */
 const TabConfig = (props: ITabConfigProps) => {
 
-  const { boxUrl, disp, wifi, mqtt, handleUpdate, handleAlertMessage } = { ...props };
+  const { boxUrl, disp, wifi, mqtt, cert, handleUpdate, handleAlertMessage } = { ...props };
+
+  const handleConfigUploadToRef = useRef<number>(-1);
 
   const loadDispConfig = async (): Promise<IDispConfig> => {
     return await new JsonLoader().load(`${boxUrl}/datout?file=config/disp.json`);
@@ -37,6 +42,41 @@ const TabConfig = (props: ITabConfigProps) => {
 
   const loadMqttConfig = async (): Promise<IMqttConfig> => {
     return await new JsonLoader().load(`${boxUrl}/datout?file=config/mqtt.json`);
+  }
+
+  const loadCertificateFile = () => {
+
+    new TextLoader().load(`${boxUrl}/datout?file=config/ca.crt`).then((response: string) => {
+
+      if (response.indexOf('"code":404') >= 0) { // no certificate found on the device
+        handleUpdate({
+          cert: {
+            status: 'LOADED_INVALID',
+            crt: ''
+          }
+        });
+      } else {
+        const certLoaded: ICertConfig = {
+          status: 'LOADED_VALID',
+          crt: response
+        };
+        handleUpdate({
+          cert: {
+            ...certLoaded,
+            status: isCertConfigValid(certLoaded) ? 'LOADED_VALID' : 'LOADED_INVALID'
+          }
+        });
+      }
+
+    }).catch((e: Error) => {
+      console.error('e', e);
+      handleAlertMessage({
+        message: e.message ? e.message : 'failed to check certificate presence',
+        severity: 'error',
+        active: true
+      });
+    });
+
   }
 
   /**
@@ -52,22 +92,21 @@ const TabConfig = (props: ITabConfigProps) => {
           handleUpdate({
             disp: {
               ..._disp,
-              status: 'LOADED'
+              status: 'LOADED_VALID'
             },
             wifi: {
               ..._wifi,
-              status: 'LOADED'
+              status: 'LOADED_VALID'
             },
             mqtt: {
               ..._mqttConfig,
-              // crt: _mqttConfig.crt ? _mqttConfig.crt : '/config/ca.crt',
               cli: _mqttConfig.cli ? _mqttConfig.cli : `moth${boxUrl.substring(boxUrl.lastIndexOf('.')).replace('.', '_').replace('/api', '').padStart(4, '_')}`,
               min: _mqttConfig.min ? _mqttConfig.min : 5,
-              status: 'LOADED'
+              status: 'LOADED_VALID'
             }
           });
         }).catch(e => {
-          console.error('e', e);
+          console.error('failed to load mqtt config', e);
           handleAlertMessage({
             message: e.message ? e.message : 'failed to load mqtt config',
             severity: 'error',
@@ -75,7 +114,7 @@ const TabConfig = (props: ITabConfigProps) => {
           });
         });
       }).catch(e => {
-        console.error('e', e);
+        console.error('failed to load wifi config', e);
         handleAlertMessage({
           message: e.message ? e.message : 'failed to load wifi config',
           severity: 'error',
@@ -83,13 +122,14 @@ const TabConfig = (props: ITabConfigProps) => {
         });
       });
     }).catch(e => {
-      console.error('e', e);
+      console.error('failed to load disp config', e);
       handleAlertMessage({
         message: e.message ? e.message : 'failed to load disp config',
         severity: 'error',
         active: true
       });
     });
+    loadCertificateFile();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -210,15 +250,37 @@ const TabConfig = (props: ITabConfigProps) => {
    * @param update
    */
   const handleMqttUpdate = (update: Partial<IMqttConfig>) => {
-    const _mqtt = {
+    const mqttUpdate: IMqttConfig = {
       ...mqtt,
       ...update
     };
-    const mqttConfigStatus: TConfigStatus = getMqttConfigStatus(_mqtt);
+    const mqttConfigStatus: TConfigStatus = getMqttConfigStatus(mqttUpdate);
     handleUpdate({
       mqtt: {
-        ..._mqtt,
+        ...mqttUpdate,
         status: mqttConfigStatus
+      }
+    });
+  };
+
+  /**
+ * evaluates the status of the cert config, depending on the properties currently configured
+ * @param update
+ */
+  const isCertConfigValid = (cert: ICertConfig): boolean => {
+    const crt = cert.crt.trim();
+    return (crt === '' || (crt.startsWith('-----BEGIN CERTIFICATE-----') && crt.endsWith('-----END CERTIFICATE-----')));
+  }
+
+  const handleCertUpdate = (update: Partial<ICertConfig>) => {
+    const certUpdate: ICertConfig = {
+      ...cert,
+      ...update,
+    };
+    handleUpdate({
+      cert: {
+        ...certUpdate,
+        status: isCertConfigValid(certUpdate) ? 'MODIFIED_VALID' : 'MODIFIED_INVALID'
       }
     });
   };
@@ -230,28 +292,44 @@ const TabConfig = (props: ITabConfigProps) => {
 
     const updates: Partial<ITabConfigProps> = {};
     if (disp.status === 'MODIFIED_VALID') {
-      await new InstLoader().load(disp, 'config/disp.json', `${boxUrl}/upload`);
+      await new InstLoader().load(disp, 'config/disp.json', 'application/json;charset=utf-8', `${boxUrl}/upload`, inst => JSON.stringify(inst, null, 2));
       updates.disp = {
         ...disp,
-        status: 'LOADED'
+        status: 'LOADED_VALID'
       };
-    }
-    if (wifi.status === 'MODIFIED_VALID') {
-      await new InstLoader().load(wifi, 'config/wifi.json', `${boxUrl}/upload`);
+    } else if (wifi.status === 'MODIFIED_VALID') {
+      await new InstLoader().load(wifi, 'config/wifi.json', 'application/json;charset=utf-8', `${boxUrl}/upload`, inst => JSON.stringify(inst, null, 2));
       updates.wifi = {
         ...wifi,
-        status: 'LOADED'
+        status: 'LOADED_VALID'
       };
-    }
-    if (mqtt.status === 'MODIFIED_VALID') {
-      await new InstLoader().load(mqtt, 'config/mqtt.json', `${boxUrl}/upload`);
+    } else if (mqtt.status === 'MODIFIED_VALID') {
+      await new InstLoader().load(mqtt, 'config/mqtt.json', 'application/json;charset=utf-8', `${boxUrl}/upload`, inst => JSON.stringify(inst, null, 2));
       updates.mqtt = {
         ...mqtt,
-        status: 'LOADED'
+        status: 'LOADED_VALID'
+      };
+    } else if (cert.status === 'MODIFIED_VALID') {
+      if (cert.crt !== '') {
+        await new InstLoader().load(cert, 'config/ca.crt', 'application/x-x509-ca-cert', `${boxUrl}/upload`, inst => inst.crt);
+
+      } else {
+        await new JsonLoader().load(`${boxUrl}/datdel?file=config/ca.crt`);
+      }
+      updates.cert = {
+        ...cert,
+        status: 'LOADED_VALID'
       };
     }
 
     handleUpdate(updates);
+
+    if (getModifiedCount() > 0) {
+      window.clearTimeout(handleConfigUploadToRef.current);
+      handleConfigUploadToRef.current = window.setTimeout(() => {
+        handleConfigUpload();
+      }, 5000);
+    }
 
   }
 
@@ -268,6 +346,9 @@ const TabConfig = (props: ITabConfigProps) => {
       modifiedCount++;
     }
     if (mqtt.status === 'MODIFIED_VALID') {
+      modifiedCount++;
+    }
+    if (cert.status === 'MODIFIED_VALID') {
       modifiedCount++;
     }
     return modifiedCount;
@@ -625,13 +706,8 @@ const TabConfig = (props: ITabConfigProps) => {
                 }}
               />
               <CertificateChoice
-                boxUrl={boxUrl}
-                type='string'
-                caption='certificate path'
-                value={mqtt.crt}
-                help='certificate must be uploaded to this path'
-                handleUpdate={value => handleMqttUpdate({ crt: value })}
-                handleAlertMessage={handleAlertMessage}
+                cert={cert}
+                handleUpdate={value => handleCertUpdate({ crt: value })}
               />
               <ConfigChoice
                 caption='username'
@@ -672,12 +748,7 @@ const TabConfig = (props: ITabConfigProps) => {
               />
             </> : null
           }
-
-
-
-
         </Stack>
-
       </Stack>
     </>
   );

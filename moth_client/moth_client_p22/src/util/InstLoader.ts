@@ -6,17 +6,17 @@ import { IConfig } from "../types/IConfig";
 export class InstLoader {
 
     /**
-     * load from the given url and return a promise resolving to an instance of LfvEvent
+     * load from the given url and return a promise
      * @param url
      */
-    async load(inst: IConfig, path: string, url: string): Promise<any> {
+    async load<T extends IConfig>(inst: T, path: string, type: string, url: string, trns: (config: T) => string): Promise<any> {
 
         delete inst['status']; // remove the status flag (not needed in uploaded file)
 
-        const instJson = JSON.stringify(inst, null, 2);
-        const instData = new TextEncoder().encode(instJson);
+        const instTrns = trns(inst);
+        const instData = new TextEncoder().encode(instTrns);
         const instBlob = new Blob([instData], {
-            type: "application/json;charset=utf-8"
+            type
         });
         var instFile = new File([instBlob], "file_name", { lastModified: Date.now() });
 

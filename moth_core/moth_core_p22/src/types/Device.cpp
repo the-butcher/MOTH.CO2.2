@@ -235,10 +235,20 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         isOrWasWifiPowered = true;
     }
 
+#ifdef USE___SERIAL
+    Serial.printf("isOrWasWifiPowered: %d\n", isOrWasWifiPowered);
+#endif
+
     bool autoDepower = false;
     if (!isOrWasWifiPowered) {  // only auto connect while wifi is not on (or was recently on) to prevent memory race conditions
+
         bool autoNtpConn = Values::values->nextAutoNtpIndex <= Values::values->nextMeasureIndex;
         bool autoPubConn = Values::values->nextAutoPubIndex <= Values::values->nextMeasureIndex;
+
+#ifdef USE___SERIAL
+        Serial.printf("autoNtpConn: %d (%d <= %d), autoPubConn: %d (%d <= %d)\n", autoNtpConn, Values::values->nextAutoNtpIndex, Values::values->nextMeasureIndex, autoPubConn, Values::values->nextAutoPubIndex, Values::values->nextMeasureIndex);
+#endif
+
         if (autoNtpConn || autoPubConn) {
             autoDepower = ModuleWifi::powerup(config, false);  // if the connection was successful, it also needs to be autoShutoff
             if (autoDepower) {                                 // was connected

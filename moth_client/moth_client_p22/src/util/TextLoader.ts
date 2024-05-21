@@ -4,7 +4,7 @@
 export class TextLoader {
 
     /**
-     * load from the given url and return a promise resolving to an instance of LfvEvent
+     * load from the given url and return a promise
      * @param url
      */
     async load(url: string): Promise<any> {

@@ -15,7 +15,7 @@ export const MQTT_CONFIG_DEFAULT: IMqttConfig = {
     status: 'DEFAULT',
     use: false,
     srv: '',
-    prt: 5,
+    prt: 1883,
     crt: '',
     usr: '',
     pwd: '',

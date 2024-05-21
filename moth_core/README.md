@@ -17,7 +17,7 @@ Most recent PlatformIO project:
 
 ---
 
-Configuration files that define the behaviour of the sensor.
+Configuration files that define the behaviour of the device.
 
 ## [SD/config](SD/config/)
 
@@ -122,9 +122,9 @@ documentation (please do not use the documented version on the device, but a cle
 
 ```
 {
+  "use": true, <<< use mqtt?
   "srv": "192.168.0.123", <<< mqtt broker host (required)
   "prt": 8883, <<< mqtt broker port (required)
-  "crt": "/config/ca.crt", <<< mqtt certificate (optional), if specified, the certificate must be present at the location specified
   "usr": "hannes", <<< mqtt user (optional)
   "pwd": "n7NZ+SfvP68wzUgh3t4acw==", <<< mqtt password (optional)
   "cli": "moth_2", <<< the mqtt client-id that the device will use
@@ -132,24 +132,11 @@ documentation (please do not use the documented version on the device, but a cle
 }
 ```
 
-example (protected server with certificate):
+example (protected, if a certificate is present at "/config/ca.crt" secure):
 
 ```
 {
-  "srv": "192.168.0.115",
-  "prt": 8883,
-  "crt": "/config/ca.crt",
-  "usr": "hannes",
-  "pwd": "fleischer",
-  "cli": "moth__66",
-  "min": 5
-}
-```
-
-example (protected server, no certificate):
-
-```
-{
+  "use": true,
   "srv": "192.168.0.115",
   "prt": 8883,
   "usr": "hannes",
@@ -159,10 +146,11 @@ example (protected server, no certificate):
 }
 ```
 
-example (unprotected server, no certificate):
+example (unprotected server, if the server does not require a secure connection, the certificate file "/config/ca.crt" should not exist):
 
 ```
 {
+  "use": true,
   "srv": "192.168.0.115",
   "prt": 1883,
   "cli": "moth__66",
@@ -174,9 +162,11 @@ example (mqtt inactive):
 
 ```
 {
-  "srv": ""
+  "use": false
 }
 ```
+
+for all above configurations, if there is a certificate present at "/config/ca.crt", a secure wifi-connection will be created using that certificate.
 
 - ### [wifi.json](SD/config/wifi.json)
 

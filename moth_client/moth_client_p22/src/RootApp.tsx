@@ -16,6 +16,7 @@ import { ITabValuesProps } from './types/ITabValuesProps';
 import { WIFI_CONFIG_DEFAULT } from './types/IWifiConfig';
 import { JsonLoader } from './util/JsonLoader';
 import { ThemeUtil } from './util/ThemeUtil';
+import { CERT_CONFIG_DEFAULT } from './types/ICertConfig';
 
 type VIEW_TYPE = 'values' | 'config' | 'server';
 
@@ -23,15 +24,15 @@ const theme = ThemeUtil.createTheme();
 
 const RootApp = () => {
 
-  // const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  const boxUrl = `http://192.168.0.178/api`; // when running directly from device
+  const boxUrl = `${window.location.origin}/api`; // when running directly from device
+  // const boxUrl = `http://192.168.0.178/api`; // when running directly from device
 
   /**
    * steps needed to deploy a new version
    * -- build (will create gzipped versions of root.html and root.js)
    * -- delete non-zipped versions and rename zipped
-   * -- upload to device
    * -- replace in the SD/server directory
+   * -- upload to device from SD/server directory
    */
 
   const [viewType, setViewType] = useState<VIEW_TYPE>('values');
@@ -56,7 +57,7 @@ const RootApp = () => {
         active: false
       })
     }).catch((e: Error) => {
-      console.error('e', e);
+      console.error('failed to connect to device', e);
       handleAlertMessage({
         message: e.message ? e.message : 'failed to connect to device',
         severity: 'error',
@@ -211,6 +212,7 @@ const RootApp = () => {
     disp: DISP_CONFIG_DEFAULT,
     wifi: WIFI_CONFIG_DEFAULT,
     mqtt: MQTT_CONFIG_DEFAULT,
+    cert: CERT_CONFIG_DEFAULT,
     handleUpdate: handleConfigUpdate,
     handleAlertMessage
   });

@@ -80,7 +80,7 @@ const ApiCalcsv = (props: IApiProperties) => {
         setDateRangeData(_dateRange);
         setDateRangeUser(_dateRange);
       }).catch(e => {
-        console.error(e);
+        console.error('failed to collect years', e);
       });
 
     }

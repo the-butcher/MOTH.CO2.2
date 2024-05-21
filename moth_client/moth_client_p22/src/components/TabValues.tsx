@@ -71,7 +71,7 @@ const TabValues = (props: ITabValuesProps) => {
         latest
       });
     }).catch((e: Error) => {
-      console.error('e', e);
+      console.error('failed to get latest values', e);
       handleAlertMessage({
         message: e.message ? e.message : 'failed to get latest values',
         severity: 'error',
@@ -94,7 +94,7 @@ const TabValues = (props: ITabValuesProps) => {
         dateRangeUser: [dateMinUser, dateMaxMisc]
       });
     }).catch((e: Error) => {
-      console.error('e', e);
+      console.error('failed to collect date range', e);
       handleAlertMessage({
         message: e.message ? e.message : 'failed to collect date range',
         severity: 'error',
@@ -133,7 +133,7 @@ const TabValues = (props: ITabValuesProps) => {
         records
       });
     }).catch((e: Error) => {
-      console.error('e', e);
+      console.error('failed to load records', e);
       handleAlertMessage({
         message: e.message ? e.message : 'failed to load records',
         severity: 'error',

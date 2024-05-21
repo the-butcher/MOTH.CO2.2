@@ -110,6 +110,7 @@ void ModuleDisp::attachWakeup(wakeup_action_e wakeupType) {
         ModuleDisp::interrupted = false;
     }
 }
+
 void ModuleDisp::detachWakeup(wakeup_action_e wakeupType) {
     if (wakeupType == WAKEUP_ACTION_BUSY) {
         detachInterrupt(digitalPinToInterrupt(PIN_EPD_BUSY));
@@ -445,6 +446,7 @@ void ModuleDisp::renderChart(values_all_t history[60], config_t& config) {
         value = String(SensorEnergy::toFloatPercent(lastMeasurement.valuesNrg.percent), 0);
         vunit = "%";
     }
+
     char titleBuffer[32];
     sprintf(titleBuffer, "%s (%s%s),%dh", label, value, vunit, config.disp.displayHrsChart);
     String title = String(titleBuffer);
