@@ -1,6 +1,6 @@
-# MOTH Core
+# Core
 
-This folder contains the Arduino Sketch for the MOTH.CO2.2 sensor and a set of configuration files in [SD](SD) that need be copied to the SD card of the device.
+This folder contains the Arduino Sketch for the moth.CO2.2 sensor and a set of configuration files in [SD](SD) that need be copied to the SD card of the device.
 
 The moth_core folder of the project is structured as follows:
 
@@ -8,12 +8,12 @@ The moth_core folder of the project is structured as follows:
 
 Historic versions of the project (kept for reference):
 
-#### [moth_core_020](moth_core_020)
-#### [moth_core_021](moth_core_021)
+- #### [moth_core_020](moth_core_020)
+- #### [moth_core_021](moth_core_021)
 
 Most recent PlatformIO project:
 
-## [moth_core_022](moth_core_022)
+- #### **[moth_core_022](moth_core_022)**
 
 ---
 

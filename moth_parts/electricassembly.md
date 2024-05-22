@@ -49,6 +49,6 @@ Attach the Buzzer so its pins go into GND and A1.
 
 ---
 
-The Electric Assembly is now ready to be configured and to have a sketch uploaded. Please refer to [MOTH Core](../moth_core/README.md) for further instructions.
+The Electric Assembly is now ready to be configured and to have a sketch uploaded. Please refer to [Core](../moth_core/README.md) for further instructions.
 
 ---
