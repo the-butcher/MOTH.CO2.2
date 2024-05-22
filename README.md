@@ -33,18 +33,18 @@ This projects provides instructions for building a CO₂ sensor from off the she
 ---
 ## The root folder of the project is structured as follows:
 
-### [Core](moth_core/README.md)
+### [Core (moth_core)](moth_core/README.md)
 
 This project is built with [PlatformIO](https://platformio.org/). Please refer to the instructions provided on the PlatformIO website. PlatformIO makes development with the ESP32 microcontroller easier and faster compared to the Arduino IDE. If you have not switched yet i advise you to do so, it will save you time after a very short period of time.
 The PlatformIO project, and configuration files can be found here.
 
 ---
-### [Building instructions](moth_parts/README.md)
+### [Building instructions (moth_parts)](moth_parts/README.md)
 
 Building instructions, drawings and printable files for the device.
 
 ---
-### [Client](moth_client/README.md)
+### [Client (moth_client)](moth_client/README.md)
 
 A react UI for data retrieval and administration of the device.
 
@@ -52,15 +52,33 @@ A react UI for data retrieval and administration of the device.
 
 ---
 
+## Device functionality:
+
+### Device usage
+
+- #### Buttons
+
+- #### Table mode
+
+- #### Chart Mode
+
+- #### CO₂ sound alert
+
+- #### Wifi
+
+- #### Dark mode
+
+- #### Altimeter
+
 ### Data access
 
 - #### On display
 
 The device display supports multiple display modes, "table", "chart" and "calibration".
 
-    - In table mode the latest CO₂, temperature and  humidity values are shown numerically.
-    - In chart mode one of CO₂, temperature, humidity or pressure are shown in a simple chart.
-    - In calibration mode, the most recent history of values is shown together with simple statistics. The device can then be calibrated either to a configurable value and button press, or through the wifi-rest-api and value that can be specified by the user.
+  - In table mode the latest CO₂, temperature and  humidity values are shown numerically.
+  - In chart mode one of CO₂, temperature, humidity or pressure are shown in a simple chart.
+  - In calibration mode, the most recent history of values is shown together with simple statistics. The device can then be calibrated either to a configurable value and button press, or through the wifi-rest-api and value that can be specified by the user.
 
 - #### Over the wifi-rest-api
 
@@ -70,6 +88,18 @@ The device display supports multiple display modes, "table", "chart" and "calibr
 
   It is possible to configure a mqtt connection and upload the mqtt brokers certificate if needed. The device will make connections in configurable intervals und publish it's measurements.
   Even though no POC has been made so far, it should be straightforward to integrate the sensor into i.e. Home Assistant.
+
+---
+
+### Calibration
+
+- #### On display (no wifi required)
+
+The device display can be switched to calibration display mode, then put outside into fresh air. After 10 minutes the recent measurement history standard deviation can be checked and, if within plausible tolerance, the device can be calibrated to a reference value previously configured. See [moth_core/disp.json](/moth_core/README.md#dispjson) and [moth_client/client_config](/moth_client/README.md#client-config) for more details.
+
+- #### Over the wifi-rest-api
+
+The rest-api of the device provides the "co2cal" endpoint. Here it is possible to calibrate the device to any value above 400pmm. This enables calibration to value other than outside air, if known from i.e. other devices (see: [moth_client/wifi-rest-api](/moth_client/README.md#wifi-rest-api)) for more detail.
 
 ---
 

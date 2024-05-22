@@ -2,22 +2,23 @@
 #define Measurements_h
 
 #include <Arduino.h>
+
 #include "Measurement.h"
 
 class Measurements {
-  
-  private:
+
+   private:
     static void saveToFile();
     static void checkCalibrationOffsetBme280();
-    static int regBufferSize; // regression value count
-    static int memBufferSize; // count of measurements kept in PSRAM
-    static int lowBufferSize; // low-pass filter size
+    static int regBufferSize;  // regression value count
+    static int memBufferSize;  // count of measurements kept in PSRAM
+    static int lowBufferSize;  // low-pass filter size
     static float lowBufferVals[];
-    static float lowBufferMult; // low-pass filter multiplicator (alpha)
+    static float lowBufferMult;  // low-pass filter multiplicator (alpha)
     static Measurement* measurements;
     static char* CSV_FRMT;
-    
-  public:
+
+   public:
     static String dataFileNameCurr;
     static int64_t measurementIntervalSeconds;
     static String CSV_HEAD;
@@ -35,7 +36,6 @@ class Measurements {
     static int getPublishableCount();
     static String toCsv(Measurement measurement);
     static float toMagnus(float temperatureDeg);
-
 };
 
 #endif

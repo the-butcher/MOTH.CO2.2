@@ -2,7 +2,7 @@
 
 ---
 
-The client subproject is react-web-application, storable on the device's SD-card, then consumable with any browser directly from the device.
+The client subproject is react-web-application, storable on the device's SD-card and consumable with any browser directly from the device.
 
 The Client UI is split into 3 main pages:
 
@@ -12,13 +12,19 @@ The Client UI is split into 3 main pages:
 
 <img src="../images/device_ui_00_800.gif">
 
-It is possible to show recent and historic CO₂, temperature, humidity, pressure and battery data.
+It is possible to show recent and historic data:
+
+- CO₂ (ppm)
+- temperature (°C)
+- humidity (%RH)
+- barometric pressure (hPa)
+- battery (%)
 
 <img src="../images/device_ui_01_800.gif">
 
-Date/Time Pickers can be used to specify the range of data to be shown in the chart.
+Date/Time Pickers can be used to specify the range of data to be shown in the chart. Since the SD-card is large enough to store the entire lifetime of the sensor, so any date range from the life time of the sensor can be picked.
 
-The current range of data can also be exported to:
+The displayed range of data can be exported to:
 
   - CSV
   - PNG
@@ -29,17 +35,17 @@ The current range of data can also be exported to:
 
 <img src="../images/device_ui_02_800.gif">
 
-This pages offers a convient way to configure the device through a reactive UI.
+This page offers a convenient way to configure the device through a reactive UI.
 
 - #### client-api
 
 <img src="../images/device_ui_03_800.png">
 
-This is a helper page to descibe the device's api. You can either use this page as-is, or if you are into scripting, it will help to understand the device api.
+This is a helper page to descibe the device's api. This page can either be used as-is, or it can serve as the basis to understand the device api.
 
 ---
 
-#### server-rest-api
+#### wifi-rest-api
 
 A short list of the device's api:
 

@@ -45,7 +45,7 @@ uint16_t actionNum = 0;
  *    -- be sure data is written exactly every 60 minutes (not 59 or 61)
  *    -- ideally data would also be flushed with the full hour
  *    -- save data on HTTP reset (have shorter no-data periods)
- *    -- do not allow button calibration when the variance is too large (just do not instantiate a button action)
+ *    -- do not allow button calibration when the standard deviation is too large (just do not instantiate a button action)
  */
 
 // schedule setting and display
