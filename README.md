@@ -31,6 +31,7 @@ This projects provides instructions for building a CO₂ sensor from off the she
 - The housing can be wall mounted, with or without theft protection.
 
 ---
+
 ## The root folder of the project is structured as follows:
 
 ### [Core (moth_core)](moth_core/README.md)
@@ -39,11 +40,13 @@ This project is built with [PlatformIO](https://platformio.org/). Please refer t
 The PlatformIO project, and configuration files can be found here.
 
 ---
+
 ### [Building instructions (moth_parts)](moth_parts/README.md)
 
 Building instructions, drawings and printable files for the device.
 
 ---
+
 ### [Client (moth_client)](moth_client/README.md)
 
 A react UI for data retrieval and administration of the device.
@@ -69,6 +72,8 @@ A react UI for data retrieval and administration of the device.
 - #### Dark mode
 
 - #### Altimeter
+
+---
 
 ### Data access
 
