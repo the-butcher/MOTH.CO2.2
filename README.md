@@ -39,13 +39,9 @@ This projects provides instructions for building a CO₂ sensor from off the she
 This project is built with [PlatformIO](https://platformio.org/). Please refer to the instructions provided on the PlatformIO website. PlatformIO makes development with the ESP32 microcontroller easier and faster compared to the Arduino IDE. If you have not switched yet i advise you to do so, it will save you time after a very short period of time.
 The PlatformIO project, and configuration files can be found here.
 
----
-
 ### [Building instructions (moth_parts)](moth_parts/README.md)
 
 Building instructions, drawings and printable files for the device.
-
----
 
 ### [Client (moth_client)](moth_client/README.md)
 
@@ -73,8 +69,6 @@ A react UI for data retrieval and administration of the device.
 
 - #### Altimeter
 
----
-
 ### Data access
 
 - #### On display
@@ -94,8 +88,6 @@ The device display supports multiple display modes, "table", "chart" and "calibr
   It is possible to configure a mqtt connection and upload the mqtt brokers certificate if needed. The device will make connections in configurable intervals und publish it's measurements.
   Even though no POC has been made so far, it should be straightforward to integrate the sensor into i.e. Home Assistant.
 
----
-
 ### Calibration
 
 - #### On display (no wifi required)
@@ -108,7 +100,7 @@ The rest-api of the device provides the "co2cal" endpoint. Here it is possible t
 
 ---
 
-### License
+## License
 
 Please be aware that all software in this project is licensed under the [MIT license](license.txt), while the drawings and 3d-printed parts are licensed under the [Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/) license.
 
