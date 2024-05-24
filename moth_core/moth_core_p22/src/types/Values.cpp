@@ -55,6 +55,7 @@ co2cal______t Values::getCo2Cal() {
         0,               // avgValue
         0,               // devValue
         0,               // refValue, zero = undefined for the beginning
+        0,               // numValue, valid values in this object
         0,               // corValue, zero = no correction for the beginning
         CO2CAL_DISPLAY,  // type
         // values
@@ -76,6 +77,7 @@ co2cal______t Values::getCo2Cal() {
             numValue++;
         }
     }
+    co2cal.numValue = numValue;
     co2cal.avgValue = round(sumValue * 1.0f / numValue);
     uint32_t sumDeviation = 0;
     for (uint8_t index = 0; index < CALIBRATION_BUFFER_SIZE; index++) {

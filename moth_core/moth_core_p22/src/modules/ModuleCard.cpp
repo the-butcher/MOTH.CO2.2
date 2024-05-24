@@ -112,7 +112,7 @@ void ModuleCard::persistValues() {
     values_all_t value;
     for (int valueIndex = 0; valueIndex < MEASUREMENT_BUFFER_SIZE; valueIndex++) {
         value = Values::values->measurements[valueIndex];
-        fileDef32Dap = SensorTime::getFile32Def(value.secondstime, FILE_FORMAT_DATA_PUBLISHABLE);  // the file name that shall be written to (always in publishable filr format)
+        fileDef32Dap = SensorTime::getFile32Def(value.secondstime, FILE_FORMAT_DATA_PUBLISHABLE);  // the file name that shall be written to (always in publishable file format)
         if (fileDef32Dap.name != datFileNameLast) {
             if (datFile) {  // file already open -> file change at midnight
                 datFile.close();

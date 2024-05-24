@@ -42,7 +42,8 @@ typedef struct {
     uint16_t avgValue;
     uint16_t devValue;
     uint16_t refValue;  // calibration reference (caslibration target)
-    int16_t corValue;   // calibration offset (the correction applied)
+    uint8_t numValue;
+    int16_t corValue;  // calibration offset (the correction applied)
     co2cal______e type;
     uint16_t values[CALIBRATION_BUFFER_SIZE];
 } co2cal______t;

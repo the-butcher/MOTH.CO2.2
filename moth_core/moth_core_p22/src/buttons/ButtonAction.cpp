@@ -47,12 +47,14 @@ bool ButtonAction::adapt(config_t& config) {
 }
 
 button_action_t ButtonAction::getButtonActionCo2Reference(config_t& config) {
+    co2cal______t result = Values::getCo2Cal();
+    bool isCalibrateable = result.numValue == CALIBRATION_BUFFER_SIZE && result.devValue <= 20;
     return {
-        "~",                                // the symbol for a fast press
-        "",                                 // the symbol for a slow press,
-        "",                                 // extra information to be displayed for this button
-        ButtonAction::calibrateToCo2Refer,  // a function to be executed on fast press
-        nullptr                             // a function to be executed on slow press
+        isCalibrateable ? "~" : "",                                     // the symbol for a fast press
+        "",                                                             // the symbol for a slow press,
+        "",                                                             // extra information to be displayed for this button
+        isCalibrateable ? ButtonAction::calibrateToCo2Refer : nullptr,  // a function to be executed on fast press
+        nullptr                                                         // a function to be executed on slow press
     };
 }
 
