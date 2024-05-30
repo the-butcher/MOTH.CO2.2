@@ -13,6 +13,7 @@ const String JSON_KEY______PORT = "prt";
 const String JSON_KEY______USER = "usr";
 const String JSON_KEY_______PWD = "pwd";
 const String JSON_KEY____CLIENT = "cli";
+const String JSON_KEY___HISTORY = "hst";
 const String JSON_KEY___MINUTES = "min";
 const String JSON_KEY__NETWORKS = "ntw";
 const String JSON_KEY_______KEY = "key";
@@ -179,6 +180,7 @@ typedef struct {
 } mqtt____all___t;
 
 typedef struct {
+    int32_t utcOffsetSeconds;
     uint16_t ntpUpdateMinutes;
     char timezone[64];
 } time____all___t;
@@ -224,6 +226,8 @@ class Config {
     static config_t load();
     static void begin(config_t* config);
     static mqtt____stat__e getMqttStatus();
+    static void setUtcOffsetSeconds(int32_t utcOffsetSeconds);
+    static int32_t getUtcOffsetSeconds();
 };
 
 #endif

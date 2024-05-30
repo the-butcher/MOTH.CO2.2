@@ -637,6 +637,7 @@ void ModuleDisp::renderEntry(config_t& config) {
 
     drawAntialiasedText18("moth", RECT_TOP, 8, 98, EPD_BLACK);
     drawAntialiasedText06(VNUM, RECT_TOP, 105, 98, EPD_BLACK);
+    drawAntialiasedText06(String(Config::getUtcOffsetSeconds()), RECT_TOP, 180, 98, EPD_BLACK);
 
     // skip header for clean screen
     ModuleDisp::renderFooter(config);

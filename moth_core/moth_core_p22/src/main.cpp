@@ -45,7 +45,15 @@ uint16_t actionNum = 0;
  *    -- be sure data is written exactly every 60 minutes (not 59 or 61)
  *    -- ideally data would also be flushed with the full hour
  *    -- save data on HTTP reset (have shorter no-data periods)
- *    -- do not allow button calibration when the standard deviation is too large (just do not instantiate a button action)
+ *    -- attempt to make some modules reusable
+ *       -- mqtt
+ *       -- wifi
+ *       -- http
+ *       -- card
+ *       -- signal
+ *       -- would require some base configuration and extended configuration
+ *       -- would require lifecycle configuration
+ * -- the settings action should be able to run at intervals shorter than display interval (i.e. mqtt at 1 minute interval)
  */
 
 // schedule setting and display
@@ -271,14 +279,44 @@ void secondsDelay(uint32_t seconds) {
     SensorTime::detachWakeup(wakeupType);
 }
 
+device_action_e getActionIndexMax() {
+    if (values.nextMeasureIndex >= values.nextDisplayIndex) {
+        return DEVICE_ACTION_DEPOWER;  // go all the way up to display/depower
+    } else if (values.nextMeasureIndex >= values.nextAutoPubIndex) {
+        return DEVICE_ACTION_SETTING;  // run settings, but do not display
+    } else if (values.nextMeasureIndex >= values.nextAutoNtpIndex) {
+        return DEVICE_ACTION_SETTING;  // run settings, but do not display
+    } else {
+        return DEVICE_ACTION_READVAL;
+    }
+}
+
+String getActionName(device_action_e action) {
+    if (action == DEVICE_ACTION_POWERUP) {
+        return "powerup";
+    } else if (action == DEVICE_ACTION_MEASURE) {
+        return "measure";
+    } else if (action == DEVICE_ACTION_READVAL) {
+        return "readval";
+    } else if (action == DEVICE_ACTION_SETTING) {
+        return "setting";
+    } else if (action == DEVICE_ACTION_DISPLAY) {
+        return "display";
+    } else if (action == DEVICE_ACTION_DEPOWER) {
+        return "depower";
+    } else {
+        return "unknown";
+    }
+}
+
 void loop() {
     device_action_t action = device.deviceActions[device.actionIndexCur];
     if (SensorTime::getSecondsUntil(action.secondsNext) == WAITTIME________________NONE) {  // action is due
         ModuleSignal::setPixelColor(action.color);
         device.actionIndexCur = Device::getFunctionByAction(action.type)(config, device.actionIndexMax);  // execute the action and see whats coming next
         if (device.actionIndexCur == DEVICE_ACTION_POWERUP) {
-            device.actionIndexMax = values.nextMeasureIndex == values.nextDisplayIndex ? DEVICE_ACTION_DEPOWER : DEVICE_ACTION_READVAL;
-            device.deviceActions[DEVICE_ACTION_POWERUP].secondsNext = SensorTime::getSecondstime() + SECONDS_PER_____________HOUR;
+            device.actionIndexMax = getActionIndexMax();
+            device.deviceActions[DEVICE_ACTION_POWERUP].secondsNext = SensorTime::getSecondstime() + SECONDS_PER_____________HOUR;  // long interval, we want to wake from SQW signal
         } else {
             device.deviceActions[device.actionIndexCur].secondsNext = SensorTime::getSecondstime() + action.secondsWait;
         }

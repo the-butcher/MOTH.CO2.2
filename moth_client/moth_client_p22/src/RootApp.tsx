@@ -25,13 +25,14 @@ const theme = ThemeUtil.createTheme();
 const RootApp = () => {
 
   const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  // const boxUrl = `http://192.168.0.178/api`; // when running directly from device
+  // const boxUrl = `http://192.168.0.73/api`; // when running directly from device
 
   /**
    * steps needed to deploy a new version
+   * -- be sure boxUrl points to api (not hardcoded IP)
    * -- build (will create gzipped versions of root.html and root.js)
-   * -- delete non-zipped versions and rename zipped
-   * -- replace in the SD/server directory
+   * -- delete non-zipped versions and rename zipped to original names
+   * -- replace in the moth_core/SD/server directory (where a zipped version of the iframe.html is present)
    * -- upload to device from SD/server directory
    */
 

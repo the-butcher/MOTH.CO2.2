@@ -9,7 +9,6 @@
 RTC_PCF8523 SensorTime::baseSensor;
 bool SensorTime::ntpWait = false;
 bool SensorTime::interrupted = false;
-int32_t SensorTime::secondstimeOffsetUtc;
 
 /**
  * called once when the device boots
@@ -82,7 +81,7 @@ void SensorTime::handleNtpUpdate(struct timeval* t) {
     getLocalTime(&timeinfo);
     DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
     SensorTime::baseSensor.adjust(now);
-    SensorTime::secondstimeOffsetUtc = SECONDS_FROM_1970_TO_2000 + now.secondstime() - t->tv_sec;
+    Config::setUtcOffsetSeconds(SECONDS_FROM_1970_TO_2000 + now.secondstime() - t->tv_sec);
     SensorTime::ntpWait = false;
 }
 
@@ -136,7 +135,7 @@ bool SensorTime::isPersistPath(String path) {
 String SensorTime::getDateTimeSecondsString(uint32_t secondstime) {
     DateTime date = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime);
     char timeBuffer[32];
-    sprintf(timeBuffer, "%04d.%02d.%02d %02d:%02d:%02d", date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second());
+    sprintf(timeBuffer, "%04d-%02d-%02dT%02d:%02d:%02d", date.year(), date.month(), date.day(), date.hour(), date.minute(), date.second());
     return timeBuffer;
 }
 
@@ -156,7 +155,7 @@ String SensorTime::getDateTimeLastModString(File32 file) {
 }
 
 String SensorTime::getDateTimeLastModString(uint32_t secondstime) {
-    DateTime dateUtc = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime - SensorTime::secondstimeOffsetUtc);
+    DateTime dateUtc = DateTime(SECONDS_FROM_1970_TO_2000 + secondstime - Config::getUtcOffsetSeconds());
     char timeBuffer[32];
     sprintf(timeBuffer, "%s, %02d %s %04d %02d:%02d:%02d GMT", SensorTime::getNameOfDay(dateUtc), dateUtc.day(), SensorTime::getNameOfMonth(dateUtc), dateUtc.year(), dateUtc.hour(), dateUtc.minute(), dateUtc.second());
     return timeBuffer;

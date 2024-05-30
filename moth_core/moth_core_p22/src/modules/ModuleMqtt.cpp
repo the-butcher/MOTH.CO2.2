@@ -30,6 +30,7 @@ void ModuleMqtt::createDat(config_t& config) {
             if (datSuccess) {
 
                 bool use = jsonDocument[JSON_KEY_______USE] | false;
+                bool hst = jsonDocument[JSON_KEY___HISTORY] | false;
                 String srv = jsonDocument[JSON_KEY____SERVER] | "";
                 uint16_t prt = jsonDocument[JSON_KEY______PORT] | 0;
                 String usr = jsonDocument[JSON_KEY______USER] | "";
@@ -39,6 +40,7 @@ void ModuleMqtt::createDat(config_t& config) {
 
                 mqtt____t mqtt;
                 mqtt.use = use;
+                mqtt.hst = hst;
                 mqtt.prt = prt;
                 mqtt.min = min;
                 srv.toCharArray(mqtt.srv, 64);
@@ -103,9 +105,9 @@ mqtt____stat__e ModuleMqtt::checkCliStat(PubSubClient* mqttClient) {
 
 void ModuleMqtt::publish(config_t& config) {
 
-#ifdef USE___SERIAL
-    Serial.printf("before mqtt publish, heap: %u\n", ESP.getFreeHeap());
-#endif
+    // #ifdef USE___SERIAL
+    //     Serial.printf("before mqtt publish, heap: %u\n", ESP.getFreeHeap());
+    // #endif
 
     ModuleCard::begin();
 
@@ -152,123 +154,89 @@ void ModuleMqtt::publish(config_t& config) {
                     config.mqtt.mqttPublishMinutes = mqtt.min;  // set to configured interval
                     config.mqtt.mqttFailureCount = 0;
 
-                    values_all_t datValue;
-                    uint16_t year = 2024;
-                    File32 yeaFold;
-                    File32 monFold;
-                    File32 datFile;
-                    char yeaFoldNameBuffer[16];
-                    char monFoldNameBuffer[16];
-                    char datFileNameBuffer[16];
-                    String datFilePath;
-
-                    // bool pubSuccess = true;
                     uint8_t pubCount = 0;
-                    bool rnmSuccess;
+                    values_all_t datValue;
 
-                    while (year > 0) {
-                        String folderYearName = String(year);
-                        if (ModuleCard::existsPath(folderYearName)) {
-                            if (yeaFold) {
-                                yeaFold.close();
-                            }
-                            yeaFold.open(folderYearName.c_str(), O_RDONLY);
-                            while (monFold.openNext(&yeaFold, O_RDONLY)) {
-                                if (monFold.isDirectory()) {
-                                    while (datFile.openNext(&monFold, O_RDONLY)) {
+                    // if file history is meant to be published
+                    if (mqtt.hst) {
 
-                                        yeaFold.getName(yeaFoldNameBuffer, 16);  // i.e. 2024
-                                        monFold.getName(monFoldNameBuffer, 16);  // i.e. 05
-                                        datFile.getName(datFileNameBuffer, 16);  // i.e. 20240429.dar
+                        uint16_t year = 2024;
+                        File32 yeaFold;
+                        File32 monFold;
+                        File32 datFile;
+                        char yeaFoldNameBuffer[16];
+                        char monFoldNameBuffer[16];
+                        char datFileNameBuffer[16];
+                        String datFilePath;
 
-                                        char datPathBuffer[48];
-                                        sprintf(datPathBuffer, "/%s/%s/%s", String(yeaFoldNameBuffer), String(monFoldNameBuffer), String(datFileNameBuffer));
-                                        datFilePath = String(datPathBuffer);  // either dap or dar
+                        bool rnmSuccess;
 
-                                        if (datFilePath.endsWith(FILE_FORMAT_DATA_PUBLISHABLE)) {
+                        while (year > 0) {
+                            String folderYearName = String(year);
+                            if (ModuleCard::existsPath(folderYearName)) {
+                                if (yeaFold) {
+                                    yeaFold.close();
+                                }
+                                yeaFold.open(folderYearName.c_str(), O_RDONLY);
+                                while (monFold.openNext(&yeaFold, O_RDONLY)) {
+                                    if (monFold.isDirectory()) {
+                                        while (datFile.openNext(&monFold, O_RDONLY)) {
 
-                                            // close and reopen with read and write
-                                            datFile.close();
-                                            datFile.open(datFilePath.c_str(), O_RDWR);
+                                            yeaFold.getName(yeaFoldNameBuffer, 16);  // i.e. 2024
+                                            monFold.getName(monFoldNameBuffer, 16);  // i.e. 05
+                                            datFile.getName(datFileNameBuffer, 16);  // i.e. 20240429.dar
 
-                                            boolean pubSuccessFile = true;
+                                            char datPathBuffer[48];
+                                            sprintf(datPathBuffer, "/%s/%s/%s", String(yeaFoldNameBuffer), String(monFoldNameBuffer), String(datFileNameBuffer));
+                                            datFilePath = String(datPathBuffer);  // either dap or dar
 
-                                            uint32_t filePos = 0;
-                                            while (datFile.available() > 1 && pubCount < MAX_PUB_COUNT) {
-                                                datFile.read((byte*)&datValue, sizeof(datValue));  // read one measurement from the file
-                                                filePos = datFile.position();
-                                                if (datValue.publishable) {  // must still check for publishable (could have been partially published while measuring)
-                                                    if (ModuleMqtt::publishMeasurement(config, &datValue, mqtt.cli, mqttClient)) {
-                                                        // mark this value as published
-                                                        datFile.seekSet(filePos - 2);                            // the assumed position where the publishable flag is stored
-                                                        datFile.write((uint8_t)0) && datFile.write((uint8_t)0);  // set to publishable false
-                                                        datFile.seekSet(filePos);                                // reset to original file position
-                                                        pubCount++;
-#ifdef USE___SERIAL
-                                                        Serial.printf("publish from file, pubCount: %d\n", pubCount);
-#endif
-                                                    } else {
-                                                        config.mqtt.mqttStatus = MQTT_FAIL____PUBLISH;
-                                                        pubCount = ERR_PUB_COUNT;
-                                                        break;
-                                                    }
-                                                }
-                                            }
+                                            if (datFilePath.endsWith(FILE_FORMAT_DATA_PUBLISHABLE)) {
 
-#ifdef USE___SERIAL
-                                            Serial.printf("done with file, file: %s, pubCount: %d\n", datFilePath.c_str(), pubCount);
-#endif
-
-                                            if (pubCount < MAX_PUB_COUNT && !SensorTime::isPersistPath(datFilePath)) {
-
-#ifdef USE___SERIAL
-                                                Serial.printf("renaming file, file: %s, pubCount: %d\n", datFilePath.c_str(), pubCount);
-#endif
-
+                                                // close, so it can be reopened in write mode
                                                 datFile.close();
 
-                                                String darFilePath = String(datFilePath);
-                                                darFilePath.replace(FILE_FORMAT_DATA_PUBLISHABLE, FILE_FORMAT_DATA____ARCHIVED);
-                                                rnmSuccess = ModuleCard::renameFile32(datFilePath, darFilePath);
+                                                pubCount += ModuleMqtt::publishFromFile(config, datFilePath, MAX_PUB_COUNT - pubCount, mqtt.cli, mqttClient);
 
                                             } else {
-                                                // either pubCount > max count or the current file -> do not rename
+                                                // not a publishable format :: do nothing
                                             }
 
-                                        } else {
-                                            // not a publishable format :: nothing
-                                        }
+                                            if (datFile) {
+                                                datFile.close();
+                                            }
 
-                                        if (datFile) {
-                                            datFile.close();
-                                        }
-
-                                        if (pubCount >= MAX_PUB_COUNT) {
-                                            break;  // dont open another file in case of failure
+                                            if (pubCount >= MAX_PUB_COUNT) {
+                                                break;  // dont open another file in case of failure
+                                            }
                                         }
                                     }
+                                    monFold.close();
                                 }
-                                monFold.close();
-                            }
 
-                            if (pubCount >= MAX_PUB_COUNT) {
-                                break;
+                                if (pubCount >= MAX_PUB_COUNT) {
+                                    break;
+                                } else {
+                                    year++;  // continue with next year
+                                }
+
                             } else {
-                                year++;  // continue with next year
+                                year = 0;  // no further year search
                             }
-
-                        } else {
-                            year = 0;  // no further year search
                         }
-                    }
-                    if (datFile) {
-                        datFile.close();
-                    }
-                    if (monFold) {
-                        monFold.close();
-                    }
-                    if (yeaFold) {
-                        yeaFold.close();
+                        if (datFile) {
+                            datFile.close();
+                        }
+                        if (monFold) {
+                            monFold.close();
+                        }
+                        if (yeaFold) {
+                            yeaFold.close();
+                        }
+
+                    } else {  // no file history to be published, but lets still publish from the current persis path, so the sensor can be disconnected a few hours without data loss
+
+                        String persistPath = SensorTime::getFile32Def(SensorTime::getSecondstime() - SECONDS_PER_____________HOUR, FILE_FORMAT_DATA_PUBLISHABLE).name;
+                        pubCount += ModuleMqtt::publishFromFile(config, persistPath, MAX_PUB_COUNT - pubCount, mqtt.cli, mqttClient);
                     }
 
                     if (pubCount < MAX_PUB_COUNT) {
@@ -287,9 +255,9 @@ void ModuleMqtt::publish(config_t& config) {
                                         false                  // publishable
                                     };
                                     pubCount++;
-#ifdef USE___SERIAL
-                                    Serial.printf("publish from data, pubCount: %d\n", pubCount);
-#endif
+                                    // #ifdef USE___SERIAL
+                                    //                                     Serial.printf("publish from data, pubCount: %d\n", pubCount);
+                                    // #endif
                                 } else {
                                     config.mqtt.mqttStatus = MQTT_FAIL____PUBLISH;
                                     pubCount = ERR_PUB_COUNT;
@@ -306,9 +274,9 @@ void ModuleMqtt::publish(config_t& config) {
                         mqttClient->loop();
                     }
 
-#ifdef USE___SERIAL
-                    Serial.printf("disconnecting mqtt\n");
-#endif
+                    // #ifdef USE___SERIAL
+                    //                     Serial.printf("disconnecting mqtt\n");
+                    // #endif
                     mqttClient->disconnect();  // calls stop() on wificlient
 
                 } else {
@@ -343,37 +311,97 @@ void ModuleMqtt::publish(config_t& config) {
     // TODO :: appropriate config and values for status
     if (config.mqtt.mqttStatus != MQTT______________OK) {
 
-        if (config.mqtt.mqttStatus >= 40) {  // non-recoverable
-#ifdef USE___SERIAL
-            Serial.printf("returning from mqtt failure (non----recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
-#endif
+        if (config.mqtt.mqttStatus >= 40) {                         // non-recoverable
+                                                                    // #ifdef USE___SERIAL
+                                                                    //             Serial.printf("returning from mqtt failure (non----recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
+                                                                    // #endif
             config.mqtt.mqttPublishMinutes = MQTT_PUBLISH___NEVER;  // new-config needs to be uploaded for retry
         } else {                                                    // recoverable
             config.mqtt.mqttFailureCount++;
             if (config.mqtt.mqttFailureCount > 3) {
-#ifdef USE___SERIAL
-                Serial.printf("returning from mqtt failure (medium-recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
-#endif
+                // #ifdef USE___SERIAL
+                //                 Serial.printf("returning from mqtt failure (medium-recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
+                // #endif
                 config.mqtt.mqttPublishMinutes = MQTT_PUBLISH_RECOVER;  // try to recover after one hour
             } else {
-#ifdef USE___SERIAL
-                Serial.printf("returning from mqtt failure (short--recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
-#endif
+                // #ifdef USE___SERIAL
+                //                 Serial.printf("returning from mqtt failure (short--recoverable), stat: %d, heap: %u\n", config.mqtt.mqttStatus, ESP.getFreeHeap());
+                // #endif
             }
         }
 
     } else {
         // do nothing the correct interval must have been set when the status was set to OK, failure count reset there as well
-#ifdef USE___SERIAL
-        Serial.printf("returning from mqtt success, heap: %u\n", ESP.getFreeHeap());
-#endif
+        // #ifdef USE___SERIAL
+        //         Serial.printf("returning from mqtt success, heap: %u\n", ESP.getFreeHeap());
+        // #endif
     }
+}
+
+uint8_t ModuleMqtt::publishFromFile(config_t& config, String datFilePath, uint8_t maxPubCount, char* client, PubSubClient* mqttClient) {
+
+    uint8_t pubCount = 0;
+    values_all_t datValue;
+    bool rnmSuccess;
+
+    File32 datFile;
+    datFile.open(datFilePath.c_str(), O_RDWR);
+
+    boolean pubSuccessFile = true;
+
+    uint32_t filePos = 0;
+    while (datFile.available() > 1 && pubCount < maxPubCount) {
+        datFile.read((byte*)&datValue, sizeof(datValue));  // read one measurement from the file
+        filePos = datFile.position();
+        if (datValue.publishable) {  // must still check for publishable (could have been partially published while measuring)
+            if (ModuleMqtt::publishMeasurement(config, &datValue, client, mqttClient)) {
+                // mark this value as published
+                datFile.seekSet(filePos - 2);                            // the assumed position where the publishable flag is stored
+                datFile.write((uint8_t)0) && datFile.write((uint8_t)0);  // set to publishable false
+                datFile.seekSet(filePos);                                // reset to original file position
+                pubCount++;
+                // #ifdef USE___SERIAL
+                //                 Serial.printf("publish from file, pubCount: %d\n", pubCount);
+                // #endif
+            } else {
+                config.mqtt.mqttStatus = MQTT_FAIL____PUBLISH;
+                pubCount = ERR_PUB_COUNT;
+                break;
+            }
+        }
+    }
+
+    // #ifdef USE___SERIAL
+    //     Serial.printf("done with file, file: %s, pubCount: %d\n", datFilePath.c_str(), pubCount);
+    // #endif
+
+    if (datFile.available() < sizeof(datValue) && !SensorTime::isPersistPath(datFilePath)) {
+
+        // #ifdef USE___SERIAL
+        //         Serial.printf("renaming file, file: %s, pubCount: %d\n", datFilePath.c_str(), pubCount);
+        // #endif
+
+        datFile.close();
+
+        String darFilePath = String(datFilePath);
+        darFilePath.replace(FILE_FORMAT_DATA_PUBLISHABLE, FILE_FORMAT_DATA____ARCHIVED);
+        rnmSuccess = ModuleCard::renameFile32(datFilePath, darFilePath);
+
+    } else {
+        // either pubCount > max count or the current file -> do not rename
+    }
+
+    if (datFile) {
+        datFile.close();
+    }
+
+    return pubCount;
 }
 
 bool ModuleMqtt::publishMeasurement(config_t& config, values_all_t* value, char* client, PubSubClient* mqttClient) {
 
     JsonDocument jsonDocument;
-    jsonDocument[FIELD_NAME____TIME] = SensorTime::getDateTimeSecondsString(value->secondstime);
+    jsonDocument[FIELD_NAME____TIME] = value->secondstime + SECONDS_FROM_1970_TO_2000 - Config::getUtcOffsetSeconds();
     jsonDocument[FIELD_NAME_CO2_LPF] = (uint16_t)round(value->valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF);
     jsonDocument[FIELD_NAME_CO2_RAW] = value->valuesCo2.co2Raw;
     jsonDocument[FIELD_NAME_____DEG] = round(SensorScd041::toFloatDeg(value->valuesCo2.deg) * 10) / 10.0;

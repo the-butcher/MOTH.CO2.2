@@ -1,7 +1,7 @@
 #ifndef Define_h
 #define Define_h
 
-#define VNUM "1.0.022"
+#define VNUM "1.0.023"
 
 // #define USE____DELAY = 1;
 // #define USE___SERIAL = 1;

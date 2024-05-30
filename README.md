@@ -4,35 +4,46 @@ This projects provides instructions for building a CO₂ sensor from off the she
 
 ![CO₂-Sensor fully assembled](/images/sensor01_800.jpg?raw=true)
 
-- CO₂, temperature, humidity, pressure, altitude.
+- measures
+  - CO₂
+  - temperature
+  - humidity
+  - pressure
+  - altitude
+  - battery
 
-- 6 weeks on a single battery charge, when operated in low power mode (no WiFi, 3 minute display update).
+- can last ~6 weeks on a single battery charge, when operated at low power settings, this is the longest battery life of a SCD41 based sensor operated at regular interval as far as i know
 
-- [Sensirion SCD-41](https://www.adafruit.com/product/5190) Sensor used, a small and high performance photoacoustic CO₂ sensor.
+- uses the [Sensirion SCD-41](https://www.adafruit.com/product/5190) Sensor, a small and high performance photoacoustic NDIR CO₂ sensor
 
-- Chart with 1h, 3h, 6h, 12h or 24h data history.
+- offers various ways to access the data measured
+  - on the device display in table or chart mode
+  - through an integrated [wifi-rest-api](/moth_client/README.md#wifi-rest-api)
+  - over the standardized [MQTT protocol](/moth_core/README.md#mqttjson)
 
-![CO₂-Sensor fully assembled](/images/sensor03_800.jpg?raw=true)
+- is configurable in many ways
+  - thresholds for CO₂, temperature and humidity
+  - temperature display in °C or °F
+  - sensor timezone
+  - temperature offset
+  - CO₂ calibration
+  - WiFi, [MQTT](https://de.wikipedia.org/wiki/MQTT)
 
-- Dark mode (inverted) optional.
+- stores unlimited history of data due to build in SD-card
 
-- Configurable Thresholds for CO₂, temperature und humidity.
+- hosts a web-UI on it's internal web-server, usable from mobile and desktop devices
 
-- Configurable temperature unit (°C/°F) and timezone.
+- optionally provides
+  - dark/inverted mode
+  - acoustic alert
 
-- Unlimited measurement history through internal SD-Card storage.
+<!-- ![chart mode](/images/sensor03_800.jpg?raw=true)
 
-- WiFi for access to current and historic measurements and to change device configuration, calibration, update firmware.
-
-![CO₂-Sensor fully assembled](/images/sensor04_800.jpg?raw=true)
-
-- MQTT can be configured to auto publish measurements ([MQTT](https://de.wikipedia.org/wiki/MQTT)).
-
-- The housing can be wall mounted, with or without theft protection.
+![WiFi connection](/images/sensor04_800.jpg?raw=true) -->
 
 ---
 
-## The root folder of the project is structured as follows:
+## The project is structured as follows:
 
 ### [Core (moth_core)](moth_core/README.md)
 
@@ -76,7 +87,7 @@ A react UI for data retrieval and administration of the device.
 The device display supports multiple display modes, "table", "chart" and "calibration".
 
   - In table mode the latest CO₂, temperature and  humidity values are shown numerically.
-  - In chart mode one of CO₂, temperature, humidity or pressure are shown in a simple chart.
+  - In chart mode one of CO₂, temperature, humidity or pressure are shown in a simple chart. The chart can show 1h, 3h, 6h, 12h or 24h data ranges.
   - In calibration mode, the most recent history of values is shown together with simple statistics. The device can then be calibrated either to a configurable value and button press, or through the wifi-rest-api and value that can be specified by the user.
 
 - #### Over the wifi-rest-api

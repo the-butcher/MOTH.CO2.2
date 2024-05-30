@@ -29,7 +29,6 @@ class SensorTime {
     static RTC_PCF8523 baseSensor;
     static bool ntpWait;
     static bool interrupted;
-    static int32_t secondstimeOffsetUtc;
     static void handleInterrupt();
     static void handleNtpUpdate(struct timeval* t);
     static String getNameOfDay(DateTime date);

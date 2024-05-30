@@ -417,6 +417,9 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     JsonObject mqttJo = jsonDocument["mqtt"].to<JsonObject>();
     mqttJo["stat"] = (int)Config::getMqttStatus();
 
+    JsonObject timeJo = jsonDocument["time"].to<JsonObject>();
+    timeJo["dutc"] = Config::getUtcOffsetSeconds();
+
     serializeJson(jsonDocument, *response);
     request->send(response);
 }

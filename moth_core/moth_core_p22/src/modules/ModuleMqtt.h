@@ -18,6 +18,7 @@ const uint8_t ERR_PUB_COUNT = 128;
 
 typedef struct {
     bool use;
+    bool hst;
     uint16_t prt;
     uint8_t min;
     char srv[64];
@@ -33,6 +34,7 @@ class ModuleMqtt {
     static void createDat(config_t& config);
     static void publish(config_t& config);
     static bool publishMeasurement(config_t& config, values_all_t* value, char* client, PubSubClient* mqttClient);
+    static uint8_t publishFromFile(config_t& config, String path, uint8_t maxPubCount, char* client, PubSubClient* mqttClient);
     static mqtt____stat__e checkDatStat(mqtt____t& mqtt);
     static mqtt____stat__e checkCliStat(PubSubClient* mqttClient);
 };

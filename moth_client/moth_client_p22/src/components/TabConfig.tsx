@@ -685,6 +685,25 @@ const TabConfig = (props: ITabConfigProps) => {
           {
             mqtt.use ? <>
               <ConfigChoice
+                caption='publish interval'
+                value={{
+                  type: 'number',
+                  fixed: true,
+                  value: mqtt.min,
+                  unit: 'minutes',
+                  min: 1,
+                  handleUpdate: value => handleMqttUpdate({ min: value })
+                }}
+              />
+              <ConfigChoice
+                caption='publish history'
+                value={{
+                  type: 'toggle',
+                  value: mqtt.hst,
+                  handleUpdate: value => handleMqttUpdate({ hst: value })
+                }}
+              />
+              <ConfigChoice
                 caption='broker address'
                 value={{
                   type: 'string',
@@ -727,25 +746,16 @@ const TabConfig = (props: ITabConfigProps) => {
                 }}
               />
               <ConfigChoice
-                caption='client'
+                caption='topic'
                 value={{
                   type: 'string',
                   value: mqtt.cli,
-                  help: 'mqtt message client id',
+                  help: 'mqtt message topic',
                   handleUpdate: value => handleMqttUpdate({ cli: value })
                 }}
               />
-              <ConfigChoice
-                caption='publish interval'
-                value={{
-                  type: 'number',
-                  fixed: true,
-                  value: mqtt.min,
-                  unit: 'minutes',
-                  min: 1,
-                  handleUpdate: value => handleMqttUpdate({ min: value })
-                }}
-              />
+
+
             </> : null
           }
         </Stack>

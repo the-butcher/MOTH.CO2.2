@@ -61,7 +61,7 @@ device_t Device::load() {
         WAKEUP_ACTION_BUSY,     // when waiting for this action, the display's busy pin must become high
         0                       // no delay required after this action
     };
-    device.actionIndexCur = DEVICE_ACTION_DISPLAY;  // start with DEVICE_ACTION_DISPLAY for entry screen
+    device.actionIndexCur = DEVICE_ACTION_SETTING;  // start with DEVICE_ACTION_SETTING for entry screen (allows for NTP update before first measurements)
     device.actionIndexMax = DEVICE_ACTION_DEPOWER;
 
     // calculate ext1Bitmask, sorting the pins is a precaution to ensure descending order
@@ -215,7 +215,7 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
         }
         return DEVICE_ACTION_POWERUP;  // meant to measure AND not displayable, NO significant change
     } else {
-        return DEVICE_ACTION_SETTING;  // setting will trigger a redraw, therefore no need to check for significant change
+        return DEVICE_ACTION_SETTING;  // advance to settings, where another decision will be made whether to continue with display or not
     }
 }
 
@@ -235,37 +235,42 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         isOrWasWifiPowered = true;
     }
 
-#ifdef USE___SERIAL
-    Serial.printf("isOrWasWifiPowered: %d\n", isOrWasWifiPowered);
-#endif
-
     bool autoDepower = false;
     if (!isOrWasWifiPowered) {  // only auto connect while wifi is not on (or was recently on) to prevent memory race conditions
 
         bool autoNtpConn = Values::values->nextAutoNtpIndex <= Values::values->nextMeasureIndex;
         bool autoPubConn = Values::values->nextAutoPubIndex <= Values::values->nextMeasureIndex;
 
-#ifdef USE___SERIAL
-        Serial.printf("autoNtpConn: %d (%d <= %d), autoPubConn: %d (%d <= %d)\n", autoNtpConn, Values::values->nextAutoNtpIndex, Values::values->nextMeasureIndex, autoPubConn, Values::values->nextAutoPubIndex, Values::values->nextMeasureIndex);
-#endif
-
         if (autoNtpConn || autoPubConn) {
+#ifdef USE___SERIAL
+            Serial.printf("autoNtpConn: %u, autoPubConn: %u\n", autoNtpConn, autoPubConn);
+#endif
             autoDepower = ModuleWifi::powerup(config, false);  // if the connection was successful, it also needs to be autoShutoff
             if (autoDepower) {                                 // was connected
+
                 if (autoPubConn) {
                     // try to publish (call with config, so mqtt gets the opportunity to )
                     ModuleMqtt::publish(config);
                     Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
                 }
                 if (autoNtpConn) {
+#ifdef USE___SERIAL
+                    Serial.printf("init ntp update\n");
+#endif
                     SensorTime::setupNtpUpdate(config);                                                  // apply timezone
                     Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
-                    for (int i = 0; i < 25; i++) {
+                    for (int i = 0; i < 100; i++) {                                                      // wait 10 secs max for time sync
                         if (!SensorTime::isNtpWait()) {
+#ifdef USE___SERIAL
+                            Serial.printf("done ntp update, dutc: %u\n", SensorTime::secondstimeOffsetUtc);
+#endif
                             break;
                         }
                         delay(100);
                     }
+#ifdef USE___SERIAL
+                    Serial.printf("exit ntp update, dutc: %u\n", SensorTime::secondstimeOffsetUtc);
+#endif
                 }
                 ModuleWifi::depower(config);
             }
@@ -287,7 +292,18 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
         SensorScd041::depower(config);
     }
 
-    return DEVICE_ACTION_DISPLAY;  // when settings runs, there should always be a redraw
+    if (maxDeviceAction == DEVICE_ACTION_SETTING) {
+        if (config.disp.displayValCycle == DISPLAY_VAL_Y____SIG) {
+            float lastCo2Lpf = Values::values->measurements[Values::values->lastDisplayIndex % MEASUREMENT_BUFFER_SIZE].valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
+            float currCo2Lpf = Values::latest().valuesCo2.co2Lpf / VALUE_SCALE_CO2LPF;
+            if (Values::isSignificantChange(lastCo2Lpf, currCo2Lpf)) {
+                return DEVICE_ACTION_DISPLAY;  // continue with display due to significant change
+            }
+        }
+        return DEVICE_ACTION_POWERUP;  // meant to end with settings (i.e. mqtt publish)
+    } else {
+        return DEVICE_ACTION_DISPLAY;  // advance to display
+    }
 }
 
 device_action_e Device::handleActionDisplay(config_t& config, device_action_e maxDeviceAction) {

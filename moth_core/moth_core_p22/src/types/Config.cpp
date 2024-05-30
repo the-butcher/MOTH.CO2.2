@@ -46,6 +46,7 @@ config_t Config::load() {
             0                      // last successful connection index
         },
         {
+            0,   // utc offset seconds
             360  // ntp update interval, 6 hours, CHECK_MEASURE_INTERVAL (likely assumes 1 minute RTC interval)
             // [timezone char array [64]]
         },
@@ -82,4 +83,12 @@ void Config::begin(config_t* config) {
 
 mqtt____stat__e Config::getMqttStatus() {
     return Config::config->mqtt.mqttStatus;
+}
+
+void Config::setUtcOffsetSeconds(int32_t utcOffsetSeconds) {
+    Config::config->time.utcOffsetSeconds = utcOffsetSeconds;
+}
+
+int32_t Config::getUtcOffsetSeconds() {
+    return Config::config->time.utcOffsetSeconds;
 }
