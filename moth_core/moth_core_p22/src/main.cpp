@@ -45,14 +45,6 @@ uint16_t actionNum = 0;
  *    -- be sure data is written exactly every 60 minutes (not 59 or 61)
  *    -- ideally data would also be flushed with the full hour
  *    -- save data on HTTP reset (have shorter no-data periods)
- *    -- attempt to make some modules reusable
- *       -- mqtt
- *       -- wifi
- *       -- http
- *       -- card
- *       -- signal
- *       -- would require some base configuration and extended configuration
- *       -- would require lifecycle configuration
  * -- the settings action should be able to run at intervals shorter than display interval (i.e. mqtt at 1 minute interval)
  */
 

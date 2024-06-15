@@ -77,7 +77,6 @@ class ModuleDisp {
     static void renderCo2Cal(co2cal______t co2cal, config_t& config);
     static void renderQRCodes(config_t& config);
     static void renderEntry(config_t& config);
-    // static void renderCo2(config_t& config, calibration_t calibration);
     static void depower();
     static bool isInterrupted();
 };
