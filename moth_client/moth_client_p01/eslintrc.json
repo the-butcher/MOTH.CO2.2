@@ -1,0 +1,47 @@
+{
+    "parser": "@typescript-eslint/parser",
+    "extends": [
+      "plugin:react/recommended",
+      "plugin:@typescript-eslint/recommended",
+      "plugin:import/errors",
+      "plugin:import/warnings",
+      "airbnb",
+      "prettier"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "sourceType": "module",
+      "ecmaFeatures": {
+        "jsx": true
+      }
+    },
+    "rules": {
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "import/order": [
+        "error",
+        {
+          "pathGroups": [
+            {
+              "pattern": "@project/shared",
+              "group": "internal",
+              "position": "after"
+            }
+          ],
+          "newlines-between": "always"
+        }
+      ],
+      "import/no-unresolved": 0,
+      "import/extensions": 0,
+      "react/jsx-filename-extension": 0,
+      "no-undef": 0,
+      "react/jsx-props-no-spreading": 0,
+      "react/jsx-curly-newline": 0,
+      "react/jsx-one-expression-per-line": 0,
+      "react/jsx-wrap-multilines": ["error", { "declaration": false, "assignment": false }]
+    },
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    }
+  }

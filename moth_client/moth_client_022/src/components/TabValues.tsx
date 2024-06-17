@@ -331,16 +331,14 @@ const TabValues = (props: ITabValuesProps) => {
         <LocalizationProvider dateAdapter={AdapterMoment}>
           <div ref={valueRef} style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', margin: '0px', flexGrow: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', flexGrow: 10 }}>
-              {
-                latest.co2_lpf ? <ValueChoice
-                  icon={<Co2Icon sx={{ fontSize: '0.8em' }} />}
-                  value={latest.co2_lpf.toFixed(0)}
-                  unit='ppm'
-                  active={seriesDef.id === 'co2Lpf'}
-                  handleClick={() => handleValueClick('co2Lpf')}
-                  style={{ flexGrow: 10 }}
-                ></ValueChoice> : null
-              }
+              <ValueChoice
+                icon={<Co2Icon sx={{ fontSize: '0.8em' }} />}
+                value={latest.co2_lpf.toFixed(0)}
+                unit='ppm'
+                active={seriesDef.id === 'co2Lpf'}
+                handleClick={() => handleValueClick('co2Lpf')}
+                style={{ flexGrow: 10 }}
+              ></ValueChoice>
               <ValueChoice
                 icon={<DeviceThermostatIcon sx={{ fontSize: '0.8em' }} />}
                 value={latest.deg.toFixed(1)}

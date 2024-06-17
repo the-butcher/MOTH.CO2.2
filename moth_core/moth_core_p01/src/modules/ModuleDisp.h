@@ -4,6 +4,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <SPI.h>
 #include <Wire.h>
 
@@ -29,7 +30,6 @@ class ModuleDisp {
    public:
     static void configure(config_t& config);  // loads json configuration
     static void begin();
-    static void renderQRCodes(config_t& config);
     static void renderEntry(config_t& config);
     static void renderTable(values_all_t& measurement, config_t& config);
 };

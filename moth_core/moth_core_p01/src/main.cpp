@@ -6,6 +6,7 @@
 #include "buttons/ButtonAction.h"
 #include "modules/ModuleDisp.h"
 #include "modules/ModuleHttp.h"
+#include "modules/ModuleMqtt.h"
 #include "modules/ModuleSignal.h"
 #include "modules/ModuleWifi.h"
 #include "sensors/SensorBme280.h"
@@ -71,6 +72,10 @@ void setup() {
     config = Config::load();
     values = Values::load();
     device = Device::load();
+
+    ModuleMqtt::configure(config);
+    ModuleDisp::configure(config);
+    SensorBme280::configure(config);
 
     Config::begin(&config);
     Values::begin(&values);

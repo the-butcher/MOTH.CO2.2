@@ -27,7 +27,6 @@ void SensorTime::setupNtpUpdate(config_t& config) {
  *  Callback function (get's called when time adjusts via NTP)
  */
 void SensorTime::handleNtpUpdate(struct timeval* t) {
-    Serial.println("handling ntp update");
     struct tm timeinfo;
     getLocalTime(&timeinfo);
     DateTime now(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);

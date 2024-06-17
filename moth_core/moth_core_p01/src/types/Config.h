@@ -3,32 +3,27 @@
 
 #include <Arduino.h>
 
-// const String JSON_KEY_______CO2 = "co2";  // co2 thresholds
-// const String JSON_KEY_______DEG = "deg";  // temperature thresholds
-// const String JSON_KEY_______HUM = "hum";  // humidity thresholds
-// const String JSON_KEY_______BME = "bme";  // altitude and low pass
-// const String JSON_KEY_______USE = "use";
-// const String JSON_KEY____SERVER = "srv";
-// const String JSON_KEY______PORT = "prt";
-// const String JSON_KEY______USER = "usr";
+const String JSON_KEY_______PMS = "pms";  // co2 thresholds
+const String JSON_KEY_______DEG = "deg";  // temperature thresholds
+const String JSON_KEY_______HUM = "hum";  // humidity thresholds
+const String JSON_KEY_______BME = "bme";  // altitude and low pass
+const String JSON_KEY_______USE = "use";
+const String JSON_KEY____SERVER = "srv";
+const String JSON_KEY______PORT = "prt";
+const String JSON_KEY_______LPA = "lpa";
+const String JSON_KEY______USER = "usr";
 const String JSON_KEY_______PWD = "pwd";
-// const String JSON_KEY____CLIENT = "cli";
-// const String JSON_KEY___HISTORY = "hst";
+const String JSON_KEY____CLIENT = "cli";
 const String JSON_KEY___MINUTES = "min";
 const String JSON_KEY__NETWORKS = "ntw";
 const String JSON_KEY_______KEY = "key";
-// const String JSON_KEY_______SSC = "ssc";  // show significant change
-// const String JSON_KEY__ALTITUDE = "alt";  // base altitude
-// const String JSON_KEY____OFFSET = "off";  // temperature offset
-// const String JSON_KEY__TIMEZONE = "tzn";
-// const String JSON_KEY_RISK__LOW = "rLo";  //
-// const String JSON_KEY_WARN__LOW = "wLo";
-// const String JSON_KEY_WARN_HIGH = "wHi";
-// const String JSON_KEY_RISK_HIGH = "rHi";
-// const String JSON_KEY_REFERENCE = "ref";  // co2 refrence
-// const String JSON_KEY_______LPA = "lpa";  // low pass filter alpha
-// const String JSON_KEY_______CAL = "cal";  // button calibration reference value
-// const String JSON_KEY_______C2F = "c2f";  // convert to deg F?
+const String JSON_KEY____OFFSET = "off";  // temperature offset
+const String JSON_KEY__TIMEZONE = "tzn";
+const String JSON_KEY_RISK__LOW = "rLo";  //
+const String JSON_KEY_WARN__LOW = "wLo";
+const String JSON_KEY_WARN_HIGH = "wHi";
+const String JSON_KEY_RISK_HIGH = "rHi";
+const String JSON_KEY_______C2F = "c2f";  // convert to deg F?
 
 typedef struct {
     uint16_t wHi;  // upper warn level
@@ -56,8 +51,7 @@ typedef enum : uint8_t {
 
 typedef enum : uint8_t {
     DISPLAY_VAL_S__ENTRY,  // splash screen
-    DISPLAY_VAL_S___NONE,  // ?
-    DISPLAY_VAL_S_____QR
+    DISPLAY_VAL_S___NONE
 } display_val_s_e;
 
 /**
@@ -83,7 +77,6 @@ typedef struct {
     display_val_s_e displayValSetng;
     display_val_t_e displayValTable;
     display_val_d_e displayDegScale;
-    uint8_t displayUpdateMinutes;
 } disp____all___t;
 
 typedef enum : uint8_t {
@@ -139,13 +132,11 @@ typedef struct {
 } time____all___t;
 
 typedef struct {
-
+    float lpFilterRatioCurr;  // low pass filter alpha
 } spms____all___t;
 
 typedef struct {
     float temperatureOffset;
-    float pressureZerolevel;  // calculated sealevel pressure
-    float altitudeBaselevel;  // the altitude that the seonsor was configured to (or set by the user)
     float lpFilterRatioCurr;  // low pass filter alpha
 } sbme____all___t;
 

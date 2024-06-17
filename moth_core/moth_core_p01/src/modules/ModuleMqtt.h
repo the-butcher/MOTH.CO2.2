@@ -19,7 +19,6 @@ const uint8_t ERR_PUB_COUNT = 128;
 
 typedef struct {
     bool use;
-    bool hst;
     uint16_t prt;
     uint8_t min;
     char srv[64];

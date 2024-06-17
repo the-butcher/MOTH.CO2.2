@@ -5,8 +5,6 @@ values_t *Values::values = nullptr;
 values_t Values::load() {
     values_t values = {
         0,  // nextMeasureIndex
-        0,  // nextDisplayIndex
-        0,  // lastDisplayIndex
         0,  // nextAutoNtpIndex
         0   // nextAutoPubIndex (there will be at least one call to mttt, which in case on non- or misconfiguration can set this value to 0xFFFFFF)
         // <-- implicit measurement buffer

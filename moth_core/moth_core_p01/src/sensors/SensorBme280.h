@@ -10,21 +10,18 @@
 #include "types/Config.h"
 #include "types/Values.h"
 
-const float ALTITUDE__EXP = 0.190284;
-const float ALTITUDE_MULT = 44307.69396;
-const float PRESSURE_ZERO = 1013.25;
-
 class SensorBme280 {
    private:
     static Adafruit_BME280 baseSensor;
     static values_bme_t values;
+    static bool hasBegun;
 
    public:
     static void begin();
+    static bool configure(config_t& config);  // must have begun before configuration
     static bool measure();
     static values_bme_t readval();
-    static float getPressureZerolevel(float altitudeBaselevel, float pressure);
-    static float getAltitude(float pressureZerolevel, float pressure);
+    static float getTemperatureOffset();
 };
 
 #endif

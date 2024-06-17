@@ -322,7 +322,6 @@ void ModuleHttp::handleApiStatus(AsyncWebServerRequest *request) {
     JsonObject values = jsonDocument["values"].to<JsonObject>();
     values["nmsr"] = Values::values->nextMeasureIndex;
     values["mmsr"] = Values::values->nextMeasureIndex % MEASUREMENT_BUFFER_SIZE;
-    values["ndsp"] = Values::values->nextDisplayIndex;
     values["nntp"] = Values::values->nextAutoNtpIndex;
     values["npub"] = Values::values->nextAutoPubIndex;
 
@@ -529,16 +528,12 @@ void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, s
             }
         }
 
-        Serial.println("opening file for append");
-
         File targetFile = LittleFS.open(path.c_str(), FILE_APPEND);
         for (size_t i = 0; i < len; i++) {
             targetFile.write(data[i]);
         }
         targetFile.flush();
         targetFile.close();
-
-        Serial.println("done writing");
 
         if (path == MQTT_CONFIG_JSON || path == MQTT_CONFIG__CRT) {
             ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
@@ -552,8 +547,9 @@ void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, s
             };
         } else if (path == DISP_CONFIG_JSON) {
             ModuleHttp::requestedReconfiguration = [=](config_t &config, values_t &values) -> void {
-                ModuleDisp::configure(config);  // reloads json and applies settings to config
-                values.nextAutoNtpIndex = 0;    // trigger an ntp update (timezone may have changed)
+                ModuleDisp::configure(config);    // reloads json and applies settings to config
+                SensorBme280::configure(config);  // should apply temperature offset (if different from current value)
+                values.nextAutoNtpIndex = 0;      // trigger an ntp update (timezone may have changed)
             };
         }
 

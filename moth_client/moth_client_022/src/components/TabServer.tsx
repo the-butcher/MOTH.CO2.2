@@ -128,7 +128,6 @@ const TabServer = (props: ITabProps) => {
         apiType: 'dat'
       }} />
       <ApiDatOut {...apiProps} />
-      {/* <ApiCalcsv {...apiProps} /> */}
 
       <LabelledDivider label='files, folders' style={{ paddingTop: '12px' }} />
       <ApiDirOut {...apiProps} />

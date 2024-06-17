@@ -13,8 +13,6 @@ bool SensorPms003::measure() {
     if (success) {
         SensorPms003::values = {data.pm10_standard, data.pm25_standard, data.pm100_standard};
     }
-    // TODO :: wrap into values object
-
     return success;
 }
 

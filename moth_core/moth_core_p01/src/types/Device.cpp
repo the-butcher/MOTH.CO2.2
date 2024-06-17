@@ -78,31 +78,29 @@ device_action_e Device::handleActionReadval(config_t& config, device_action_e ma
     values_pms_t measurementPms = SensorPms003::readval();
     values_bme_t measurementBme = SensorBme280::readval();
 
-    // TODO :: OK to write into values each time, but lets only increment measurement index after one minute has passed
-
-    // store values
-    uint32_t currMeasureIndex = Values::values->nextMeasureIndex;  // not yet incremented
-    uint32_t nextMeasureIndex = currMeasureIndex + 1;
+    uint32_t currSecondstime = SensorTime::getSecondstime();
+    uint32_t currMeasureIndex = Values::values->nextMeasureIndex;            // not yet incremented
     uint32_t currStorageIndex = currMeasureIndex % MEASUREMENT_BUFFER_SIZE;  // the index of this measurement in the data
     uint32_t prevStorageIndex = currMeasureIndex > 0 ? (currMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE : 0;
 
-    // ok to use raw pressure value since the first value is unfiltered anyways
-    if (currMeasureIndex == 0) {
-        // when pressureZerolevel == 0.0 pressure at sealevel needs to be recalculated (should only happen once at startup)
-        if (config.sbme.pressureZerolevel == 0.0) {
-            config.sbme.pressureZerolevel = SensorBme280::getPressureZerolevel(config.sbme.altitudeBaselevel, measurementBme.pressure);
-        }
+    // TODO :: have a better time reference for when to step back (this way if continually increments the secondstime with the minute)
+    uint32_t prevSecondstime = Values::values->measurements[prevStorageIndex].secondstime;
+    if (currMeasureIndex > 0 && currSecondstime < prevSecondstime + SECONDS_PER___________MINUTE) {
+        currSecondstime = prevSecondstime;  // need to use prev, or it would never not step back
+        currMeasureIndex = currMeasureIndex - 1;
+        currStorageIndex = currMeasureIndex % MEASUREMENT_BUFFER_SIZE;  // the index of this measurement in the data
+        prevStorageIndex = currMeasureIndex > 0 ? (currMeasureIndex - 1) % MEASUREMENT_BUFFER_SIZE : 0;
     }
+    uint32_t nextMeasureIndex = currMeasureIndex + 1;
+
+    Values::values->measurements[currStorageIndex] = {
+        currSecondstime,  // secondstime as of RTC
+        measurementPms,   // sensorScd041 values
+        measurementBme,   // sensorBme280 values
+        true              // publishable
+    };
 
     Values::values->nextMeasureIndex = nextMeasureIndex;
-
-    // is storing the measurement needed? (will be replaced a few lines further down)
-    Values::values->measurements[currStorageIndex] = {
-        SensorTime::getSecondstime(),  // secondstime as of RTC
-        measurementPms,                // sensorScd041 values
-        measurementBme,                // sensorBme280 values
-        true                           // publishable
-    };
 
     return DEVICE_ACTION_SETTING;  // advance to settings, where another decision will be made whether to continue with display or not
 }
@@ -115,7 +113,7 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
     bool isOrWasWifiPowered = ModuleWifi::isPowered();
     if (config.wifi.wifiValPower == WIFI____VAL_P__PND_Y && !ModuleWifi::isPowered()) {  // to be turned on, but currently off
         if (ModuleWifi::powerup(config, true)) {
-            config.disp.displayValSetng = DISPLAY_VAL_S_____QR;  // let the display render qr next time
+            // do nothing (was renderQR)
         }
         isOrWasWifiPowered = true;
     } else if (config.wifi.wifiValPower == WIFI____VAL_P__PND_N) {  // to be turned off, no check for powered state since the device could have silently lost connection
@@ -142,9 +140,6 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
                     Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
                 }
                 if (autoNtpConn) {
-#ifdef USE___SERIAL
-                    Serial.printf("init ntp update\n");
-#endif
                     SensorTime::setupNtpUpdate(config);                                                  // apply timezone
                     Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
                     for (int i = 0; i < 100; i++) {                                                      // wait 10 secs max for time sync
@@ -169,14 +164,9 @@ device_action_e Device::handleActionDisplay(config_t& config, device_action_e ma
     uint32_t currMeasureIndex = Values::values->nextMeasureIndex - 1;
     if (config.disp.displayValSetng == DISPLAY_VAL_S__ENTRY) {
         ModuleDisp::renderEntry(config);  // splash screen
-    } else if (config.disp.displayValSetng == DISPLAY_VAL_S_____QR) {
-        ModuleDisp::renderQRCodes(config);
-        Values::values->nextDisplayIndex = currMeasureIndex + 1;  // wait a minute before next update
     } else {
         values_all_t measurement = Values::values->measurements[(currMeasureIndex + MEASUREMENT_BUFFER_SIZE) % MEASUREMENT_BUFFER_SIZE];
         ModuleDisp::renderTable(measurement, config);
-        Values::values->lastDisplayIndex = currMeasureIndex;
-        Values::values->nextDisplayIndex = currMeasureIndex + config.disp.displayUpdateMinutes;
     }
     config.disp.displayValSetng = DISPLAY_VAL_S___NONE;
 

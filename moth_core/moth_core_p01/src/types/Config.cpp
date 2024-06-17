@@ -17,7 +17,8 @@ config_t Config::load() {
                 14,  // deg rLo
                 19,  // deg wLo
                 25,  // deg wHi
-                30   // deg rHi
+                30,  // deg rHi
+
             },
             {
                 25,  // hum rLo
@@ -27,8 +28,7 @@ config_t Config::load() {
             },
             DISPLAY_VAL_S__ENTRY,  // entry screen first
             DISPLAY_VAL_T____025,  // value shown when rendering in table mode
-            DISPLAY_VAL_D______C,  // temperature scale celsius | fahrenheit
-            3                      // display update minutes
+            DISPLAY_VAL_D______C   // temperature scale celsius | fahrenheit
         },
         {
             CONFIG_STAT__DEFAULT,  // flag indicating the status if the wifi config
@@ -42,13 +42,11 @@ config_t Config::load() {
             // [timezone char array [64]]
         },
         {
-
+            0.5  // low pass filter alpha
         },
         {
-            0.0,
-            0.0,  // calculated sealevel pressure, 0.0 = needs recalculation
-            153,  // the altitude that the sensor was configured to (or set to by the user)
-            0.5   // low pass filter alpha
+            10.0,
+            0.5  // low pass filter alpha
         },
         {
             SIGNAL__VAL_____OFF  // warn signal

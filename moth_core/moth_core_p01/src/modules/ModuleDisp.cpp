@@ -1,5 +1,6 @@
 #include "ModuleDisp.h"
 
+#include "ModuleCard.h"
 #include "buttons/ButtonAction.h"
 
 Adafruit_SH1107 ModuleDisp::display(64, 128, &Wire, -1, 200000, 100000);
@@ -12,62 +13,48 @@ void ModuleDisp::configure(config_t& config) {
 
     // ModuleCard::begin();
 
-    // File32 dispFileJson;
-    // bool dispSuccess = dispFileJson.open(DISP_CONFIG_JSON.c_str(), O_RDONLY);
-    // if (dispSuccess) {
-    //     JsonDocument jsonDocument;
-    //     DeserializationError error = deserializeJson(jsonDocument, dispFileJson);
-    //     if (!error) {
+    File dispFileJson = LittleFS.open(DISP_CONFIG_JSON.c_str(), FILE_READ);
+    if (dispFileJson) {
+        JsonDocument jsonDocument;
+        DeserializationError error = deserializeJson(jsonDocument, dispFileJson);
+        if (!error) {
 
-    //         config.disp.configStatus = CONFIG_STAT__APPLIED;
+            config.disp.configStatus = CONFIG_STAT__APPLIED;
 
-    //         // display minutes
-    //         config.disp.displayUpdateMinutes = jsonDocument[JSON_KEY___MINUTES] | config.disp.displayUpdateMinutes;  // apply network expiry (independant from networks)
+            // display co2 threshold and reference
+            config.disp.thresholdsPms.wHi = jsonDocument[JSON_KEY_______PMS][JSON_KEY_WARN_HIGH] | config.disp.thresholdsPms.wHi;
+            config.disp.thresholdsPms.rHi = jsonDocument[JSON_KEY_______PMS][JSON_KEY_RISK_HIGH] | config.disp.thresholdsPms.rHi;
+            config.spms.lpFilterRatioCurr = jsonDocument[JSON_KEY_______PMS][JSON_KEY_______LPA] | config.spms.lpFilterRatioCurr;
 
-    //         // show significant scale
-    //         bool isShowSignificant = jsonDocument[JSON_KEY_______SSC] | config.disp.displayValCycle == DISPLAY_VAL_Y____SIG;
-    //         config.disp.displayValCycle = isShowSignificant ? DISPLAY_VAL_Y____SIG : DISPLAY_VAL_Y____FIX;
+            // display deg thresholds
+            config.disp.thresholdsDeg.rLo = jsonDocument[JSON_KEY_______DEG][JSON_KEY_RISK__LOW] | config.disp.thresholdsDeg.rLo;
+            config.disp.thresholdsDeg.wLo = jsonDocument[JSON_KEY_______DEG][JSON_KEY_WARN__LOW] | config.disp.thresholdsDeg.wLo;
+            config.disp.thresholdsDeg.wHi = jsonDocument[JSON_KEY_______DEG][JSON_KEY_WARN_HIGH] | config.disp.thresholdsDeg.wHi;
+            config.disp.thresholdsDeg.rHi = jsonDocument[JSON_KEY_______DEG][JSON_KEY_RISK_HIGH] | config.disp.thresholdsDeg.rHi;
+            config.sbme.temperatureOffset = jsonDocument[JSON_KEY_______DEG][JSON_KEY____OFFSET] | config.sbme.temperatureOffset;
 
-    //         // display co2 threshold and reference
-    //         config.disp.thresholdsCo2.wHi = jsonDocument[JSON_KEY_______CO2][JSON_KEY_WARN_HIGH] | config.disp.thresholdsCo2.wHi;
-    //         config.disp.thresholdsCo2.rHi = jsonDocument[JSON_KEY_______CO2][JSON_KEY_RISK_HIGH] | config.disp.thresholdsCo2.rHi;
-    //         config.disp.thresholdsCo2.ref = jsonDocument[JSON_KEY_______CO2][JSON_KEY_REFERENCE] | config.disp.thresholdsCo2.ref;
+            // display deg scale (unit)
+            bool isFahrenheit = jsonDocument[JSON_KEY_______DEG][JSON_KEY_______C2F] | config.disp.displayDegScale == DISPLAY_VAL_D______F;
+            config.disp.displayDegScale = isFahrenheit ? DISPLAY_VAL_D______F : DISPLAY_VAL_D______C;
 
-    //         // display deg thresholds
-    //         config.disp.thresholdsDeg.rLo = jsonDocument[JSON_KEY_______DEG][JSON_KEY_RISK__LOW] | config.disp.thresholdsDeg.rLo;
-    //         config.disp.thresholdsDeg.wLo = jsonDocument[JSON_KEY_______DEG][JSON_KEY_WARN__LOW] | config.disp.thresholdsDeg.wLo;
-    //         config.disp.thresholdsDeg.wHi = jsonDocument[JSON_KEY_______DEG][JSON_KEY_WARN_HIGH] | config.disp.thresholdsDeg.wHi;
-    //         config.disp.thresholdsDeg.rHi = jsonDocument[JSON_KEY_______DEG][JSON_KEY_RISK_HIGH] | config.disp.thresholdsDeg.rHi;
+            // display hum thresholds
+            config.disp.thresholdsHum.rLo = jsonDocument[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | config.disp.thresholdsHum.rLo;
+            config.disp.thresholdsHum.wLo = jsonDocument[JSON_KEY_______HUM][JSON_KEY_WARN__LOW] | config.disp.thresholdsHum.wLo;
+            config.disp.thresholdsHum.wHi = jsonDocument[JSON_KEY_______HUM][JSON_KEY_WARN_HIGH] | config.disp.thresholdsHum.wHi;
+            config.disp.thresholdsHum.rHi = jsonDocument[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | config.disp.thresholdsHum.rHi;
 
-    //         // display deg scale (unit)
-    //         bool isFahrenheit = jsonDocument[JSON_KEY_______DEG][JSON_KEY_______C2F] | config.disp.displayDegScale == DISPLAY_VAL_D______F;
-    //         config.disp.displayDegScale = isFahrenheit ? DISPLAY_VAL_D______F : DISPLAY_VAL_D______C;
+            config.sbme.lpFilterRatioCurr = jsonDocument[JSON_KEY_______BME][JSON_KEY_______LPA] | config.sbme.lpFilterRatioCurr;
 
-    //         // display deg offset
-    //         config.sco2.temperatureOffset = jsonDocument[JSON_KEY_______DEG][JSON_KEY____OFFSET] | config.sco2.temperatureOffset;
-    //         config.sco2.lpFilterRatioCurr = jsonDocument[JSON_KEY_______CO2][JSON_KEY_______LPA] | config.sco2.lpFilterRatioCurr;
-    //         config.sco2.calibrationCo2Ref = jsonDocument[JSON_KEY_______CO2][JSON_KEY_______CAL] | config.sco2.calibrationCo2Ref;
+            String timezone = jsonDocument[JSON_KEY__TIMEZONE] | "";
+            if (timezone != "") {
+                timezone.toCharArray(config.time.timezone, 64);
+            }
 
-    //         // display hum thresholds
-    //         config.disp.thresholdsHum.rLo = jsonDocument[JSON_KEY_______HUM][JSON_KEY_RISK__LOW] | config.disp.thresholdsHum.rLo;
-    //         config.disp.thresholdsHum.wLo = jsonDocument[JSON_KEY_______HUM][JSON_KEY_WARN__LOW] | config.disp.thresholdsHum.wLo;
-    //         config.disp.thresholdsHum.wHi = jsonDocument[JSON_KEY_______HUM][JSON_KEY_WARN_HIGH] | config.disp.thresholdsHum.wHi;
-    //         config.disp.thresholdsHum.rHi = jsonDocument[JSON_KEY_______HUM][JSON_KEY_RISK_HIGH] | config.disp.thresholdsHum.rHi;
-
-    //         // altitude base level (home altitude of sensor)
-    //         config.sbme.altitudeBaselevel = jsonDocument[JSON_KEY_______BME][JSON_KEY__ALTITUDE] | config.sbme.altitudeBaselevel;
-    //         config.sbme.lpFilterRatioCurr = jsonDocument[JSON_KEY_______BME][JSON_KEY_______LPA] | config.sbme.lpFilterRatioCurr;
-
-    //         String timezone = jsonDocument[JSON_KEY__TIMEZONE] | "";
-    //         if (timezone != "") {
-    //             timezone.toCharArray(config.time.timezone, 64);
-    //         }
-
-    //     } else {
-    //         // TODO :: handle this condition
-    //     }
-    //     dispFileJson.close();
-    // }
+        } else {
+            // TODO :: handle this condition
+        }
+        dispFileJson.close();
+    }
 }
 
 void ModuleDisp::begin() {
@@ -151,69 +138,6 @@ void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
 
 void ModuleDisp::renderEntry(config_t& config) {
     // nothing
-}
-
-void ModuleDisp::renderQRCodes(config_t& config) {
-
-    Serial.println('renderQR');
-
-    // ModuleDisp::clearBuffer(config);
-    // ModuleDisp::drawOuterBorders(EPD_LIGHT);
-
-    // // either http://ap_ip/login or [PREF_A_WIFI] + IP
-    // String address = ModuleWifi::getRootUrl();
-    // String networkName = ModuleWifi::getNetworkName();
-    // String networkPass = ModuleWifi::getNetworkPass();
-
-    // int qrCodeX = 12;
-    // int qrCodeY = 35;
-
-    // // render the network connection link
-    // if (networkName != "") {
-    //     char networkBuf[networkName.length() + 1];
-    //     networkName.toCharArray(networkBuf, networkName.length() + 1);
-
-    //     QRCode qrcodeNetwork;
-    //     uint8_t qrcodeDataNetwork[qrcode_getBufferSize(3)];
-    //     qrcode_initText(&qrcodeNetwork, qrcodeDataNetwork, 3, 0, networkBuf);
-
-    //     for (uint8_t y = 0; y < qrcodeNetwork.size; y++) {
-    //         for (uint8_t x = 0; x < qrcodeNetwork.size; x++) {
-    //             if (qrcode_getModule(&qrcodeNetwork, x, y)) {
-    //                 baseDisplay.fillRect(x * 2 + qrCodeX, y * 2 + qrCodeY, 2, 2, EPD_BLACK);
-    //             }
-    //         }
-    //     }
-
-    //     qrCodeX = 228;
-
-    //     ModuleDisp::drawAntialiasedText06("wlan", RECT_TOP, 75, 45, EPD_BLACK);
-    //     if (networkPass != "") {
-    //         ModuleDisp::drawAntialiasedText06(ModuleWifi::getNetworkPass(), RECT_TOP, 75, 60, EPD_BLACK);
-    //     }
-    //     ModuleDisp::drawAntialiasedText06("open", RECT_TOP, 193, 89, EPD_BLACK);
-    // }
-
-    // char addressBuf[address.length() + 1];
-    // address.toCharArray(addressBuf, address.length() + 1);
-
-    // QRCode qrcodeAddress;
-    // uint8_t qrcodeDataAddress[qrcode_getBufferSize(3)];
-    // qrcode_initText(&qrcodeAddress, qrcodeDataAddress, 3, 0, addressBuf);
-
-    // // render the ip address within the network
-    // for (uint8_t y = 0; y < qrcodeAddress.size; y++) {
-    //     for (uint8_t x = 0; x < qrcodeAddress.size; x++) {
-    //         if (qrcode_getModule(&qrcodeAddress, x, y)) {
-    //             baseDisplay.fillRect(x * 2 + qrCodeX, y * 2 + qrCodeY, 2, 2, EPD_BLACK);
-    //         }
-    //     }
-    // }
-
-    // ModuleDisp::renderHeader();
-    // ModuleDisp::renderFooter(config);
-
-    // ModuleDisp::flushBuffer();
 }
 
 String ModuleDisp::formatString(String value, char const* format) {
