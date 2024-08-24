@@ -243,7 +243,7 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
 
         if (autoNtpConn || autoPubConn) {
 #ifdef USE___SERIAL
-            Serial.printf("autoNtpConn: %u, autoPubConn: %u\n", autoNtpConn, autoPubConn);
+            Serial.printf("autoNtpConn (%u <= %u): %u, autoPubConn (%u <= %u): %u\n", Values::values->nextAutoNtpIndex, Values::values->nextMeasureIndex, autoNtpConn, Values::values->nextAutoPubIndex, Values::values->nextMeasureIndex, autoPubConn);
 #endif
             autoDepower = ModuleWifi::powerup(config, false);  // if the connection was successful, it also needs to be autoShutoff
             if (autoDepower) {                                 // was connected
@@ -251,29 +251,33 @@ device_action_e Device::handleActionSetting(config_t& config, device_action_e ma
                 if (autoPubConn) {
                     // try to publish (call with config, so mqtt gets the opportunity to )
                     ModuleMqtt::publish(config);
-                    Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
+                    // Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
                 }
                 if (autoNtpConn) {
 #ifdef USE___SERIAL
                     Serial.printf("init ntp update\n");
 #endif
-                    SensorTime::setupNtpUpdate(config);                                                  // apply timezone
-                    Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
-                    for (int i = 0; i < 100; i++) {                                                      // wait 10 secs max for time sync
+                    SensorTime::setupNtpUpdate(config);  // apply timezone
+                    // Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;  // TODO :: add config, then choose either MQTT update interval or NTP update interval
+                    for (int i = 0; i < 100; i++) {  // wait 10 secs max for time sync
                         if (!SensorTime::isNtpWait()) {
 #ifdef USE___SERIAL
-                            Serial.printf("done ntp update, dutc: %u\n", SensorTime::secondstimeOffsetUtc);
+                            Serial.printf("done ntp update, dutc: %u\n", Config::getUtcOffsetSeconds());
 #endif
                             break;
                         }
                         delay(100);
                     }
 #ifdef USE___SERIAL
-                    Serial.printf("exit ntp update, dutc: %u\n", SensorTime::secondstimeOffsetUtc);
+                    Serial.printf("exit ntp update, dutc: %u\n", Config::getUtcOffsetSeconds());
 #endif
                 }
                 ModuleWifi::depower(config);
             }
+
+            // regardless of powerup wifi success increment pub and ntp indices, or it will try to connect eacht time
+            Values::values->nextAutoPubIndex = config.mqtt.mqttPublishMinutes == MQTT_PUBLISH___NEVER ? MQTT_PUBLISH___NEVER : currMeasureIndex + config.mqtt.mqttPublishMinutes;
+            Values::values->nextAutoNtpIndex = currMeasureIndex + config.time.ntpUpdateMinutes;
         }
     }
 

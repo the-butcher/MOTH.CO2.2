@@ -29,7 +29,7 @@ This projects provides instructions for building a CO₂ sensor from off the she
   - CO₂ calibration
   - WiFi, [MQTT](https://de.wikipedia.org/wiki/MQTT)
 
-- stores unlimited history of data due to build in SD-card
+- stores unlimited history of data due to integrated SD-card
 
 - hosts a web-UI on it's internal web-server, usable from mobile and desktop devices
 
@@ -88,7 +88,7 @@ The device display supports multiple display modes, "table", "chart" and "calibr
 
   - In table mode the latest CO₂, temperature and  humidity values are shown numerically.
   - In chart mode one of CO₂, temperature, humidity or pressure are shown in a simple chart. The chart can show 1h, 3h, 6h, 12h or 24h data ranges.
-  - In calibration mode, the most recent history of values is shown together with simple statistics. The device can then be calibrated either to a configurable value and button press, or through the wifi-rest-api and value that can be specified by the user.
+  - In calibration mode, the most recent history of values is shown together with simple statistics. The device can then be calibrated either to a configurable value via button press, or through the wifi-rest-api and value that can be specified by the user.
 
 - #### Over the wifi-rest-api
 
@@ -97,7 +97,7 @@ The device display supports multiple display modes, "table", "chart" and "calibr
 - #### MQTT
 
   It is possible to configure a mqtt connection and upload the mqtt brokers certificate if needed. The device will make connections in configurable intervals und publish it's measurements.
-  Even though no POC has been made so far, it should be straightforward to integrate the sensor into i.e. Home Assistant.
+  The sensor can easily be integrated into HomeAssistant.
 
 ### Calibration
 

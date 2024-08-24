@@ -71,9 +71,9 @@ A short list of the device's api:
 
 ---
 
-There are multiple ways the device can connect to the internet:
+There are multiple ways connectivity to the device can be established:
 
-- When no wifi-connection has been configured yet, the device will start in AP-mode, providing it's own network. You can connect you mobile phone or computer to that network and configure i.e. your home wifi.
-- When wifi-connections have been configured, the device will connect to the network with the highest signal strength.
+- When no wifi-connection has been configured yet, the device will start in AP-mode, providing it's own network. You can connect you mobile phone or computer to that network and configure i.e. your home wifi. The AP connections password is "CO2@420PPM".
+- When wifi-connections have been configured, the device will pick from the configured networks the one with the highest signal strength.
 
 What has been working for me is configuring my home network and my mobile's wifi-hotspot. That way the sensor will connect to the home network most of the time, but there is a fallback to the hotspot of my phone when i'm away. When in a hotel i add the hotel network, so i can save data on the hotspot.

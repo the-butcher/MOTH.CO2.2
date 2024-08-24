@@ -1,9 +1,10 @@
 {
-  "srv": "192.168.0.123",
-  "prt": 8883,
+  "srv": "192.168.0.38",
+  "cli": "moth/ip_123",
+  "min": 5,
+  "prt": 1883,
   "crt": "/config/ca.crt",
-  "usr": "your-mqtt-user",
-  "pwd": "n7xT+SfvP12qwUgh3t4rtz==",
-  "cli": "moth",
-  "top": "moth/co2"
+  "usr": "usr",
+  "pwd": "pwd",
+  "use": false
 }

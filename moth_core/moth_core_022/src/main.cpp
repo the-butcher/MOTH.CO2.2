@@ -182,6 +182,13 @@ bool isDelayRequired() {
     return ButtonAction::getActionPin() > 0 || ButtonAction::getPressedPin() > 0 || ModuleWifi::isPowered();
 }
 
+/**
+ * puts the device to deep-sleep for a given amount of seconds
+ * when in deep-sleep, the device can wake up from:
+ * - a button press
+ * - the sqw signal from RTC
+ * - the display's busy spin
+ */
 void secondsSleep(uint32_t seconds) {
     // convert to microseconds
     uint64_t sleepMicros = seconds * MICROSECONDS_PER______SECOND;
