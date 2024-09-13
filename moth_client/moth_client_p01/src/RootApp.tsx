@@ -25,7 +25,7 @@ const theme = ThemeUtil.createTheme();
 const RootApp = () => {
 
   // const boxUrl = `${window.location.origin}/api`; // when running directly from device
-  const boxUrl = `http://192.168.0.129/api`; // when running directly from device
+  const boxUrl = `http://192.168.0.130/api`; // when running directly from device
   // const boxUrl = `http://192.168.4.1/api`; // when running directly from device
 
   /**

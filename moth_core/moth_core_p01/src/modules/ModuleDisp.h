@@ -8,6 +8,7 @@
 #include <SPI.h>
 #include <Wire.h>
 
+#include "fonts/smb36pt.h"
 #include "modules/ModuleWifi.h"
 #include "types/Action.h"
 #include "types/Config.h"

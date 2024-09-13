@@ -125,9 +125,16 @@ void ModuleDisp::renderTable(values_all_t& measurement, config_t& config) {
     display.setCursor(128 - unit.length() * CHAR_DIM_X6, 0);
     display.print(unit);
 
-    display.setCursor(30, 18);
-    display.setTextSize(4);
+    display.setCursor(32, 38);
+
+    // set font here
+    display.setFont(&smb36pt);
+    // display.setTextSize(4);
+
     display.println(value);
+
+    // unset font here
+    display.setFont(NULL);  // reset to default 6x8 font
 
     ModuleDisp::renderFooter(config);
 

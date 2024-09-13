@@ -412,5 +412,5 @@ bool ModuleMqtt::publishMeasurement(config_t& config, values_all_t* value, char*
     // https://arduinojson.org/v7/how-to/use-arduinojson-with-pubsubclient/
     char outputBuf[128];
     serializeJson(jsonDocument, outputBuf);
-    return mqttClient->publish(client, outputBuf);
+    return mqttClient->publish(client, outputBuf, true);
 }

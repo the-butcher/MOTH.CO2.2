@@ -515,6 +515,7 @@ void ModuleHttp::handleUpload(AsyncWebServerRequest *request, String filename, s
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
+
         // delete file if exists
         if (index == 0) {
             if (ModuleCard::existsPath(path) && index == 0) {
